@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import Cropper, { type Area } from "react-easy-crop";
+import Image from "next/image";
 import {
   ArrowLeft,
   ArrowRight,
@@ -948,8 +949,15 @@ export default function StillValidApp() {
             }}
             aria-label={t.homeLabel}
           >
-            <span className="brand-icon">
-              <ScanLine size={23} strokeWidth={1.8} />
+            <span className="brand-icon" aria-hidden="true">
+              <Image
+                src="/icons/stillvalid-192.png"
+                alt=""
+                width={36}
+                height={36}
+                loading="eager"
+                unoptimized
+              />
             </span>
             <span dir="ltr">
               Still<span className="brand-light">Valid</span>
@@ -1864,7 +1872,13 @@ export default function StillValidApp() {
       <footer className="site-footer">
         <div>
           <span className="footer-mark">
-            <ScanLine size={16} />
+            <Image
+              src="/icons/stillvalid-192.png"
+              alt=""
+              width={20}
+              height={20}
+              unoptimized
+            />
             StillValid.
           </span>
           <p>{t.footer}</p>

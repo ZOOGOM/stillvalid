@@ -5,7 +5,6 @@ export const metadata: Metadata = {
   title: "StillValid — 지금도 맞나요?",
   description:
     "Compare a saved notice with official sources. See changes, evidence, and your next confirmation step, without GPS.",
-  icons: { icon: "/icon.svg" },
 };
 export const viewport: Viewport = {
   width: "device-width",
