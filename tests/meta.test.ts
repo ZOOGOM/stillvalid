@@ -121,6 +121,57 @@ test("malformed provider envelopes are reported as model output errors", () =>
       });
     }
   }));
+test("output diagnostics log only fixed categories and preserve the public error", (t) =>
+  withTestKey(async () => {
+    const logs: unknown[][] = [];
+    t.mock.method(console, "error", (...args: unknown[]) => logs.push(args));
+    const sensitive = "private-provider-content-and-credential";
+    const envelope = (content: unknown, finish = "stop", refusal?: string) =>
+      JSON.stringify({
+        choices: [{ finish_reason: finish, message: { content, refusal } }],
+      });
+    const cases = [
+      [sensitive, "response_json"],
+      [JSON.stringify([sensitive]), "response_shape"],
+      [envelope(sensitive, "length"), "completion_length"],
+      [envelope(sensitive, sensitive), "completion_not_stopped"],
+      [JSON.stringify({ private: sensitive }), "completion_not_stopped"],
+      [envelope("", "stop"), "completion_empty"],
+      [envelope(sensitive, "stop", sensitive), "completion_refusal"],
+      [envelope(sensitive), "content_json"],
+      [envelope(JSON.stringify({ country: sensitive })), "schema_mismatch"],
+    ];
+    for (const [body, reason] of cases) {
+      logs.length = 0;
+      const client = new MetaClient(
+        async () => new Response(body),
+        () => {},
+      );
+      await assert.rejects(
+        () =>
+          client.structured(
+            "untrusted-schema-name",
+            noticeSchema,
+            sensitive,
+            {},
+          ),
+        { code: "model_output", status: 422, message: "model_output" },
+      );
+      assert.deepEqual(logs, [
+        [JSON.stringify({ event: "model_output_rejected", reason })],
+      ]);
+    }
+    logs.length = 0;
+    const client = new MetaClient(
+      async () => new Response(envelope(JSON.stringify(notice))),
+      () => {},
+    );
+    assert.deepEqual(
+      await client.structured("notice", noticeSchema, "Read", {}),
+      notice,
+    );
+    assert.deepEqual(logs, []);
+  }));
 test("notice and comparison countries accept supported codes or null only", () => {
   const comparison = {
     same_notice: false,

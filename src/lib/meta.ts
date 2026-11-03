@@ -14,6 +14,20 @@ import { reserveModelCall } from "./store";
 
 const endpoint = "https://api.meta.ai/v1";
 type Fetcher = typeof fetch;
+type OutputFailureReason =
+  | "response_json"
+  | "response_shape"
+  | "completion_length"
+  | "completion_not_stopped"
+  | "completion_empty"
+  | "completion_refusal"
+  | "content_json"
+  | "schema_mismatch";
+function outputFailure(reason: OutputFailureReason): AppError {
+  // Only fixed categories: never log provider content, errors or schema issues.
+  console.error(JSON.stringify({ event: "model_output_rejected", reason }));
+  return new AppError("model_output", 422);
+}
 const proxy =
   process.env.HTTPS_PROXY || process.env.HTTP_PROXY
     ? new EnvHttpProxyAgent()
@@ -85,16 +99,19 @@ export class MetaClient {
         response.status === 429 ? 429 : 503,
       );
     }
+    let result: unknown;
     try {
-      const result: unknown = await response.json();
-      if (!result || typeof result !== "object" || Array.isArray(result))
-        throw new Error("invalid provider response");
-      return result as Record<string, unknown>;
+      result = await response.json();
     } catch {
       throw signal?.aborted
         ? new AppError("cancelled", 503)
-        : new AppError("model_output", 422);
+        : outputFailure("response_json");
     }
+    if (!result || typeof result !== "object" || Array.isArray(result)) {
+      if (signal?.aborted) throw new AppError("cancelled", 503);
+      throw outputFailure("response_shape");
+    }
+    return result as Record<string, unknown>;
   }
   async structured<T>(
     name: string,
@@ -139,16 +156,24 @@ export class MetaClient {
           message?: { content?: string; refusal?: string };
         }[]
       | undefined;
-    if (
-      choices?.[0]?.finish_reason !== "stop" ||
-      !choices[0].message?.content ||
-      choices[0].message.refusal
-    )
-      throw new AppError("model_output", 422);
+    if (choices?.[0]?.finish_reason !== "stop")
+      throw outputFailure(
+        choices?.[0]?.finish_reason === "length"
+          ? "completion_length"
+          : "completion_not_stopped",
+      );
+    if (choices[0].message?.refusal) throw outputFailure("completion_refusal");
+    if (!choices[0].message?.content) throw outputFailure("completion_empty");
+    let content: unknown;
     try {
-      return schema.parse(JSON.parse(choices[0].message.content));
+      content = JSON.parse(choices[0].message.content);
     } catch {
-      throw new AppError("model_output", 422);
+      throw outputFailure("content_json");
+    }
+    try {
+      return schema.parse(content);
+    } catch {
+      throw outputFailure("schema_mismatch");
     }
   }
   async extract(
