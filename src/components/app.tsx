@@ -1679,11 +1679,21 @@ export default function StillValidApp() {
         </div>
         <nav>
           <button onClick={() => setDialog("privacy")}>{t.privacy}</button>
+          <a
+            href={`${GitHub}/blob/main/LICENSE`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t.codeLicense}
+          </a>
           <a href={GitHub} target="_blank" rel="noopener noreferrer">
             {t.github}
             <ArrowUpRight size={12} />
           </a>
         </nav>
+        <p className="footer-copyright" lang="en">
+          <strong>Copyright 2026 Zoogom. All rights reserved.</strong>
+        </p>
       </footer>
       {toast && (
         <div className="toast" role="status">

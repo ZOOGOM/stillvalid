@@ -788,6 +788,8 @@ html[lang="en"] .hero h1 {
   margin: auto;
   padding: 25px 0 28px;
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 14px;
   align-items: center;
   justify-content: space-between;
 }
@@ -808,6 +810,16 @@ html[lang="en"] .hero h1 {
   margin: 0;
   font-size: 12px;
   color: #62655e;
+}
+.site-footer .footer-copyright {
+  flex-basis: 100%;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  line-height: 1.8;
+  overflow-wrap: anywhere;
 }
 .site-footer nav {
   display: flex;
