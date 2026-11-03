@@ -59,7 +59,7 @@ export const comparisonSchema = z.object({
 });
 export type Notice = z.infer<typeof noticeSchema>;
 export type ModelComparison = z.infer<typeof comparisonSchema>;
-export type Lang = "ko" | "en";
+export type Lang = ResultLang;
 export type ResultStatus =
   "changed" | "matched" | "cancelled" | "expired" | "review" | "unavailable";
 export type Source = {

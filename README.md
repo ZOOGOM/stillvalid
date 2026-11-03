@@ -6,7 +6,7 @@ A mobile-first web app that compares notice photos or text with official-source 
 
 ## Implementation status
 
-The web app and server adapter include English/Korean interfaces, ten result languages, optional usage-region settings, image editing, extraction review, source discovery, evidence comparison, synthetic examples, deletion and failure recovery.
+The web app and server adapter include ten display languages, optional usage-region settings, image editing, extraction review, source discovery, evidence comparison, synthetic examples, deletion and failure recovery.
 
 See the [product acceptance checklist](docs/acceptance.md) for the complete user flow, implementation coverage and live release checks. It includes a ten-task real-notice evaluation sheet with unrun tasks clearly marked.
 
@@ -34,18 +34,20 @@ npm start           # Production server
 
 ## User flow
 
-1. In settings, choose the interface language (English or Korean) and result language independently, and optionally select a usage region from 249 countries and regions. Remembering the region is opt-in and reversible. GPS and IP do not determine the notice country.
+1. In settings, choose one display language for the interface and results, and optionally select a usage region from 249 countries and regions. Remembering the region is opt-in and reversible. GPS and IP do not determine the notice country.
 2. Upload a JPEG, PNG or WebP (up to 10MB), crop/rotate locally, or paste notice text. Image re-encoding reduces metadata.
 3. Review title, institution and recognized details, including the notice country separately from the usage region. Resolve a mismatch or edit the text before comparing.
 4. Find source candidates using Meta's built-in web search, or provide an official HTTPS URL.
 5. Inspect before/after values, actual source quotes, URLs, time checked and the next confirmation action.
 6. Copy a summary, start a fresh check, or delete individual/session-wide results.
 
-Result languages are English (`en`), Simplified Chinese (`zh`), Spanish (`es`), French (`fr`), German (`de`), Japanese (`ja`), Korean (`ko`), Portuguese (`pt`), Arabic (`ar`) and Russian (`ru`). Result status, explanations, comparison labels, next actions, warnings and copied summaries use the selected result language. Dates, amounts, institution names, addresses, before/after source values and quotes are preserved. Changing the result language does not change the verdict or make another model call. Arabic results use RTL with original text direction isolated. Traditional Chinese is a later consideration.
+Display languages are English (`en`), Simplified Chinese (`zh`), Spanish (`es`), French (`fr`), German (`de`), Japanese (`ja`), Korean (`ko`), Portuguese (`pt`), Arabic (`ar`) and Russian (`ru`). The selection controls the interface, results, errors, settings and copied summaries. Dates, amounts, institution names, addresses, before/after source values and quotes are preserved. Changing language does not change the verdict or make another model call. Arabic uses RTL throughout with original text direction isolated. Traditional Chinese is a later consideration. Notice language is detected independently and is not forced to a country-specific language.
 
-Region and language choices do not change one another or infer nationality, residence or time zone. The 249 choices do not establish worldwide notice coverage. The result language is stored on the device as `sv_result_lang`, independently of the interface language in `sv_lang`; `POST /api/checks` uses `lang` for the result language. The ten-language dictionary is separate from real Meta language-quality validation, which remains outstanding.
+Region and language choices do not change one another or infer nationality, residence or time zone. The 249 choices do not establish worldwide notice coverage. `POST /api/checks` uses `lang` for the chosen display language. The ten-language dictionaries are separate from real Meta language-quality validation, which remains outstanding.
 
-A valid saved result language takes precedence; otherwise the browser language's supported base code is used, falling back to the default interface language (Korean or English). For example, `ja-JP` selects Japanese results even if the interface defaults to English. Language does not infer the usage region. Chinese uses the `zh-CN` locale and Portuguese uses `pt-BR`.
+Language preference order is valid `sv_display_lang`, legacy `sv_result_lang`, legacy `sv_lang`, a supported browser-language base code, then English. Legacy keys are removed after the new preference is saved. Chinese uses the `zh-CN` locale and Portuguese uses `pt-BR`.
+
+The optional “find region using current location” button requests location once only after a user action and browser permission on HTTPS. A locally loaded boundary dataset estimates the region in the browser without sending, storing or logging coordinates. Inaccurate positions over 20 km, ocean, unsupported or uncertain borders fall back to manual choice. The center-and-eight-sample method with a 1 km guard is an approximation, not a legal boundary or full-radius guarantee. Detection changes only the usage region; users can correct it or cancel.
 
 ## Architecture
 

@@ -1,4 +1,4 @@
-import { copy } from "./i18n";
+import { baseCopy } from "./ui-base";
 import type { ResultLang } from "./languages";
 
 // These keys cover the result view, its warnings, and the copied summary.
@@ -71,7 +71,7 @@ type ResultCopy = Record<ResultCopyKey, string>;
 
 // Reuse the established Korean and English wording exactly.
 function existingCopy(lang: "ko" | "en"): ResultCopy {
-  const source = copy(lang);
+  const source = baseCopy(lang);
   return Object.fromEntries(
     resultKeys.map((key) => [key, source[key]]),
   ) as ResultCopy;
