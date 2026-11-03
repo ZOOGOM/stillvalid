@@ -64,7 +64,7 @@ function countryName(code: string | null, lang: ResultLang) {
     ? new Intl.DisplayNames([resultLocale(lang)], { type: "region" }).of(
         code,
       ) || code
-    : copy(lang === "ko" ? "ko" : "en").unset;
+    : copy(lang).unset;
 }
 function timeLabel(value: string, lang: ResultLang) {
   return new Intl.DateTimeFormat(resultLocale(lang), {
@@ -78,11 +78,13 @@ function Modal({
   children,
   title,
   close,
+  closeLabel,
   wide = false,
 }: {
   children: ReactNode;
   title: string;
   close: () => void;
+  closeLabel: string;
   wide?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -137,7 +139,7 @@ function Modal({
           <h2 id="modal-title">{title}</h2>
           <button
             className="icon-button"
-            aria-label="Close / 닫기"
+            aria-label={closeLabel}
             onClick={close}
           >
             <X size={21} />
@@ -154,24 +156,41 @@ function CountryPicker({
   setValue,
   lang,
   setLang,
-  resultLanguage,
-  setResultLanguage,
   close,
 }: {
   value: string | null;
   setValue: (v: string | null) => void;
   lang: Lang;
   setLang: (v: Lang) => void;
-  resultLanguage: ResultLang;
-  setResultLanguage: (v: ResultLang) => void;
   close: () => void;
 }) {
   const t = copy(lang),
     [query, setQuery] = useState(""),
-    [remember, setRemember] = useState(false);
+    [remember, setRemember] = useState(false),
+    [locationStatus, setLocationStatus] = useState<
+      | "idle"
+      | "pending"
+      | "detected"
+      | "denied"
+      | "timeout"
+      | "uncertain"
+      | "secure"
+      | "unavailable"
+    >("idle"),
+    [detectedCountry, setDetectedCountry] = useState<string | null>(null);
+  const locationGeneration = useRef(0),
+    rememberRef = useRef(false);
+  useEffect(
+    () => () => {
+      locationGeneration.current++;
+    },
+    [],
+  );
   useEffect(() => {
     try {
-      setRemember(localStorage.getItem("sv_remember_country") === "true");
+      const saved = localStorage.getItem("sv_remember_country") === "true";
+      rememberRef.current = saved;
+      setRemember(saved);
     } catch {}
   }, []);
   const items = countryCodes
@@ -182,47 +201,139 @@ function CountryPicker({
         .includes(query.toLocaleLowerCase()),
     )
     .sort((a, b) => a.name.localeCompare(b.name, lang));
-  const choose = (code: string | null) => {
+  const cancelLocation = () => {
+    locationGeneration.current++;
+    setLocationStatus("idle");
+    setDetectedCountry(null);
+  };
+  const applyCountry = (code: string | null) => {
     setValue(code);
     try {
-      if (remember && code) localStorage.setItem("sv_country", code);
+      if (rememberRef.current && code) localStorage.setItem("sv_country", code);
       else localStorage.removeItem("sv_country");
     } catch {}
+  };
+  const choose = (code: string | null) => {
+    cancelLocation();
+    applyCountry(code);
     close();
   };
+  const detectLocation = () => {
+    const generation = ++locationGeneration.current;
+    setDetectedCountry(null);
+    if (!window.isSecureContext) {
+      setLocationStatus("secure");
+      return;
+    }
+    try {
+      if (!navigator.geolocation) {
+        setLocationStatus("unavailable");
+        return;
+      }
+      setLocationStatus("pending");
+      navigator.geolocation.getCurrentPosition(
+        async ({ coords }) => {
+          try {
+            const { countryFromPosition } = await import("@/lib/location");
+            if (generation !== locationGeneration.current) return;
+            const code = countryFromPosition(
+              coords.latitude,
+              coords.longitude,
+              coords.accuracy,
+            );
+            if (!code) {
+              setLocationStatus("uncertain");
+              return;
+            }
+            applyCountry(code);
+            setDetectedCountry(code);
+            setLocationStatus("detected");
+          } catch {
+            if (generation === locationGeneration.current)
+              setLocationStatus("unavailable");
+          }
+        },
+        (error) => {
+          if (generation !== locationGeneration.current) return;
+          setLocationStatus(
+            error.code === 1
+              ? "denied"
+              : error.code === 3
+                ? "timeout"
+                : "unavailable",
+          );
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+      );
+    } catch {
+      if (generation === locationGeneration.current)
+        setLocationStatus("unavailable");
+    }
+  };
+  const locationMessage =
+    locationStatus === "pending"
+      ? t.locationDetecting
+      : locationStatus === "detected" && detectedCountry
+        ? t.locationDetected.replace(
+            "{country}",
+            countryName(detectedCountry, lang),
+          )
+        : locationStatus === "denied"
+          ? t.locationDenied
+          : locationStatus === "timeout"
+            ? t.locationTimeout
+            : locationStatus === "uncertain"
+              ? t.locationUncertain
+              : locationStatus === "secure"
+                ? t.locationSecure
+                : locationStatus === "unavailable"
+                  ? t.locationUnavailable
+                  : "";
   return (
     <>
       <div className="settings-language-fields">
         <label className="settings-field">
-          {t.resultLanguage}
+          {t.displayLanguage}
           <select
-            value={resultLanguage}
+            value={lang}
             onChange={(e) => {
-              if (isResultLang(e.target.value))
-                setResultLanguage(e.target.value);
+              if (isResultLang(e.target.value)) setLang(e.target.value);
             }}
           >
             {resultLanguageOptions.map(({ code, nativeName, englishName }) => (
-              <option key={code} value={code}>
+              <option key={code} value={code} dir="auto">
                 {nativeName}
                 {nativeName !== englishName ? ` · ${englishName}` : ""}
               </option>
             ))}
           </select>
         </label>
-        <label className="settings-field">
-          {t.interfaceLanguage}
-          <select
-            value={lang}
-            onChange={(e) => setLang(e.target.value === "ko" ? "ko" : "en")}
-          >
-            <option value="ko">한국어</option>
-            <option value="en">English</option>
-          </select>
-        </label>
       </div>
       <h3>{t.country}</h3>
       <p className="muted modal-intro">{t.countryHint}</p>
+      <button
+        className="secondary"
+        onClick={detectLocation}
+        disabled={locationStatus === "pending"}
+      >
+        <MapPin size={16} /> {t.locationDetect}
+      </button>
+      {locationStatus === "pending" && (
+        <button className="text-button" onClick={cancelLocation}>
+          {t.locationCancel}
+        </button>
+      )}
+      {locationMessage && <p role="status">{locationMessage}</p>}
+      <p className="muted">
+        {t.locationPrivacy}{" "}
+        <a
+          href="/licenses/country-coder.txt"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {t.locationLicense}
+        </a>
+      </p>
       <div className="country-search">
         <Search size={18} />
         <input
@@ -264,6 +375,7 @@ function CountryPicker({
             checked={remember}
             onChange={(e) => {
               const checked = e.target.checked;
+              rememberRef.current = checked;
               setRemember(checked);
               try {
                 if (checked) {
@@ -285,6 +397,8 @@ function CountryPicker({
               localStorage.removeItem("sv_country");
               localStorage.removeItem("sv_remember_country");
             } catch {}
+            cancelLocation();
+            rememberRef.current = false;
             setRemember(false);
             setValue(null);
           }}
@@ -328,7 +442,7 @@ function CropModal({
       .catch(() => {});
   }, [image]);
   return (
-    <Modal title={t.cropTitle} close={close} wide>
+    <Modal title={t.cropTitle} close={close} closeLabel={t.closeLabel} wide>
       <p className="muted modal-intro">{t.cropDesc}</p>
       <div className="crop-viewport">
         <Cropper
@@ -393,10 +507,9 @@ function CropModal({
 
 export default function StillValidApp() {
   const [lang, setLang] = useState<Lang>("ko"),
-    [resultLanguage, setResultLanguage] = useState<ResultLang>("ko"),
     [prefsLoaded, setPrefsLoaded] = useState(false),
     t = copy(lang),
-    rt = resultCopy(resultLanguage);
+    rt = resultCopy(lang);
   const [stage, setStage] = useState<Stage>("input"),
     [mode, setMode] = useState<"photo" | "text">("photo");
   const [country, setCountry] = useState<string | null>(null),
@@ -433,9 +546,7 @@ export default function StillValidApp() {
     closeCrop = useCallback(() => setCropping(false), []);
 
   useEffect(() => {
-    const browserLang = navigator.language.toLowerCase();
-    const defaultLang: Lang = browserLang.startsWith("ko") ? "ko" : "en";
-    const browserResultLang = browserLang.split(/[-_]/)[0];
+    const browserLang = navigator.language.toLowerCase().split(/[-_]/)[0];
     const readPreference = (key: string) => {
       try {
         return localStorage.getItem(key);
@@ -443,18 +554,13 @@ export default function StillValidApp() {
         return null;
       }
     };
-    const savedLang = readPreference("sv_lang");
-    const initialLang =
-      savedLang === "en" || savedLang === "ko" ? savedLang : defaultLang;
-    const savedResultLang = readPreference("sv_result_lang");
-    setLang(initialLang);
-    setResultLanguage(
-      isResultLang(savedResultLang)
-        ? savedResultLang
-        : isResultLang(browserResultLang)
-          ? browserResultLang
-          : initialLang,
-    );
+    const candidates = [
+      readPreference("sv_display_lang"),
+      readPreference("sv_result_lang"),
+      readPreference("sv_lang"),
+      browserLang,
+    ];
+    setLang(candidates.find(isResultLang) ?? "en");
     if (readPreference("sv_remember_country") === "true") {
       const saved = readPreference("sv_country");
       if (saved && countryCodes.includes(saved)) setCountry(saved);
@@ -519,20 +625,16 @@ export default function StillValidApp() {
     };
   }, []);
   useEffect(() => {
-    document.documentElement.lang = lang;
+    document.documentElement.lang = resultLocale(lang);
+    document.documentElement.dir = resultDirection(lang);
     if (prefsLoaded) {
       try {
-        localStorage.setItem("sv_lang", lang);
+        localStorage.setItem("sv_display_lang", lang);
+        localStorage.removeItem("sv_result_lang");
+        localStorage.removeItem("sv_lang");
       } catch {}
     }
   }, [lang, prefsLoaded]);
-  useEffect(() => {
-    if (prefsLoaded) {
-      try {
-        localStorage.setItem("sv_result_lang", resultLanguage);
-      } catch {}
-    }
-  }, [resultLanguage, prefsLoaded]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(null), 4500);
@@ -667,7 +769,7 @@ export default function StillValidApp() {
         body: JSON.stringify({
           notice,
           country,
-          lang: resultLanguage,
+          lang: lang,
           sourceUrl: overrideUrl ?? sourceUrl,
           requestKey: crypto.randomUUID(),
         }),
@@ -761,12 +863,9 @@ export default function StillValidApp() {
     busy.current = true;
     setError(null);
     try {
-      const response = await fetch(
-        `/api/demo?id=${id}&lang=${resultLanguage}`,
-        {
-          cache: "no-store",
-        },
-      );
+      const response = await fetch(`/api/demo?id=${id}&lang=${lang}`, {
+        cache: "no-store",
+      });
       if (!response.ok) throw new Error("network");
       const data = await response.json();
       if (generation !== operation.current) return;
@@ -809,7 +908,7 @@ export default function StillValidApp() {
       rt[("desc_" + result.status) as ResultCopyKey],
       result.mode === "demo"
         ? rt.syntheticDesc
-        : rt.checked + ": " + timeLabel(result.checkedAt, resultLanguage),
+        : rt.checked + ": " + timeLabel(result.checkedAt, lang),
       ...result.comparisons.map(
         (f) =>
           `${rt[("key_" + f.key) as ResultCopyKey]}: ${f.before ?? "—"} → ${f.after ?? "—"} (${f.verified ? rt[f.relation === "same" ? "same" : "changed"] : rt.uncertain})`,
@@ -829,16 +928,16 @@ export default function StillValidApp() {
     ].join("\n");
     try {
       await navigator.clipboard.writeText(summary);
-      setToast({ text: rt.copied, lang: resultLanguage });
+      setToast({ text: rt.copied, lang: lang });
     } catch {
-      setToast({ text: rt.copyFailed, lang: resultLanguage });
+      setToast({ text: rt.copyFailed, lang: lang });
     }
   };
 
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main">
-        {lang === "ko" ? "본문으로 이동" : "Skip to content"}
+        {t.skipToContent}
       </a>
       <header className="site-header">
         <div className="header-inner">
@@ -847,17 +946,17 @@ export default function StillValidApp() {
             onClick={() => {
               if (stage !== "processing") reset();
             }}
-            aria-label="StillValid home"
+            aria-label={t.homeLabel}
           >
             <span className="brand-icon">
               <ScanLine size={23} strokeWidth={1.8} />
             </span>
-            <span>
+            <span dir="ltr">
               Still<span className="brand-light">Valid</span>
               <span className="brand-dot">.</span>
             </span>
           </button>
-          <nav aria-label={lang === "ko" ? "주 메뉴" : "Main navigation"}>
+          <nav aria-label={t.mainNavigation}>
             <button onClick={() => setDialog("how")}>{t.navHow}</button>
             <button className="about-nav" onClick={() => setDialog("about")}>
               {t.navAbout}
@@ -869,7 +968,7 @@ export default function StillValidApp() {
               aria-label={t.settings}
             >
               <Globe2 size={16} />
-              {t.settings}
+              <span>{t.settings}</span>
               <ChevronDown size={12} />
             </button>
           </nav>
@@ -925,7 +1024,7 @@ export default function StillValidApp() {
                 <div
                   className="input-tabs"
                   role="tablist"
-                  aria-label={lang === "ko" ? "입력 방식" : "Input method"}
+                  aria-label={t.inputMethod}
                 >
                   <button
                     role="tab"
@@ -983,16 +1082,11 @@ export default function StillValidApp() {
                     />
                     {image ? (
                       <div className="image-preview">
-                        <img
-                          src={image}
-                          alt={
-                            lang === "ko"
-                              ? "선택한 안내문 미리보기"
-                              : "Preview of your notice"
-                          }
-                        />
+                        <img src={image} alt={t.imagePreview} />
                         <div className="image-toolbar">
-                          <span title={imageName}>{imageName}</span>
+                          <span title={imageName} dir="auto">
+                            {imageName}
+                          </span>
                           <button
                             aria-label={t.crop}
                             title={t.crop}
@@ -1110,11 +1204,10 @@ export default function StillValidApp() {
                     <Globe2 size={17} />
                     <span>
                       <small>{t.country}</small>
-                      {countryName(country, lang)} · {t.resultLanguage}:{" "}
+                      {countryName(country, lang)} · {t.displayLanguage}:{" "}
                       {
-                        resultLanguageOptions.find(
-                          (item) => item.code === resultLanguage,
-                        )?.nativeName
+                        resultLanguageOptions.find((item) => item.code === lang)
+                          ?.nativeName
                       }
                     </span>
                     <ChevronDown size={15} />
@@ -1159,12 +1252,7 @@ export default function StillValidApp() {
                   </p>
                 )}
               </section>
-              <aside
-                className="story-panel"
-                aria-label={
-                  lang === "ko" ? "서비스 예시" : "An illustrative comparison"
-                }
-              >
+              <aside className="story-panel" aria-label={t.illustrationLabel}>
                 <div className="story-heading">
                   <span className="tiny-label">
                     <span />
@@ -1344,7 +1432,9 @@ export default function StillValidApp() {
                 {notice.fields.map((f, i) => (
                   <div key={f.key + i}>
                     <span>{t[("key_" + f.key) as CopyKey]}</span>
-                    <strong>{f.value}</strong>
+                    <strong>
+                      <bdi>{f.value}</bdi>
+                    </strong>
                   </div>
                 ))}
               </div>
@@ -1356,7 +1446,7 @@ export default function StillValidApp() {
                   {t.original}
                   <ChevronDown size={15} />
                 </summary>
-                <p>{notice.originalText}</p>
+                <p dir="auto">{notice.originalText}</p>
                 <button
                   className="text-button"
                   onClick={() => {
@@ -1407,6 +1497,7 @@ export default function StillValidApp() {
                   <Link2 size={17} />
                   <input
                     type="url"
+                    dir="ltr"
                     value={sourceUrl}
                     maxLength={2000}
                     placeholder={t.sourcePlaceholder}
@@ -1485,8 +1576,8 @@ export default function StillValidApp() {
         {stage === "result" && result && (
           <section
             className="result-container"
-            lang={resultLanguage}
-            dir={resultDirection(resultLanguage)}
+            lang={lang}
+            dir={resultDirection(lang)}
           >
             <button className="back-button" onClick={reset}>
               <ArrowLeft size={16} />
@@ -1527,14 +1618,14 @@ export default function StillValidApp() {
                 {result.country && (
                   <span>
                     <Globe2 size={14} />
-                    {countryName(result.country, resultLanguage)}
+                    {countryName(result.country, lang)}
                   </span>
                 )}
                 <span>
                   <Clock3 size={14} />
                   {result.mode === "demo"
                     ? rt.demoStamp
-                    : timeLabel(result.checkedAt, resultLanguage)}
+                    : timeLabel(result.checkedAt, lang)}
                 </span>
               </div>
             </div>
@@ -1704,8 +1795,7 @@ export default function StillValidApp() {
                               : rt.sourceUnverified}
                           </small>
                           <small>
-                            {rt.fetched}:{" "}
-                            {timeLabel(s.fetchedAt, resultLanguage)}
+                            {rt.fetched}: {timeLabel(s.fetchedAt, lang)}
                           </small>
                           <a
                             href={s.url}
@@ -1793,7 +1883,7 @@ export default function StillValidApp() {
             <ArrowUpRight size={12} />
           </a>
         </nav>
-        <p className="footer-copyright" lang="en">
+        <p className="footer-copyright" lang="en" dir="ltr">
           <strong>Copyright 2026 Zoogom. All rights reserved.</strong>
         </p>
       </footer>
@@ -1809,14 +1899,16 @@ export default function StillValidApp() {
         </div>
       )}
       {countryOpen && (
-        <Modal title={t.settings} close={closeCountry}>
+        <Modal
+          title={t.settings}
+          close={closeCountry}
+          closeLabel={t.closeLabel}
+        >
           <CountryPicker
             value={country}
             setValue={setCountryValue}
             lang={lang}
             setLang={setLang}
-            resultLanguage={resultLanguage}
-            setResultLanguage={setResultLanguage}
             close={closeCountry}
           />
         </Modal>
@@ -1844,6 +1936,7 @@ export default function StillValidApp() {
                   : t.deleteAsk
           }
           close={closeDialog}
+          closeLabel={t.closeLabel}
         >
           {dialog === "how" && (
             <div className="how-list">
@@ -1890,14 +1983,7 @@ export default function StillValidApp() {
               <button
                 className="text-button delete-button"
                 onClick={async () => {
-                  if (
-                    !window.confirm(
-                      lang === "ko"
-                        ? "이 세션의 모든 확인 결과를 삭제할까요?"
-                        : "Delete all check results in this session?",
-                    )
-                  )
-                    return;
+                  if (!window.confirm(t.deleteAllConfirm)) return;
                   try {
                     const response = await fetch("/api/session", {
                       method: "DELETE",
@@ -1912,9 +1998,7 @@ export default function StillValidApp() {
                 }}
               >
                 <Trash2 size={14} />
-                {lang === "ko"
-                  ? "이 세션의 모든 결과 삭제"
-                  : "Delete all results in this session"}
+                {t.deleteAllResults}
               </button>
             </div>
           )}

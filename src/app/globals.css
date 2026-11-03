@@ -223,6 +223,7 @@ html[lang="en"] .hero h1 {
 }
 .trust-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 25px;
@@ -2353,7 +2354,7 @@ html[lang="en"] .hero h1 {
 
 .settings-language-fields {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -2390,6 +2391,40 @@ html[lang="en"] .hero h1 {
 .result-container[dir="rtl"] .lucide-arrow-right,
 .result-container[dir="rtl"] .lucide-arrow-left {
   transform: scaleX(-1);
+}
+html[dir="rtl"] .lucide-arrow-right,
+html[dir="rtl"] .lucide-arrow-left {
+  transform: scaleX(-1);
+}
+html[dir="rtl"] .country-list button > svg:last-child {
+  margin-left: 0;
+  margin-inline-start: auto;
+}
+html[dir="rtl"] .start-button svg {
+  right: auto;
+  left: 18px;
+}
+html[dir="rtl"] .skip-link {
+  left: auto;
+  right: 20px;
+}
+.header-inner nav,
+.header-inner nav > button {
+  min-width: 0;
+}
+.language-button > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.modal p[role="status"] {
+  font-size: 13px;
+  line-height: 1.8;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--green-soft);
+  overflow-wrap: anywhere;
 }
 @media (max-width: 640px) {
   .settings-field select {

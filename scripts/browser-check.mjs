@@ -29,67 +29,203 @@ async function audit(page, label) {
     });
 }
 try {
-  const japaneseContext = await browser.newContext({ locale: "ja-JP" });
-  const japanesePage = await japaneseContext.newPage();
-  await japanesePage.goto(origin, { waitUntil: "networkidle" });
-  await japanesePage
-    .getByRole("button", { name: "Settings", exact: true })
-    .click();
-  assert.equal(
-    await japanesePage
-      .getByRole("combobox", { name: "Result language" })
-      .inputValue(),
-    "ja",
-  );
-  assert.equal(
-    await japanesePage
-      .getByRole("combobox", { name: "Interface language" })
-      .inputValue(),
-    "en",
-  );
-  assert.equal(
-    await japanesePage.evaluate(() => localStorage.getItem("sv_country")),
-    null,
-  );
-  await japaneseContext.close();
+  // Preferences are initialized independently of region and recover when storage is blocked.
+  for (const scenario of [
+    { locale: "ja-JP", values: {}, expected: "ja" },
+    {
+      locale: "ja-JP",
+      values: { sv_lang: "ko", sv_result_lang: "es" },
+      expected: "es",
+    },
+    {
+      locale: "ja-JP",
+      values: { sv_lang: "ko", sv_result_lang: "es", sv_display_lang: "fr" },
+      expected: "fr",
+    },
+    {
+      locale: "ja-JP",
+      values: { sv_result_lang: "invalid", sv_lang: "ko" },
+      expected: "ko",
+    },
+    { locale: "ja-JP", blocked: true, values: {}, expected: "ja" },
+  ]) {
+    const c = await browser.newContext({ locale: scenario.locale });
+    await c.addInitScript(({ values, blocked }) => {
+      for (const [key, value] of Object.entries(values))
+        localStorage.setItem(key, value);
+      if (blocked)
+        Object.defineProperty(window, "localStorage", {
+          get() {
+            throw new DOMException("Blocked", "SecurityError");
+          },
+        });
+    }, scenario);
+    const p = await c.newPage();
+    p.on("pageerror", (e) => errors.push(e.message));
+    await p.goto(origin, { waitUntil: "networkidle" });
+    await p.locator(".language-button").click();
+    assert.equal(
+      await p.locator(".settings-language-fields select").count(),
+      1,
+    );
+    assert.equal(
+      await p.locator(".settings-language-fields select").inputValue(),
+      scenario.expected,
+    );
+    if (!scenario.blocked) {
+      assert.equal(
+        await p.evaluate(() => localStorage.getItem("sv_display_lang")),
+        scenario.expected,
+      );
+      assert.equal(
+        await p.evaluate(() => localStorage.getItem("sv_result_lang")),
+        null,
+      );
+      assert.equal(
+        await p.evaluate(() => localStorage.getItem("sv_lang")),
+        null,
+      );
+      assert.equal(
+        await p.evaluate(() => localStorage.getItem("sv_country")),
+        null,
+      );
+    }
+    await c.close();
+  }
   results.push(
-    "supported browser locale initializes result language independently of UI and region",
+    "browser language, legacy migration and blocked storage fallback",
   );
-  const blockedStorageContext = await browser.newContext({ locale: "ja-JP" });
-  await blockedStorageContext.addInitScript(() => {
-    Object.defineProperty(window, "localStorage", {
-      get() {
-        throw new DOMException("Storage access blocked", "SecurityError");
+  // Geolocation is mocked: no prompt or external geolocation service is used.
+  const gpsContext = await browser.newContext({ locale: "en-US" });
+  await gpsContext.addInitScript(() => {
+    window.__geo = { calls: 0, success: null, failure: null, options: null };
+    Object.defineProperty(navigator, "geolocation", {
+      value: {
+        getCurrentPosition(success, failure, options) {
+          window.__geo.calls++;
+          window.__geo.success = success;
+          window.__geo.failure = failure;
+          window.__geo.options = options;
+        },
       },
     });
   });
-  const blockedStoragePage = await blockedStorageContext.newPage();
-  blockedStoragePage.on("pageerror", (e) => errors.push(e.message));
-  await blockedStoragePage.goto(origin, { waitUntil: "networkidle" });
-  assert.match(
-    await blockedStoragePage
-      .getByRole("button", { name: /Region of use/ })
-      .innerText(),
-    /Not selected/,
+  const gps = await gpsContext.newPage();
+  const gpsRequests = [];
+  gps.on("request", (r) =>
+    gpsRequests.push(r.url() + " " + (r.postData() || "")),
   );
-  await blockedStoragePage
-    .getByRole("button", { name: "Settings", exact: true })
+  await gps.goto(origin, { waitUntil: "networkidle" });
+  assert.equal(await gps.evaluate(() => window.__geo.calls), 0);
+  await gps.locator(".language-button").click();
+  assert.equal(await gps.evaluate(() => window.__geo.calls), 0);
+  assert.equal(await gps.getByRole("checkbox").isChecked(), false);
+  await gps
+    .getByRole("button", { name: "Find my region from location" })
     .click();
+  assert.equal(await gps.evaluate(() => window.__geo.calls), 1);
+  assert.deepEqual(await gps.evaluate(() => window.__geo.options), {
+    enableHighAccuracy: false,
+    timeout: 10000,
+    maximumAge: 300000,
+  });
+  await gps.locator(".settings-language-fields select").selectOption("es");
+  assert.ok(await gps.getByRole("status").innerText());
+  await gps.locator(".settings-language-fields select").selectOption("en");
   assert.equal(
-    await blockedStoragePage
-      .getByRole("combobox", { name: "Result language" })
-      .inputValue(),
-    "ja",
+    await gps.evaluate(() => localStorage.getItem("sv_country")),
+    null,
+  );
+  await gps.getByRole("checkbox").check();
+  await gps.evaluate(() =>
+    window.__geo.success({
+      coords: { latitude: 37.5665, longitude: 126.978, accuracy: 100 },
+    }),
+  );
+  await gps
+    .getByRole("status")
+    .filter({ hasText: /Detected region:/ })
+    .waitFor();
+  assert.equal(
+    await gps.evaluate(() => localStorage.getItem("sv_country")),
+    "KR",
   );
   assert.equal(
-    await blockedStoragePage
-      .getByRole("combobox", { name: "Interface language" })
-      .inputValue(),
+    await gps.locator(".settings-language-fields select").inputValue(),
     "en",
   );
-  await blockedStorageContext.close();
+  for (const [code, message] of [
+    [1, /permission was denied/],
+    [3, /timed out/],
+    [2, /unavailable/],
+  ]) {
+    await gps
+      .getByRole("button", { name: "Find my region from location" })
+      .click();
+    await gps.evaluate((code) => window.__geo.failure({ code }), code);
+    await gps.getByRole("status").filter({ hasText: message }).waitFor();
+  }
+  await gps
+    .getByRole("button", { name: "Find my region from location" })
+    .click();
+  await gps.evaluate(() =>
+    window.__geo.success({
+      coords: { latitude: 0, longitude: 0, accuracy: 100 },
+    }),
+  );
+  await gps
+    .getByRole("status")
+    .filter({ hasText: /imprecise or near a border or coast/ })
+    .waitFor();
+  await gps
+    .getByRole("button", { name: "Find my region from location" })
+    .click();
+  await gps.getByRole("button", { name: "Cancel location lookup" }).click();
+  await gps.evaluate(() =>
+    window.__geo.success({
+      coords: { latitude: 38.8977, longitude: -77.0365, accuracy: 100 },
+    }),
+  );
+  assert.equal(
+    await gps.evaluate(() => localStorage.getItem("sv_country")),
+    "KR",
+  );
+  await gps
+    .getByRole("button", { name: "Find my region from location" })
+    .click();
+  await gps.locator(".country-search input").fill("United States");
+  await gps
+    .getByRole("button", { name: /USUnited States|US United States/ })
+    .click();
+  await gps.evaluate(() =>
+    window.__geo.success({
+      coords: { latitude: 37.5665, longitude: 126.978, accuracy: 100 },
+    }),
+  );
+  assert.equal(
+    await gps.evaluate(() => localStorage.getItem("sv_country")),
+    "US",
+  );
+  await gps.locator(".language-button").click();
+  await gps
+    .getByRole("button", { name: "Find my region from location" })
+    .click();
+  await gps.locator(".modal-heading .icon-button").click();
+  await gps.evaluate(() =>
+    window.__geo.success({
+      coords: { latitude: 37.5665, longitude: 126.978, accuracy: 100 },
+    }),
+  );
+  assert.equal(
+    await gps.evaluate(() => localStorage.getItem("sv_country")),
+    "US",
+  );
+  assert.ok(
+    gpsRequests.every((r) => !r.includes("37.5665") && !r.includes("126.978")),
+  );
+  await gpsContext.close();
   results.push(
-    "blocked local storage retains browser language defaults and no region",
+    "on-demand mocked location success, errors, cancellation and local-only coordinates",
   );
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1050 },
@@ -102,6 +238,39 @@ try {
   await audit(page, "desktop home");
   await page.screenshot({ path: screenshots + "/desktop.png", fullPage: true });
   results.push("desktop home");
+  // Every display language must fit the narrow home page as well as results.
+  for (const code of [
+    "en",
+    "zh",
+    "es",
+    "fr",
+    "de",
+    "ja",
+    "ko",
+    "pt",
+    "ar",
+    "ru",
+  ]) {
+    await page.locator(".language-button").click();
+    await page.locator(".settings-language-fields select").selectOption(code);
+    await page.locator(".modal-heading .icon-button").click();
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert.equal(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+        true,
+        `${code} home at ${width}px`,
+      );
+    }
+  }
+  await page.locator(".language-button").click();
+  await page.locator(".settings-language-fields select").selectOption("ko");
+  await page.locator(".modal-heading .icon-button").click();
+  await page.setViewportSize({ width: 1440, height: 1050 });
+  results.push("all ten display languages fit 320px and 390px home pages");
+
   await page.getByRole("button", { name: /사용 지역/ }).click();
   await page.getByRole("textbox", { name: "국가 이름 검색" }).fill("미국");
   await page.getByRole("checkbox").check();
@@ -116,38 +285,25 @@ try {
     /미국/,
   );
   await page.getByRole("button", { name: /사용 지역/ }).click();
-  await page.getByRole("combobox", { name: "결과 언어" }).selectOption("es");
-  assert.equal(
-    await page.evaluate(() => localStorage.getItem("sv_country")),
-    "US",
-  );
   await page.getByRole("button", { name: "기억한 국가 지우기" }).click();
-  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  await page.locator(".modal-heading .icon-button").click();
   assert.equal(
     await page.evaluate(() => localStorage.getItem("sv_country")),
     null,
   );
-  await page.getByRole("button", { name: "설정", exact: true }).click();
-  await page.getByRole("combobox", { name: "결과 언어" }).selectOption("es");
-  assert.equal(
-    await page.getByRole("combobox", { name: "화면 언어" }).inputValue(),
-    "ko",
-  );
-  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  await page.locator(".language-button").click();
+  await page.locator(".settings-language-fields select").selectOption("es");
+  await page.locator(".modal-heading .icon-button").click();
   await page.reload({ waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "설정", exact: true }).click();
+  await page.locator(".language-button").click();
   assert.equal(
-    await page.getByRole("combobox", { name: "결과 언어" }).inputValue(),
+    await page.locator(".settings-language-fields select").inputValue(),
     "es",
   );
-  assert.equal(
-    await page.getByRole("combobox", { name: "화면 언어" }).inputValue(),
-    "ko",
-  );
-  await page.getByRole("combobox", { name: "결과 언어" }).selectOption("ko");
-  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  await page.locator(".settings-language-fields select").selectOption("ko");
+  await page.locator(".modal-heading .icon-button").click();
   results.push(
-    "optional region memory and clear; independent result language persists on reload",
+    "optional region memory and clear; display language persists on reload",
   );
   await page.getByRole("button", { name: "신청 기한이 바뀌었다면?" }).click();
   await page.getByRole("heading", { name: "달라진 내용을 찾았어요" }).waitFor();
@@ -165,8 +321,8 @@ try {
     if (/\/api\/(?:checks|demo)(?:[/?]|$)/.test(request.url())) checkRequests++;
   });
   await page.getByRole("button", { name: "설정", exact: true }).click();
-  const resultLanguage = page.getByRole("combobox", { name: "결과 언어" });
-  const interfaceLanguage = page.getByRole("combobox", { name: "화면 언어" });
+  const resultLanguage = page.locator(".settings-language-fields select");
+  const translatedUi = new Set();
   await page.screenshot({
     path: screenshots + "/desktop-settings.png",
     fullPage: true,
@@ -185,7 +341,15 @@ try {
     "ru",
   ]) {
     await resultLanguage.selectOption(code);
-    assert.equal(await interfaceLanguage.inputValue(), "ko");
+    assert.equal(
+      await page.locator("html").getAttribute("lang"),
+      code === "zh" ? "zh-CN" : code === "pt" ? "pt-BR" : code,
+    );
+    assert.equal(
+      await page.locator("html").getAttribute("dir"),
+      code === "ar" ? "rtl" : "ltr",
+    );
+    translatedUi.add(await page.locator(".language-button").innerText());
     assert.equal(
       await page.locator(".result-container").getAttribute("lang"),
       code,
@@ -202,8 +366,9 @@ try {
     );
   }
   assert.equal(translatedHeadings.size, 10);
+  assert.equal(translatedUi.size, 10);
   await resultLanguage.selectOption("ar");
-  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  await page.locator(".modal-heading .icon-button").click();
   await page.screenshot({
     path: screenshots + "/desktop-arabic-result.png",
     fullPage: true,
@@ -217,14 +382,13 @@ try {
   );
   assert.match(arabicSummary, /[\u0600-\u06ff]/);
   assert.match(arabicSummary, /2026년 11월 10일/);
-  await page.getByRole("button", { name: "설정", exact: true }).click();
+  await page.locator(".language-button").click();
   await resultLanguage.selectOption("en");
-  await interfaceLanguage.selectOption("en");
   assert.equal(
-    await page.getByRole("combobox", { name: "Result language" }).inputValue(),
+    await page.locator(".settings-language-fields select").inputValue(),
     "en",
   );
-  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  await page.locator(".modal-heading .icon-button").click();
   assert.equal(
     checkRequests,
     0,
@@ -240,7 +404,7 @@ try {
     await page.getByText("2026년 11월 10일", { exact: true }).isVisible(),
   );
   results.push(
-    "ten result languages, independent interface, RTL, copy and preserved facts without new requests",
+    "ten display languages, RTL, copy and preserved facts without new requests",
   );
   await page
     .getByRole("button", { name: "Check another notice", exact: true })
@@ -360,9 +524,7 @@ try {
   await page
     .getByRole("heading", { name: "Is this the right notice?" })
     .waitFor();
-  const readCountry = page.getByRole("combobox", {
-    name: "Country read from the notice",
-  });
+  const readCountry = page.locator(".review-card select");
   assert.equal(await readCountry.inputValue(), "GB");
   assert.match(
     await page.getByRole("button", { name: /Region of use/ }).innerText(),
@@ -387,10 +549,10 @@ try {
     .getByRole("textbox", { name: "Year or edition" })
     .fill("2026 corrected");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Result language" })
-    .selectOption("es");
-  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  await page.locator(".settings-language-fields select").selectOption("es");
+  assert.equal(await readCountry.inputValue(), "GB");
+  await page.locator(".settings-language-fields select").selectOption("en");
+  await page.locator(".modal-heading .icon-button").click();
   assert.equal(await readCountry.inputValue(), "GB");
   assert.match(
     await page.getByRole("button", { name: /Region of use/ }).innerText(),
@@ -440,17 +602,16 @@ try {
       })
     ),
   );
-  await page
-    .getByRole("button", { name: "Check official sources", exact: true })
-    .click();
+  await page.locator(".language-button").click();
+  await page.locator(".settings-language-fields select").selectOption("es");
+  await page.locator(".modal-heading .icon-button").click();
+  await page.locator(".review-card button.primary").click();
   await page.locator('.result-container[lang="es"]').waitFor();
   assert.equal(sentNotice.notice.edition, "2026 corrected");
   assert.equal(sentNotice.lang, "es");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Result language" })
-    .selectOption("en");
-  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  await page.locator(".language-button").click();
+  await page.locator(".settings-language-fields select").selectOption("en");
+  await page.locator(".modal-heading .icon-button").click();
   await page.getByRole("heading", { name: "We found a few changes" }).waitFor();
   assert.ok(
     await page
@@ -541,10 +702,10 @@ try {
     true,
   );
   const closeSize = await phone
-    .getByRole("button", { name: "Close / 닫기" })
+    .locator(".modal-heading .icon-button")
     .boundingBox();
   assert.ok(closeSize && closeSize.width >= 44 && closeSize.height >= 44);
-  await phone.getByRole("button", { name: "Close / 닫기" }).click();
+  await phone.locator(".modal-heading .icon-button").click();
   await phone.getByRole("tab", { name: "텍스트로" }).click();
   assert.ok(
     (await phone
@@ -585,9 +746,9 @@ try {
     ),
     true,
   );
-  await phone.getByRole("button", { name: "설정", exact: true }).click();
-  await phone.getByRole("combobox", { name: "결과 언어" }).selectOption("ar");
-  await phone.getByRole("button", { name: "Close / 닫기" }).click();
+  await phone.locator(".language-button").click();
+  await phone.locator(".settings-language-fields select").selectOption("ar");
+  await phone.locator(".modal-heading .icon-button").click();
   assert.equal(
     await phone.locator(".result-container").getAttribute("dir"),
     "rtl",
@@ -606,7 +767,7 @@ try {
   results.push("390px touch viewport and result without horizontal overflow");
   for (const width of [320, 390]) {
     await phone.setViewportSize({ width, height: 800 });
-    await phone.getByRole("button", { name: "설정", exact: true }).click();
+    await phone.locator(".language-button").click();
     assert.equal(
       await phone.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -619,22 +780,20 @@ try {
         .evaluate((el) => el.scrollWidth <= el.clientWidth),
       true,
     );
-    assert.ok(
-      await phone.getByRole("textbox", { name: "국가 이름 검색" }).isVisible(),
-    );
+    assert.ok(await phone.locator(".country-search input").isVisible());
     await phone.locator(".modal").evaluate(async (el) => {
       await Promise.all(
         el.getAnimations().map((animation) => animation.finished),
       );
     });
     await audit(phone, `${width}px settings`);
-    await phone.getByRole("button", { name: "Close / 닫기" }).click();
+    await phone.locator(".modal-heading .icon-button").click();
     for (const code of ["ar", "de", "fr"]) {
-      await phone.getByRole("button", { name: "설정", exact: true }).click();
+      await phone.locator(".language-button").click();
       await phone
-        .getByRole("combobox", { name: "결과 언어" })
+        .locator(".settings-language-fields select")
         .selectOption(code);
-      await phone.getByRole("button", { name: "Close / 닫기" }).click();
+      await phone.locator(".modal-heading .icon-button").click();
       assert.equal(
         await phone.locator(".result-container").getAttribute("lang"),
         code,

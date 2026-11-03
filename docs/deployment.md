@@ -2,17 +2,17 @@
 
 Choose **GitHub + Vercel + Upstash Redis** for deployment without maintaining a server. The application also supports a single Node.js 24 process with persistent SQLite storage through Docker Compose. GitHub Pages alone cannot run the protected Meta API routes.
 
-## Recommended GitHub deployment
+## Vercel Git deployment
 
-1. Review/merge the application branch, then import `ZOOGOM/stillvalid` into Vercel using your GitHub account. Use the Next.js framework preset. Node.js 24 is specified in `package.json`.
-2. Connect an Upstash Redis database through your Vercel storage/integration setup. Register its `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` as server-only environment variables.
-3. Register `META_API_KEY`. Set production `APP_URL` to the exact deployed HTTPS origin; leave it unset on independent preview domains or use their own origin.
-4. Deploy the application commit. The synthetic examples remain available without secrets; live checks fail closed if Meta or shared storage is not configured.
-5. Test live extraction, official-source retrieval, comparisons, cross-session isolation and deletion before using the URL for judging.
+Import `ZOOGOM/stillvalid` into a new Vercel project and connect its Git integration. Vercel can build and deploy pushes independently of GitHub Actions. The user reports that the Actions quota is exhausted; CI status has not been independently verified. Run local `npm run check`, `npm run build`, and `npm run test:browser` before pushing; the browser test needs a running app and Chromium. Vercel does not wait for those local checks or the GitHub checks before deploying.
+
+The current `main` contains setup documentation, while the application is on `feat/stillvalid-webapp`. For a new review project, set its Production Branch in the Vercel project's Git settings to `feat/stillvalid-webapp`, then redeploy that branch or push a new commit. The initial import may try `main` and fail before this setting is changed. Once the app is merged into `main`, change the Production Branch back to `main`. The Git integration needs no `VERCEL_TOKEN`, `VERCEL_ORG_ID`, or `VERCEL_PROJECT_ID`; CLI alternatives are described in the [Korean setup guide](deployment.ko.md).
+
+The UI, location control and synthetic examples can be reviewed without application secrets. For live checks, register `META_API_KEY`, `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in Vercel for the relevant environment; live checks fail closed without Meta or shared storage. After Vercel issues an HTTPS domain, set production `APP_URL` to its exact origin and redeploy. Leave it unset for independent preview domains or set their own exact origin. Configure Deployment Protection so the intended review URL is accessible externally and test it in a separate browser before giving it to Claude. Do not put passwords or bypass tokens in chat or documentation.
 
 Vercel runs server-side functions and hosts the interface; GitHub stores source and triggers deployments. Redis holds expiring results and atomic request/concurrency counters shared between function instances. No always-on server purchase is required. Provider plans, quotas and Meta API charges still apply separately.
 
-See [Vercel's GitHub integration](https://vercel.com/docs/git/vercel-for-github) and [Upstash Redis REST](https://upstash.com/docs/redis/features/restapi). Hosted accounts and secrets are not created by the code. The Redis implementation has in-memory Lua behavior tests, not a verified hosted-provider deployment.
+See [Vercel Git integration](https://vercel.com/docs/git), [Deployment Protection](https://vercel.com/docs/deployment-protection), and [Upstash Redis REST](https://upstash.com/docs/redis/features/restapi). Hosted accounts and secrets are not created by the code. No Vercel deployment or hosted Redis connection has been verified, and no hosted URL is available yet.
 
 ## Local development
 
