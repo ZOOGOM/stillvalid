@@ -15,6 +15,8 @@ export function db(): DatabaseSync {
   database = new DatabaseSync(path);
   database.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
     CREATE TABLE IF NOT EXISTS checks (id TEXT PRIMARY KEY, owner TEXT NOT NULL, state TEXT NOT NULL, result TEXT, created INTEGER NOT NULL, expires INTEGER NOT NULL, request_key TEXT, UNIQUE(owner, request_key));
+    CREATE TABLE IF NOT EXISTS work_leases (id TEXT PRIMARY KEY, owner TEXT NOT NULL, request_key TEXT, expires INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS work_admissions (id TEXT PRIMARY KEY, created INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS limits (key TEXT PRIMARY KEY, count INTEGER NOT NULL, expires INTEGER NOT NULL);`);
   const timer = setInterval(() => {
     try {
@@ -47,11 +49,15 @@ export function cleanup(): void {
   const now = Date.now();
   db().prepare("DELETE FROM checks WHERE expires < ?").run(now);
   db().prepare("DELETE FROM limits WHERE expires < ?").run(now);
+  db().prepare("DELETE FROM work_leases WHERE expires <= ?").run(now);
+  db()
+    .prepare("DELETE FROM work_admissions WHERE created <= ?")
+    .run(now - 60000);
   db()
     .prepare(
       "UPDATE checks SET state = 'interrupted' WHERE state = 'processing' AND created < ?",
     )
-    .run(now - 180000);
+    .run(now - 210000);
 }
 export function reserve(key: string, maximum: number, windowMs: number): void {
   const now = Date.now(),
@@ -82,15 +88,17 @@ export function createCheck(
       database.exec("COMMIT");
       return { id: existing.id, existing: true };
     }
-    const processing = database
-      .prepare(
-        "SELECT count(*) AS count FROM checks WHERE state = 'processing'",
-      )
-      .get() as { count: number };
-    if (processing.count >= 3) throw new AppError("busy", 429);
-    reserve("check:" + actor, 12, 3600000);
+    const activeDuplicate = database
+      .prepare("SELECT id FROM work_leases WHERE owner = ? AND request_key = ?")
+      .get(actor, key) as { id: string } | undefined;
+    if (activeDuplicate) {
+      database.exec("COMMIT");
+      return { id: activeDuplicate.id, existing: true };
+    }
     const id = randomUUID(),
       now = Date.now();
+    admitWork(id, actor, key);
+    reserve("check:" + actor, 12, 3600000);
     database
       .prepare(
         "INSERT INTO checks (id, owner, state, created, expires, request_key) VALUES (?, ?, 'processing', ?, ?, ?)",
@@ -136,4 +144,42 @@ export function deleteCheck(id: string, actor: string): void {
 }
 export function deleteAllChecks(actor: string): void {
   db().prepare("DELETE FROM checks WHERE owner = ?").run(actor);
+}
+
+// A lease outlives both route hard deadlines (180s/90s). Result deletion must
+// never release it: only the runner's finally block knows execution has ended.
+function admitWork(id: string, actor: string, requestKey: string | null) {
+  const active = db()
+    .prepare("SELECT count(*) AS count FROM work_leases")
+    .get() as { count: number };
+  if (active.count >= 3) throw new AppError("busy", 429);
+  const recent = db()
+    .prepare("SELECT count(*) AS count FROM work_admissions")
+    .get() as { count: number };
+  if (recent.count >= 10) throw new AppError("rate_limit", 429);
+  const now = Date.now();
+  db()
+    .prepare("INSERT INTO work_leases VALUES (?, ?, ?, ?)")
+    .run(id, actor, requestKey, now + 210000);
+  db().prepare("INSERT INTO work_admissions VALUES (?, ?)").run(id, now);
+}
+export function acquireExtraction(actor: string): string {
+  const database = db();
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    cleanup();
+    const id = randomUUID();
+    admitWork(id, actor, null);
+    reserve("extract:" + actor, 20, 3600000);
+    database.exec("COMMIT");
+    return id;
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
+  }
+}
+export function releaseWork(id: string, actor: string): void {
+  db()
+    .prepare("DELETE FROM work_leases WHERE id = ? AND owner = ?")
+    .run(id, actor);
 }

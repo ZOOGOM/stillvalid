@@ -16,6 +16,7 @@ import {
   getCheck,
   owner,
   sameOrigin,
+  releaseWork,
 } from "@/lib/store";
 import { assembleResult } from "@/lib/compare";
 import { errorResponse, readJson } from "@/lib/http";
@@ -54,8 +55,21 @@ export async function POST(request: NextRequest) {
             abort.abort();
           }
         };
+        const ensureActive = async () => {
+          if (signal.aborted) throw new AppError("cancelled", 499);
+          try {
+            if ((await getCheck(job.id, actor)).state !== "processing")
+              throw new AppError("cancelled", 499);
+          } catch (error) {
+            if (error instanceof AppError && error.code === "not_found")
+              throw new AppError("cancelled", 499);
+            throw error;
+          }
+          if (signal.aborted) throw new AppError("cancelled", 499);
+        };
         send("created", { id: job.id });
         try {
+          await ensureActive();
           const meta = new MetaClient();
           let candidates: Candidate[] = [];
           const warnings: string[] = [];
@@ -100,7 +114,7 @@ export async function POST(request: NextRequest) {
           const analyses: ModelComparison[] = [];
           send("phase", { step: "sources" });
           for (const candidate of candidates.slice(0, 3)) {
-            if (signal.aborted) throw new AppError("cancelled", 499);
+            await ensureActive();
             try {
               const source = await fetchSource(
                 candidate.url,
@@ -118,9 +132,11 @@ export async function POST(request: NextRequest) {
             }
           }
           send("phase", { step: "compare" });
-          for (const source of sources)
+          for (const source of sources) {
+            await ensureActive();
             analyses.push(await meta.compare(notice, source, lang, signal));
-          if (signal.aborted) throw new AppError("cancelled", 499);
+          }
+          await ensureActive();
           const result = assembleResult({
             id: job.id,
             notice,
@@ -151,6 +167,11 @@ export async function POST(request: NextRequest) {
           );
           send("error", { code });
         } finally {
+          try {
+            await releaseWork(job.id, actor);
+          } catch {
+            // Storage outages retain the lease until its bounded expiry.
+          }
           try {
             controller.close();
           } catch {

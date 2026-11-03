@@ -36,3 +36,10 @@ export async function deleteCheck(id: string, actor: string) {
 export async function deleteAllChecks(actor: string) {
   await backend().deleteAllChecks(actor);
 }
+
+export async function acquireExtraction(actor: string) {
+  return await backend().acquireExtraction(actor);
+}
+export async function releaseWork(id: string, actor: string) {
+  await backend().releaseWork(id, actor);
+}

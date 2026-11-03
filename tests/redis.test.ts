@@ -56,7 +56,7 @@ test("serverless completion retains an expiring readable result", async () => {
   const ttl = await client.ttl(store.key("check:" + job.id));
   assert.ok(ttl > 0 && ttl <= 86400);
 });
-test("serverless concurrency lease is released after failure", async () => {
+test("serverless concurrency lease is released only when the runner ends", async () => {
   const jobs = await Promise.all(
     [0, 1, 2].map((i) => store.createCheck(String(i), randomUUID())),
   );
@@ -64,6 +64,10 @@ test("serverless concurrency lease is released after failure", async () => {
     code: "busy",
   });
   await store.failCheck(jobs[0].id, "0");
+  await assert.rejects(() => store.createCheck("fourth", randomUUID()), {
+    code: "busy",
+  });
+  await store.releaseWork(jobs[0].id, "0");
   await store.createCheck("fourth", randomUUID());
 });
 test("serverless session-wide deletion preserves other actors", async () => {
@@ -73,17 +77,19 @@ test("serverless session-wide deletion preserves other actors", async () => {
   await assert.rejects(() => store.getCheck(a.id, "a"));
   assert.equal((await store.getCheck(b.id, "b")).state, "processing");
 });
-test("deletion removes the idempotency mapping and permits the same request key again", async () => {
+test("deletion retains active idempotency until the runner ends", async () => {
   for (const deleteAll of [false, true]) {
     const key = randomUUID();
     const first = await store.createCheck("a", key);
     if (deleteAll) await store.deleteAllChecks("a");
     else await store.deleteCheck(first.id, "a");
-    assert.equal(await client.get(store.key("idem:a:" + key)), null);
+    assert.equal((await store.createCheck("a", key)).existing, true);
+    await store.releaseWork(first.id, "a");
     const next = await store.createCheck("a", key);
     assert.equal(next.existing, false);
     assert.notEqual(next.id, first.id);
     await store.failCheck(next.id, "a");
+    await store.releaseWork(next.id, "a");
   }
 });
 test("a stale idempotency mapping left by an older deletion is repaired", async () => {
@@ -102,3 +108,62 @@ test("serverless quota increments atomically and rejects excess requests", async
     code: "rate_limit",
   });
 });
+
+for (const all of [false, true]) {
+  test(`legacy ${all ? "session-wide" : "single"} deletion cannot release v2 execution or request-key leases`, async () => {
+    const requestKey = randomUUID();
+    const first = await store.createCheck("a", requestKey);
+    await store.createCheck("a", randomUUID());
+    await store.createCheck("b", randomUUID());
+    // Execute the previous deployed deletion scripts against the original keys.
+    if (all) {
+      await command(
+        "EVAL",
+        `local ids=redis.call('SMEMBERS',KEYS[1]);for _,id in ipairs(ids) do local key=ARGV[2]..id;if redis.call('HGET',key,'owner')==ARGV[1] then local request=redis.call('HGET',key,'request_key');if request then local idem=ARGV[3]..request;if redis.call('GET',idem)==id then redis.call('DEL',idem) end;end;redis.call('DEL',key);redis.call('ZREM',KEYS[2],id);end;end;redis.call('DEL',KEYS[1]);return 1`,
+        2,
+        store.key("owner:a"),
+        store.key("active"),
+        "a",
+        store.key("check:"),
+        store.key("idem:a:"),
+      );
+    } else {
+      await command(
+        "EVAL",
+        `if redis.call('HGET',KEYS[1],'owner')~=ARGV[1] then return 0 end;local request=redis.call('HGET',KEYS[1],'request_key');if request then local idem=ARGV[3]..request;if redis.call('GET',idem)==ARGV[2] then redis.call('DEL',idem) end;end;redis.call('DEL',KEYS[1]);redis.call('ZREM',KEYS[2],ARGV[2]);redis.call('SREM',KEYS[3],ARGV[2]);return 1`,
+        3,
+        store.key("check:" + first.id),
+        store.key("active"),
+        store.key("owner:a"),
+        "a",
+        first.id,
+        store.key("idem:a:"),
+      );
+    }
+    await client.del(store.key("idem:a:" + requestKey));
+    await assert.rejects(() => store.getCheck(first.id, "a"), {
+      code: "not_found",
+    });
+    await assert.rejects(() => store.acquireExtraction("fresh"), {
+      code: "busy",
+    });
+    await assert.rejects(() => store.createCheck("fresh", randomUUID()), {
+      code: "busy",
+    });
+    const duplicate = await store.createCheck("a", requestKey);
+    assert.equal(duplicate.existing, true);
+    assert.equal(duplicate.id, first.id);
+    await store.finishCheck(first.id, "a", demoResult("deadline", "en"));
+    await assert.rejects(() => store.getCheck(first.id, "a"), {
+      code: "not_found",
+    });
+    await store.releaseWork(first.id, "wrong-owner");
+    await assert.rejects(() => store.acquireExtraction("fresh"), {
+      code: "busy",
+    });
+    await store.releaseWork(first.id, "a");
+    const retry = await store.createCheck("a", requestKey);
+    assert.equal(retry.existing, false);
+    assert.notEqual(retry.id, first.id);
+  });
+}
