@@ -8,6 +8,8 @@ A mobile-first web app that compares notice photos or text with official-source 
 
 The web app and server adapter are implemented: English/Korean interfaces, optional country settings, image editing, extraction review, source discovery, evidence comparison, synthetic examples, deletion and failure recovery.
 
+See the [product acceptance checklist](docs/acceptance.md) for the complete user flow, implementation coverage and live release checks. It includes a ten-task real-notice evaluation sheet with unrun tasks clearly marked.
+
 **Live checks require a real Meta API key and approved network access.** Provider-contract tests use mocked HTTP responses. Live inference, real-notice accuracy, external hosting and a judging-ready service URL have not yet been verified. Examples are visibly synthetic and never presented as live checks.
 
 ## Run locally

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { MetaClient } from "../src/lib/meta";
-import { noticeSchema } from "../src/lib/schema";
+import { comparisonSchema, noticeSchema } from "../src/lib/schema";
 const notice = {
   title: "Workshop",
   institution: "Library",
@@ -104,6 +104,96 @@ test("truncated model JSON cannot become a verified result", () =>
     );
     await assert.rejects(
       () => client.structured("notice", noticeSchema, "Read", {}),
+      { code: "model_output" },
+    );
+  }));
+test("malformed provider envelopes are reported as model output errors", () =>
+  withTestKey(async () => {
+    for (const body of ["{", "null", "[]"]) {
+      const client = new MetaClient(
+        async () => new Response(body),
+        () => {},
+      );
+      await assert.rejects(() => client.call("/chat/completions", {}), {
+        code: "model_output",
+        status: 422,
+      });
+    }
+  }));
+test("notice and comparison countries accept supported codes or null only", () => {
+  const comparison = {
+    same_notice: false,
+    identity_quote: "",
+    country: null,
+    source_role: "unknown",
+    comparisons: [],
+    summary: "",
+    next_action: "",
+  };
+  for (const country of ["GB", "US", "KR", null]) {
+    assert.equal(noticeSchema.safeParse({ ...notice, country }).success, true);
+    assert.equal(
+      comparisonSchema.safeParse({ ...comparison, country }).success,
+      true,
+    );
+  }
+  for (const country of ["X", "1", "12", "ZZ", "us", ""]) {
+    assert.equal(noticeSchema.safeParse({ ...notice, country }).success, false);
+    assert.equal(
+      comparisonSchema.safeParse({ ...comparison, country }).success,
+      false,
+    );
+  }
+});
+test("invalid model country fails extraction and comparison", () =>
+  withTestKey(async () => {
+    const response = (content: unknown) =>
+      Response.json({
+        choices: [
+          {
+            finish_reason: "stop",
+            message: { content: JSON.stringify(content) },
+          },
+        ],
+      });
+    const { originalText: _ignored, ...extracted } = notice;
+    const extractor = new MetaClient(
+      async () => response({ ...extracted, country: "12" }),
+      () => {},
+    );
+    await assert.rejects(
+      () => extractor.extract(notice.originalText, undefined, null),
+      {
+        code: "model_output",
+      },
+    );
+    const comparator = new MetaClient(
+      async () =>
+        response({
+          same_notice: false,
+          identity_quote: "",
+          country: "ZZ",
+          source_role: "unknown",
+          comparisons: [],
+          summary: "",
+          next_action: "",
+        }),
+      () => {},
+    );
+    await assert.rejects(
+      () =>
+        comparator.compare(
+          notice,
+          {
+            id: "source-0",
+            url: "https://nypl.org/notice",
+            title: "Notice",
+            text: "Workshop. Open.",
+            authority: "registered",
+            fetchedAt: "2026-11-03T00:00:00Z",
+          },
+          "en",
+        ),
       { code: "model_output" },
     );
   }));

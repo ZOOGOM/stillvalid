@@ -71,24 +71,37 @@ export function createCheck(
   actor: string,
   key: string,
 ): { id: string; existing: boolean } {
-  cleanup();
-  const existing = db()
-    .prepare("SELECT id FROM checks WHERE owner = ? AND request_key = ?")
-    .get(actor, key) as { id: string } | undefined;
-  if (existing) return { id: existing.id, existing: true };
-  const processing = db()
-    .prepare("SELECT count(*) AS count FROM checks WHERE state = 'processing'")
-    .get() as { count: number };
-  if (processing.count >= 3) throw new AppError("busy", 429);
-  reserve("check:" + actor, 12, 3600000);
-  const id = randomUUID(),
-    now = Date.now();
-  db()
-    .prepare(
-      "INSERT INTO checks (id, owner, state, created, expires, request_key) VALUES (?, ?, 'processing', ?, ?, ?)",
-    )
-    .run(id, actor, now, now + 86400000, key);
-  return { id, existing: false };
+  const database = db();
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    cleanup();
+    const existing = database
+      .prepare("SELECT id FROM checks WHERE owner = ? AND request_key = ?")
+      .get(actor, key) as { id: string } | undefined;
+    if (existing) {
+      database.exec("COMMIT");
+      return { id: existing.id, existing: true };
+    }
+    const processing = database
+      .prepare(
+        "SELECT count(*) AS count FROM checks WHERE state = 'processing'",
+      )
+      .get() as { count: number };
+    if (processing.count >= 3) throw new AppError("busy", 429);
+    reserve("check:" + actor, 12, 3600000);
+    const id = randomUUID(),
+      now = Date.now();
+    database
+      .prepare(
+        "INSERT INTO checks (id, owner, state, created, expires, request_key) VALUES (?, ?, 'processing', ?, ?, ?)",
+      )
+      .run(id, actor, now, now + 86400000, key);
+    database.exec("COMMIT");
+    return { id, existing: false };
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
+  }
 }
 export function finishCheck(id: string, actor: string, result: Result): void {
   db()

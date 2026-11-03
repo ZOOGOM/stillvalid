@@ -126,6 +126,17 @@ export function assembleResult(args: {
   const checkedAt = args.checkedAt || new Date().toISOString();
   const verified = comparisons.filter((f) => f.verified);
   const hasUnverified = comparisons.some((f) => !f.verified);
+  const partial = notice.fields.some(
+    (f) =>
+      !verified.some(
+        (v) =>
+          v.key === f.key && normalize(v.before || "") === normalize(f.value),
+      ),
+  );
+  if (partial) warnings.push("partial");
+  const incompleteSources = warnings.some((warning) =>
+    ["search", "budget", "network", "fetch"].includes(warning),
+  );
   const cancelled = analyses.some(
     (a, i) =>
       a.source_role === "cancellation" &&
@@ -150,6 +161,8 @@ export function assembleResult(args: {
     : !verified.length ||
         identityFailed ||
         hasUnverified ||
+        partial ||
+        incompleteSources ||
         warnings.includes("conflict")
       ? "review"
       : cancelled
@@ -159,8 +172,6 @@ export function assembleResult(args: {
           : verified.some((f) => f.relation === "changed")
             ? "changed"
             : "matched";
-  if (notice.fields.some((f) => !verified.some((v) => v.key === f.key)))
-    warnings.push("partial");
   return {
     id: args.id,
     mode: args.mode || "live",

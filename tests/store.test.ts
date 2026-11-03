@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import { fork } from "node:child_process";
 import * as store from "../src/lib/sqlite-store";
 const directory = mkdtempSync(join(tmpdir(), "stillvalid-store-"));
 process.env.DATABASE_PATH = join(directory, "test.sqlite");
@@ -52,4 +53,64 @@ test("request limits reject calls beyond the reserved allowance", () => {
   store.reserve(key, 2, 3600000);
   store.reserve(key, 2, 3600000);
   assert.throws(() => store.reserve(key, 2, 3600000), { code: "rate_limit" });
+});
+test("simultaneous SQLite processes share idempotency and the concurrency limit", async () => {
+  store.db().exec("DELETE FROM checks; DELETE FROM limits");
+  const run = async (keys: string[]) => {
+    const children = keys.map((key, index) => {
+      const child = fork(
+        "-e",
+        [
+          `const store = require('./src/lib/sqlite-store.ts');
+         store.db();
+         process.send('ready');
+         process.on('message', () => {
+           try { process.send({job: store.createCheck('parallel', process.argv[1])}); }
+           catch (error) { process.send({error: error.code || 'unexpected'}); }
+           process.disconnect();
+         });`,
+          key,
+        ],
+        { execArgv: ["--import", "tsx"], silent: true },
+      );
+      return { child, index };
+    });
+    return await new Promise<
+      Array<{ job?: { id: string; existing: boolean }; error?: string }>
+    >((resolve, reject) => {
+      const results: Array<{
+        job?: { id: string; existing: boolean };
+        error?: string;
+      }> = [];
+      let ready = 0,
+        done = 0;
+      for (const { child, index } of children) {
+        child.on("error", reject);
+        child.on("exit", (code) => {
+          if (code !== 0)
+            reject(new Error(`SQLite worker exited with ${code}`));
+        });
+        child.on("message", (message) => {
+          if (message === "ready") {
+            if (++ready === children.length)
+              for (const entry of children) entry.child.send("start");
+          } else {
+            results[index] = message as (typeof results)[number];
+            if (++done === children.length) resolve(results);
+          }
+        });
+      }
+    });
+  };
+  const key = randomUUID();
+  const duplicates = await run(Array(6).fill(key));
+  assert.equal(
+    duplicates.filter((entry) => entry.job && !entry.job.existing).length,
+    1,
+  );
+  assert.equal(new Set(duplicates.map((entry) => entry.job?.id)).size, 1);
+  store.failCheck(duplicates[0].job!.id, "parallel");
+  const attempts = await run(Array.from({ length: 6 }, () => randomUUID()));
+  assert.equal(attempts.filter((entry) => entry.job).length, 3);
+  assert.equal(attempts.filter((entry) => entry.error === "busy").length, 3);
 });

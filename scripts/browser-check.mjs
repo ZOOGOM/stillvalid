@@ -139,6 +139,19 @@ try {
     .waitFor({ state: "visible" });
   results.push("real image upload, crop and rotate");
   await page.getByRole("button", { name: "Remove photo", exact: true }).click();
+  await page
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({
+      name: "not-an-image.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("not an image"),
+    });
+  await page
+    .getByRole("alert")
+    .getByText("Choose a JPG, PNG or WebP photo.")
+    .waitFor();
+  results.push("unsupported upload shows a recoverable error");
   await page.getByRole("tab", { name: "Paste text" }).click();
   await page
     .getByRole("textbox", { name: "Paste text" })
@@ -173,13 +186,6 @@ try {
     route.fulfill({ json: { notice: fakeNotice } }),
   );
   await page.reload({ waitUntil: "networkidle" });
-  await page.getByRole("button", { name: /Notice country/ }).click();
-  await page
-    .getByRole("textbox", { name: "Search countries" })
-    .fill("United States");
-  await page
-    .getByRole("button", { name: /USUnited States|US United States/ })
-    .click();
   await page.getByRole("tab", { name: "Paste text" }).click();
   await page
     .getByRole("textbox", { name: "Paste text" })
@@ -190,6 +196,36 @@ try {
   await page
     .getByRole("heading", { name: "Is this the right notice?" })
     .waitFor();
+  const readCountry = page.getByRole("combobox", {
+    name: "Country read from the notice",
+  });
+  assert.equal(await readCountry.inputValue(), "GB");
+  assert.match(
+    await page.getByRole("button", { name: /Notice country/ }).innerText(),
+    /Not selected/,
+  );
+  await readCountry.selectOption("US");
+  assert.equal(await readCountry.inputValue(), "US");
+  await readCountry.selectOption("GB");
+  assert.equal(await readCountry.inputValue(), "GB");
+  assert.match(
+    await page.getByRole("button", { name: /Notice country/ }).innerText(),
+    /Not selected/,
+  );
+  await page.getByRole("button", { name: /Notice country/ }).click();
+  await page
+    .getByRole("textbox", { name: "Search countries" })
+    .fill("United States");
+  await page
+    .getByRole("button", { name: /USUnited States|US United States/ })
+    .click();
+  await page
+    .getByRole("textbox", { name: "Year or edition" })
+    .fill("2026 corrected");
+  assert.match(
+    await page.getByRole("button", { name: /Notice country/ }).innerText(),
+    /United States/,
+  );
   assert.equal(
     await page
       .getByRole("button", { name: "Check official sources", exact: true })
@@ -212,25 +248,96 @@ try {
   ).json();
   fixtureResult.result.mode = "live";
   fixtureResult.result.id = "fixture-check-id";
-  await page.route("**/api/checks", (route) =>
-    route.fulfill({
-      contentType: "application/x-ndjson",
-      body:
-        [
-          { type: "created", data: { id: "fixture-check-id" } },
-          { type: "phase", data: { step: "sources" } },
-          { type: "phase", data: { step: "compare" } },
-          { type: "result", data: fixtureResult.result },
-        ]
-          .map((x) => JSON.stringify(x))
-          .join("\n") + "\n",
-    }),
+  fixtureResult.result.candidates = [
+    { title: "Synthetic source candidate", url: "https://example.org/notice" },
+  ];
+  let sentNotice;
+  await page.route(
+    "**/api/checks",
+    (route) => (
+      (sentNotice = route.request().postDataJSON()),
+      route.fulfill({
+        contentType: "application/x-ndjson",
+        body:
+          [
+            { type: "created", data: { id: "fixture-check-id" } },
+            { type: "phase", data: { step: "sources" } },
+            { type: "phase", data: { step: "compare" } },
+            { type: "result", data: fixtureResult.result },
+          ]
+            .map((x) => JSON.stringify(x))
+            .join("\n") + "\n",
+      })
+    ),
   );
   await page
     .getByRole("button", { name: "Check official sources", exact: true })
     .click();
   await page.getByRole("heading", { name: "We found a few changes" }).waitFor();
+  assert.equal(sentNotice.notice.edition, "2026 corrected");
+  assert.ok(
+    await page
+      .getByText(/A candidate is not necessarily a verified official source/)
+      .isVisible(),
+  );
+  await page.getByRole("button", { name: "Check using this link" }).click();
+  await page.getByRole("heading", { name: "We found a few changes" }).waitFor();
+  assert.equal(sentNotice.sourceUrl, "https://example.org/notice");
+  assert.equal(
+    await page.evaluate(() => document.activeElement?.tagName),
+    "H1",
+  );
   results.push("HTTP-fixture NDJSON progress and result integration");
+  let deletedChecks = 0;
+  await page.route("**/api/checks/**", (route) => {
+    if (route.request().method() === "DELETE") {
+      deletedChecks++;
+      return route.fulfill({ status: 503, json: { error: "network" } });
+    }
+    return route.continue();
+  });
+  await page
+    .getByRole("button", { name: "Delete this result", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Delete result", exact: true })
+    .click();
+  await page
+    .getByRole("status")
+    .getByText(/connection was interrupted/i)
+    .waitFor();
+  assert.ok(
+    await page
+      .getByRole("heading", { name: "We found a few changes" })
+      .isVisible(),
+  );
+  results.push("failed result deletion is visible and retains the result");
+  await page.unroute("**/api/checks");
+  let releaseCheck;
+  const pendingCheck = new Promise((resolve) => {
+    releaseCheck = resolve;
+  });
+  await page.route("**/api/checks", async (route) => {
+    await pendingCheck;
+    await route.abort().catch(() => {});
+  });
+  await page.getByRole("button", { name: "Run a fresh check" }).click();
+  await page
+    .getByRole("heading", { name: "A closer look at your notice" })
+    .waitFor();
+  await page.getByRole("button", { name: "Stop checking" }).click();
+  await page
+    .getByRole("heading", { name: "Is this the right notice?" })
+    .waitFor();
+  releaseCheck();
+  assert.equal(
+    deletedChecks,
+    1,
+    "cancelling before a new check is created must not delete the previous result",
+  );
+  results.push(
+    "cancelling a recheck before creation preserves the previous result",
+  );
   const mobile = await browser.newContext({
     viewport: { width: 390, height: 844 },
     locale: "ko-KR",
@@ -240,6 +347,39 @@ try {
   const phone = await mobile.newPage();
   phone.on("pageerror", (e) => errors.push(e.message));
   await phone.goto(origin, { waitUntil: "networkidle" });
+  await phone.getByRole("button", { name: /공고 국가/ }).click();
+  assert.ok(
+    (await phone
+      .getByRole("textbox", { name: "국가 이름 검색" })
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize))) >= 16,
+  );
+  const closeSize = await phone
+    .getByRole("button", { name: "Close / 닫기" })
+    .boundingBox();
+  assert.ok(closeSize && closeSize.width >= 44 && closeSize.height >= 44);
+  await phone.getByRole("button", { name: "Close / 닫기" }).click();
+  await phone.getByRole("tab", { name: "텍스트로" }).click();
+  assert.ok(
+    (await phone
+      .getByRole("textbox", { name: "텍스트로" })
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize))) >= 16,
+  );
+  await phone.getByRole("tab", { name: "사진으로" }).click();
+  await phone
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({
+      name: "synthetic-notice.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(png, "base64"),
+    });
+  await phone.getByRole("img", { name: "선택한 안내문 미리보기" }).waitFor();
+  const cropSize = await phone
+    .getByRole("button", { name: "자르기", exact: true })
+    .boundingBox();
+  assert.ok(cropSize && cropSize.width >= 44 && cropSize.height >= 44);
+  await phone.getByRole("button", { name: "사진 삭제", exact: true }).click();
+  results.push("mobile input text and touch target sizes");
   assert.equal(
     await phone.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

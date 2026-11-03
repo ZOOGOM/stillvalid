@@ -73,6 +73,28 @@ test("serverless session-wide deletion preserves other actors", async () => {
   await assert.rejects(() => store.getCheck(a.id, "a"));
   assert.equal((await store.getCheck(b.id, "b")).state, "processing");
 });
+test("deletion removes the idempotency mapping and permits the same request key again", async () => {
+  for (const deleteAll of [false, true]) {
+    const key = randomUUID();
+    const first = await store.createCheck("a", key);
+    if (deleteAll) await store.deleteAllChecks("a");
+    else await store.deleteCheck(first.id, "a");
+    assert.equal(await client.get(store.key("idem:a:" + key)), null);
+    const next = await store.createCheck("a", key);
+    assert.equal(next.existing, false);
+    assert.notEqual(next.id, first.id);
+    await store.failCheck(next.id, "a");
+  }
+});
+test("a stale idempotency mapping left by an older deletion is repaired", async () => {
+  const key = randomUUID(),
+    oldId = randomUUID();
+  await client.set(store.key("idem:a:" + key), oldId, "EX", 86400);
+  const next = await store.createCheck("a", key);
+  assert.equal(next.existing, false);
+  assert.notEqual(next.id, oldId);
+  assert.equal((await store.getCheck(next.id, "a")).state, "processing");
+});
 test("serverless quota increments atomically and rejects excess requests", async () => {
   await store.reserve("quota", 2, 3600000);
   await store.reserve("quota", 2, 3600000);

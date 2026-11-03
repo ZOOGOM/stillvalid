@@ -62,6 +62,7 @@ const ko = {
   titleLabel: "공고 제목",
   institution: "발행 기관",
   edition: "연도·회차",
+  noticeCountry: "안내문에서 읽은 국가",
   original: "인식한 원문 보기",
   editText: "원문을 수정해 다시 읽기",
   sourceLabel: "공식 공고 주소",
@@ -134,6 +135,8 @@ const ko = {
   scope:
     "결과는 조회한 출처와 시점에 한정돼요. 원문의 날짜·기관명·주소는 번역하지 않고 보존해요.",
   candidatesTitle: "다른 출처 후보",
+  candidatesHint:
+    "같은 공고인지 살펴본 뒤 주소를 선택해 다시 확인하세요. 후보라는 것만으로 공식 출처로 검증된 것은 아니에요.",
   useCandidate: "이 주소로 다시 확인",
   copy: "결과 요약 복사",
   copied: "복사했어요",
@@ -174,6 +177,8 @@ const ko = {
     "공개된 HTTPS 공고 주소를 입력해 주세요. 내부 주소·인증 정보가 있는 주소는 사용할 수 없어요.",
   error_too_large: "파일이 너무 커요. 10MB 이하의 사진을 선택해 주세요.",
   error_image_type: "JPG, PNG, WebP 사진을 선택해 주세요.",
+  error_image_compression:
+    "사진을 충분히 압축하지 못했어요. 더 작은 사진을 선택해 주세요.",
   error_busy: "다른 확인 작업이 진행 중이에요. 잠시 뒤 다시 시도해 주세요.",
   error_cancelled: "확인을 중단했어요.",
   error_not_found: "결과가 만료되었거나 삭제되었어요. 새로 확인해 주세요.",
@@ -280,6 +285,7 @@ const en: Copy = {
   titleLabel: "Notice title",
   institution: "Issuing institution",
   edition: "Year or edition",
+  noticeCountry: "Country read from the notice",
   original: "Read extracted text",
   editText: "Edit the text and read again",
   sourceLabel: "Official notice URL",
@@ -357,6 +363,8 @@ const en: Copy = {
   scope:
     "Results cover only the sources and time checked. Original dates, names and addresses are preserved.",
   candidatesTitle: "Other source candidates",
+  candidatesHint:
+    "Review the candidates and choose a link to check again. A candidate is not necessarily a verified official source.",
   useCandidate: "Check using this link",
   copy: "Copy summary",
   copied: "Copied",
@@ -400,6 +408,8 @@ const en: Copy = {
     "Enter a public HTTPS notice URL without credentials. Internal addresses aren't supported.",
   error_too_large: "This file is too large. Choose a photo under 10MB.",
   error_image_type: "Choose a JPG, PNG or WebP photo.",
+  error_image_compression:
+    "We couldn't compress this photo enough. Please choose a smaller image.",
   error_busy: "Other checks are running. Please try again shortly.",
   error_cancelled: "The check was stopped.",
   error_not_found:
