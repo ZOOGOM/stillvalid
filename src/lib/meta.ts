@@ -125,7 +125,9 @@ export class MetaClient {
     const response = await this.call(
       "/chat/completions",
       {
-        max_completion_tokens: 4500,
+        // Image extraction also returns the full transcription. Give it bounded
+        // extra headroom without increasing other calls or retrying truncation.
+        max_completion_tokens: image ? 6000 : 4500,
         messages: [
           {
             role: "developer",

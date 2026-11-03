@@ -21,6 +21,7 @@ test("text extraction preserves the complete supplied text without asking the mo
           "originalText" in body.response_format.json_schema.schema.properties,
           false,
         );
+        assert.equal(body.max_completion_tokens, 4500);
         return Response.json({
           choices: [
             {
@@ -37,6 +38,47 @@ test("text extraction preserves the complete supplied text without asking the mo
       (await client.extract(original, undefined, null)).originalText,
       original,
     );
+  }));
+test("image extraction has bounded transcription headroom and rejects truncation without retry", () =>
+  withTestKey(async () => {
+    const fullText = "Full transcribed notice. ".repeat(500);
+    const imageNotice = { ...notice, originalText: fullText };
+    for (const finish of ["stop", "length"]) {
+      let calls = 0;
+      const client = new MetaClient(
+        async (_input, init) => {
+          calls++;
+          const body = JSON.parse(String(init?.body));
+          assert.equal(body.max_completion_tokens, 6000);
+          assert.ok(
+            body.response_format.json_schema.schema.properties.originalText,
+          );
+          assert.equal(body.messages[1].content[1].type, "image_url");
+          return Response.json({
+            choices: [
+              {
+                finish_reason: finish,
+                message: { content: JSON.stringify(imageNotice) },
+              },
+            ],
+          });
+        },
+        () => {},
+      );
+      const extraction = client.extract(
+        "",
+        "data:image/png;base64,fixture",
+        null,
+      );
+      if (finish === "stop")
+        assert.equal((await extraction).originalText, fullText);
+      else
+        await assert.rejects(() => extraction, {
+          code: "model_output",
+          status: 422,
+        });
+      assert.equal(calls, 1);
+    }
   }));
 async function withTestKey(fn: () => Promise<void>) {
   const previous = process.env.META_API_KEY;
@@ -287,6 +329,7 @@ test("comparison sends the selected result language without changing source fact
       async (_input, init) => {
         const body = JSON.parse(String(init?.body));
         const payload = JSON.parse(body.messages[1].content);
+        assert.equal(body.max_completion_tokens, 4500);
         assert.equal(payload.result_language, expected);
         assert.deepEqual(payload.notice, notice);
         assert.equal(payload.source.text, source.text);
