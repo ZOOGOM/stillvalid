@@ -36,14 +36,14 @@ An explicit location button may request a one-time HTTPS location permission. Br
 | Deletion and expiry | Owner-scoped result/session deletion and 24-hour lifetime | SQLite and Redis behavior tests, browser deletion/error checks |
 | Shared usage controls | Atomic Redis operations or SQLite transactions | Emulator tests and SQLite multi-process concurrency tests |
 | Accessible mobile presentation | Focus handling, keyboard controls, readable inputs and touch targets | Automated browser/accessibility checks; actual iOS/Android remains pending |
-| Deployable service | Vercel + Upstash Redis settings, or single-server Docker | Production build; external deployment and hosted services remain pending |
+| Deployable service | Vercel + Marketplace Upstash Redis settings, or single-server Docker | Vercel production deployment reached READY; real provider/storage and external HTTP verification are separate checks |
 
 ## Live release gate
 
 Complete these on the deployed HTTPS service before describing it as ready for judging:
 
-- [ ] Connect the reviewed GitHub version to Vercel with Node.js 24.
-- [ ] Register `META_API_KEY`, both Upstash REST variables and the correct production `APP_URL` as server environment variables.
+- [x] Connect the reviewed GitHub version to Vercel with Node.js 24.
+- [x] Register `META_API_KEY`, both Marketplace KV REST variables and the correct production `APP_URL` as server environment variables.
 - [ ] Check account/model access, then perform actual image extraction, web search, source retrieval and comparison. A models-list response alone is insufficient.
 - [ ] Run the ten real-notice tasks below, record human reference answers and investigate every incorrect definitive result.
 - [ ] Evaluate actual Meta output quality for each display language separately from the implemented dictionaries; record observed evidence and limitations. Selecting 249 regions does not establish worldwide notice coverage.

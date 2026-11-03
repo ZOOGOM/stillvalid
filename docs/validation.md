@@ -5,7 +5,7 @@ Validated in the cloud checkout with Node.js 24.19.0 and Next.js 16.4.4. A singl
 | Check | Result |
 | --- | --- |
 | TypeScript | Passed on the final UI revision |
-| Behavioral/security unit tests | 69 passed, including local country lookup and complete interface/result dictionaries |
+| Behavioral/security unit tests | 74 passed, including Marketplace Redis configuration, local country lookup and complete interface/result dictionaries |
 | Production build | Passed on the final UI revision |
 | Chromium production HTTP browser flow groups | 19 passed on localhost with `APP_URL` matching the server origin |
 | Automated accessibility | No detected WCAG A/AA violations on 13 inspected snapshots |
@@ -22,7 +22,11 @@ A previous production HTTP run passed eight checks for home/security headers, co
 
 Redis tests execute production Lua commands in an in-memory Redis emulator. Meta contract and browser HTTP-fixture tests do not make real provider calls. These checks are not a hosted Redis integration test, model-accuracy study, physical Safari/Android test or proof of language quality in live Meta output.
 
-`npm run verify:meta` previously reported that no API key was configured; no catalog or inference request was made. The inspected outbound policy did not allow api.meta.ai. Actual provider requests, real-notice evaluation, hosted Redis, external deployment, production TLS and the Docker image remain unverified. The user is setting up Vercel. No deployment URL or live provider result is claimed by these checks. Native Vercel Git deployment is independent of GitHub Actions; remote CI capacity is currently reported exhausted by the user.
+The Vercel project is connected, and production deployments have reached READY at https://stillvalid-beta.vercel.app. `META_API_KEY` and `META_MODEL=muse-spark-1.3` are registered for Production. Marketplace Redis provided the sensitive `KV_REST_API_URL` and `KV_REST_API_TOKEN` variables for Production and Preview. Registration was checked without reading secret values. Preview has no Meta key. Local tests do not establish actual provider requests or hosted Redis operations. The opt-in hosting-build probe performs a real short-lived Redis write/read/delete and one real text inference on an explicitly synthetic diagnostic input; its fixed success/failure record is written to that deployment's build logs. Images, search, real-notice evaluation, external HTTP/TLS requests and the Docker image remain separate release checks. The authoring environment's enforced outbound policy does not permit the deployment host or api.meta.ai. Native Vercel Git deployment is independent of GitHub Actions; remote CI capacity is currently reported exhausted by the user.
+
+Marketplace configuration tests execute the real backend selection and REST transport with a mocked HTTP response: the writable KV token and endpoint are selected together; a complete canonical pair takes precedence; incomplete pairs never mix or fall back; blank template variables still permit local SQLite; raw Redis URLs and read-only tokens cannot configure REST storage. These tests do not establish hosted Redis connectivity or actual Meta inference.
+
+The latest local browser run includes the upstream liquid-glass theme. The 19 flow groups passed with no page errors and no detected accessibility violations on the same 13 snapshots after small text-link colors were darkened to meet contrast requirements. This is a localhost check, separate from the hosting-build probe and real-device evaluation.
 
 The [mobile screenshot](screenshots/mobile.png) and [desktop screenshot](screenshots/desktop.png), [desktop settings](screenshots/desktop-settings.png), [mobile settings](screenshots/mobile-settings.png), [desktop Arabic result](screenshots/desktop-arabic-result.png) and [mobile Arabic result](screenshots/mobile-arabic-result.png) show inspected synthetic flows without private notices or credentials. The [product acceptance checklist](acceptance.md) records the remaining live release gate; its ten real-notice task slots are not completed measurements.
 

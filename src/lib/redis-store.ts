@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { EnvHttpProxyAgent } from "undici";
 import { AppError, type Result } from "./schema";
+import { redisConfig } from "./redis-config";
 
 export type RedisCommand = (...args: (string | number)[]) => Promise<unknown>;
 const proxy =
@@ -10,17 +11,16 @@ const proxy =
 export async function restCommand(
   ...args: (string | number)[]
 ): Promise<unknown> {
-  const endpoint = process.env.UPSTASH_REDIS_REST_URL,
-    token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!endpoint || !token) throw new AppError("storage", 503);
+  const config = redisConfig();
+  if (!config) throw new AppError("storage", 503);
   try {
-    const url = new URL(endpoint);
+    const url = new URL(config.endpoint);
     if (url.protocol !== "https:" || url.username || url.password)
       throw new Error();
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + token,
+        Authorization: "Bearer " + config.token,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(args),

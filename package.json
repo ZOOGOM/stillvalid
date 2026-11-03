@@ -10,11 +10,13 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build --webpack",
+    "vercel-build": "npm run build && npm run verify:hosted",
     "start": "next start --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "check": "npm run typecheck && npm test",
     "verify:meta": "node scripts/check-meta.mjs",
+    "verify:hosted": "node --import tsx scripts/check-hosted.mjs",
     "test:browser": "node scripts/browser-check.mjs",
     "format": "prettier --write src tests scripts next.config.ts tsconfig.json"
   },

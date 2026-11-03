@@ -10,7 +10,7 @@ The web app and server adapter include ten display languages, optional usage-reg
 
 See the [product acceptance checklist](docs/acceptance.md) for the complete user flow, implementation coverage and live release checks. It includes a ten-task real-notice evaluation sheet with unrun tasks clearly marked.
 
-**Live checks require a real Meta API key and approved network access.** Provider-contract tests use mocked HTTP responses. Live inference, real-notice accuracy, external hosting and a judging-ready service URL have not yet been verified. Examples are visibly synthetic and never presented as live checks.
+**Live checks require a real Meta API key, shared storage on Vercel, and approved network access.** Provider-contract tests use mocked HTTP responses. The connected Vercel project has a production URL at [stillvalid-beta.vercel.app](https://stillvalid-beta.vercel.app). Actual Redis/model connectivity is checked by the opt-in [hosting-build probe](docs/deployment.md); see that deployment's build logs for its result. Real-notice accuracy and judging readiness remain separate release checks. Examples are visibly synthetic and never presented as live checks.
 
 ## Run locally
 
@@ -61,11 +61,11 @@ Browser → Next.js API routes → Meta Model API
 
 The default model is `muse-spark-1.3` at `https://api.meta.ai/v1`. Keys stay on the server. Deterministic quote checks supplement model interpretation; they do not establish general factual accuracy. Unknown authority, ambiguous fields, different editions and conflicting sources remain review states.
 
-Deploy directly from GitHub using **Vercel + Upstash Redis**, without buying or maintaining a server. A local/persistent Node server with SQLite and Docker Compose is also supported. See [deployment and secret setup](docs/deployment.md) for both paths. GitHub Pages alone cannot execute the protected Meta API routes.
+The existing **Vercel + Upstash Redis** setup deploys from GitHub without an always-on server. The Marketplace-provided `KV_REST_API_URL` and `KV_REST_API_TOKEN` pair is accepted, as is the canonical Upstash REST pair. A local/persistent Node server with SQLite and Docker Compose is also supported. See [deployment and secret setup](docs/deployment.md) for details and remaining verification. GitHub Pages alone cannot execute the protected Meta API routes.
 
 ## Validation
 
-Behavioral tests cover supported changes, fabricated evidence, different editions, country mismatch, unknown authority, conflicting sources, negated cancellation, explicit time zones, invalid dates, source encoding, unsafe URLs, request sizes, session isolation, deletion, expiry, idempotency and request ceilings. Provider-contract tests incur no inference charges. Redis Lua behavior is tested with an in-memory Redis emulator; a hosted Redis account has not been tested.
+Behavioral tests cover supported changes, fabricated evidence, different editions, country mismatch, unknown authority, conflicting sources, negated cancellation, explicit time zones, invalid dates, source encoding, unsafe URLs, request sizes, session isolation, deletion, expiry, idempotency and request ceilings. Provider-contract tests incur no inference charges. Redis Lua behavior is tested with an in-memory Redis emulator; this is separate from the opt-in hosted storage/provider probe.
 
 Browser checks exercise desktop/mobile layouts, country persistence, evidence expansion, language preservation, image editing and HTTP-fixture integration. They require an installed Chromium and a running app:
 

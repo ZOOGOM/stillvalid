@@ -1,20 +1,12 @@
 import * as local from "./sqlite-store";
 import { RedisStore } from "./redis-store";
+import { redisConfig } from "./redis-config";
 import { AppError, type Result } from "./schema";
 export { hash, newSession, owner, sameOrigin } from "./sqlite-store";
 const redis = new RedisStore();
 function backend() {
-  if (
-    process.env.UPSTASH_REDIS_REST_URL &&
-    process.env.UPSTASH_REDIS_REST_TOKEN
-  )
-    return redis;
-  if (
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.VERCEL
-  )
-    throw new AppError("storage", 503);
+  if (redisConfig()) return redis;
+  if (process.env.VERCEL) throw new AppError("storage", 503);
   return local;
 }
 export async function cleanup() {
