@@ -156,3 +156,6 @@ Thumbs.db
 # Local user uploads and transient check data
 /uploads/
 /tmp/
+.data/
+playwright-report/
+test-results/

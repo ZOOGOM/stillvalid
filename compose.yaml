@@ -1,0 +1,17 @@
+services:
+  stillvalid:
+    build: .
+    init: true
+    restart: unless-stopped
+    ports: ["3000:3000"]
+    environment:
+      META_API_KEY: ${META_API_KEY:-}
+      MODEL_API_KEY: ${MODEL_API_KEY:-}
+      META_MODEL: ${META_MODEL:-muse-spark-1.3}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      DATABASE_PATH: /app/data/stillvalid.sqlite
+      DAILY_MODEL_CALL_LIMIT: ${DAILY_MODEL_CALL_LIMIT:-100}
+      VERIFIED_SOURCE_HOSTS: ${VERIFIED_SOURCE_HOSTS:-}
+    volumes: ["stillvalid-data:/app/data"]
+volumes:
+  stillvalid-data:

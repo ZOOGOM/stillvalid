@@ -1,111 +1,84 @@
 # StillValid
 
-Mobile-first AI web app that compares notice photos with official sources and explains changes with evidence, country settings, and multilingual results.
+**Saved a notice. Still the same?**
 
-StillValid helps people check whether a saved event poster, public-program notice, or facility announcement still matches the official information available at the time of checking.
+A mobile-first web app that compares notice photos or text with official-source material and links changes to supporting quotes. 한국어 작업명은 **지금도 맞나요**입니다.
 
-한국어 작업명은 **지금도 맞나요**입니다. 저장해 둔 공고 사진을 공식 자료와 대조해, 달라진 내용과 다음 확인 행동을 사용자의 언어로 알려주는 모바일 웹앱을 목표로 합니다.
+## Implementation status
 
-## Project status
+The web app and server adapter are implemented: English/Korean interfaces, optional country settings, image editing, extraction review, source discovery, evidence comparison, synthetic examples, deletion and failure recovery.
 
-**Repository setup — application implementation is pending.**
+**Live checks require a real Meta API key and approved network access.** Provider-contract tests use mocked HTTP responses. Live inference, real-notice accuracy, external hosting and a judging-ready service URL have not yet been verified. Examples are visibly synthetic and never presented as live checks.
 
-This repository currently contains project documentation, an MIT license, ignore rules, and an example environment file. The capabilities below are planned; a working application, model integration, evaluation results, and a deployed demo are not yet available.
+## Run locally
 
-| Submission resource | Status |
-| --- | --- |
-| Live web app | Not deployed yet |
-| Three-minute demo video | Not recorded yet |
-| Evaluation results | Not measured yet |
-
-## The problem
-
-People often keep a screenshot or photo of a notice after its deadline, location, or event status has changed. Finding the right official update and comparing it with the original can be difficult, especially across languages.
-
-The project focuses initially on public events, classes and programs, and facility notices.
-
-## Planned features
-
-- **Photo and text input:** read a notice from an uploaded image or pasted text.
-- **Optional country settings:** select the country relevant to the notice without GPS; country and result language remain independent.
-- **Official-source discovery:** use extracted links and identifying information to find candidate sources, with an official URL input as a fallback.
-- **Notice identity checks:** distinguish institutions, locations, years, and event editions before comparing.
-- **Evidence-linked comparison:** show previous and current values, supporting passages, source URLs, and the time checked.
-- **Multilingual results:** start with English and Korean while preserving original names, dates, addresses, and evidence.
-- **Clear uncertainty and recovery:** explain ambiguous dates, missing sources, access failures, and retry options.
-- **Mobile-first interaction:** make the complete flow usable from a phone without requiring an account.
-
-Selecting a country will not imply a language, a single time zone, or verified coverage of every institution in that country.
-
-## Intended user flow
-
-1. Optionally select the notice country and choose a result language.
-2. Upload a notice photo or enter its text.
-3. Review identifying details when clarification is needed.
-4. Find and verify official-source candidates, or provide an official URL.
-5. Compare the same notice or event edition against the retrieved material.
-6. Read what changed, inspect the evidence, and choose the next confirmation action.
-7. Retry, start a new check, or delete the check as appropriate.
-
-A missing search result must not be interpreted as a cancellation or proof that nothing has changed. Results describe the retrieved evidence and its limits, not guaranteed completeness across the internet.
-
-## Planned architecture and Meta model use
-
-The proposed stack is React, Next.js, and TypeScript, with server-side model calls, source retrieval, validation, and check-state management.
-
-A Meta model is intended to help extract structured information from notice images and interpret retrieved material. The final model identifier and API configuration will be recorded after account access and an actual image request are verified.
-
-Application logic must validate structured outputs, notice identity, dates, and quoted evidence before presenting a confirmed change. Retrieved documents are input data, not instructions for the application.
-
-## Getting started
-
-Clone the repository:
+Requires Node.js 24 and npm.
 
 ```bash
-git clone https://github.com/ZOOGOM/stillvalid.git
-cd stillvalid
+npm ci
+cp .env.example .env.local
+# Add META_API_KEY securely to .env.local for live checks.
+npm run dev
 ```
 
-There is no application package or runnable development server yet. Installation, development, build, and test commands will be added with the application code.
+Open `http://localhost:3000`. Without a key, explore three synthetic examples: deadline/location changes, explicit cancellation and a different event edition.
 
-The [.env.example](.env.example) file contains proposed server-side variable names with empty values. They are placeholders for the upcoming implementation, not an already-working API integration. Never commit real credentials.
+```bash
+npm run verify:meta # Read-only account/model availability check
+npm run check       # Type checking and behavioral/security tests
+npm run build       # Production build
+npm start           # Production server
+```
 
-## Evaluation plan
+## User flow
 
-Before submission, evaluate real and clearly labeled synthetic cases covering:
+1. Optionally select the notice country and choose English or Korean. No GPS or IP-derived country.
+2. Upload a JPEG, PNG or WebP (up to 10MB), crop/rotate locally, or paste notice text. Image re-encoding reduces metadata.
+3. Review title, institution and recognized details. Resolve a country mismatch or edit the text before comparing.
+4. Find source candidates using Meta's built-in web search, or provide an official HTTPS URL.
+5. Inspect before/after values, actual source quotes, URLs, time checked and the next confirmation action.
+6. Copy a summary, start a fresh check, or delete individual/session-wide results.
 
-- changed, matching, expired, and canceled notices;
-- different institutions, locations, years, or event editions;
-- country mismatch, an unset country, and ambiguous dates or time zones;
-- missing, blocked, conflicting, and unavailable official sources;
-- consistency between English and Korean results;
-- mobile input, error recovery, deletion, request limits, latency, and cost.
+Country does not establish time zone or complete coverage. Dates, names, addresses and quoted values remain in their original form when the interface language changes.
 
-Report measured case counts, errors, timings, and costs separately from targets. No performance or accuracy claims have been established yet.
+## Architecture
 
-## Privacy and security requirements
+```text
+Browser → Next.js API routes → Meta Model API
+                     ├─ Chat Completions: image/text extraction and structured comparison
+                     ├─ Responses: built-in web search and returned candidates
+                     ├─ HTTPS retrieval: bounded text and public DNS pinning
+                     └─ SQLite (local) / Redis (serverless): session-owned results and limits
+```
 
-Before deployment, the application must:
+The default model is `muse-spark-1.3` at `https://api.meta.ai/v1`. Keys stay on the server. Deterministic quote checks supplement model interpretation; they do not establish general factual accuracy. Unknown authority, ambiguous fields, different editions and conflicting sources remain review states.
 
-- keep model and search credentials on the server;
-- validate uploaded files and fetched URLs, including redirects and private-network destinations;
-- restrict access to each check and its uploaded material;
-- implement and verify deletion and expiration;
-- limit requests, retries, and spending;
-- avoid logging raw uploads, complete extracted text, or personal contact details by default.
+Deploy directly from GitHub using **Vercel + Upstash Redis**, without buying or maintaining a server. A local/persistent Node server with SQLite and Docker Compose is also supported. See [deployment and secret setup](docs/deployment.md) for both paths. GitHub Pages alone cannot execute the protected Meta API routes.
 
-Do not upload student records, private school notices, personal contact details, or credentials to this public repository. Use permitted public material or clearly labeled synthetic samples.
+## Validation
 
-## Scope and limitations
+Behavioral tests cover supported changes, fabricated evidence, different editions, country mismatch, unknown authority, conflicting sources, negated cancellation, explicit time zones, invalid dates, source encoding, unsafe URLs, request sizes, session isolation, deletion, expiry, idempotency and request ceilings. Provider-contract tests incur no inference charges. Redis Lua behavior is tested with an in-memory Redis emulator; a hosted Redis account has not been tested.
 
-Global access is the product goal. Verified source, language, and notice coverage will be disclosed as it is tested.
+Browser checks exercise desktop/mobile layouts, country persistence, evidence expansion, language preservation, image editing and HTTP-fixture integration. They require an installed Chromium and a running app:
 
-Initial use is limited to understanding public notices and their documented changes. The project does not provide individualized eligibility decisions, medical or legal judgments, emergency instructions, or application and payment services.
+```bash
+CHROMIUM_PATH=/usr/bin/chromium SCREENSHOT_DIR=./test-results/screenshots \
+  npm run test:browser
+```
 
-The hackathon submission target is a working, hosted mobile web app. App-store distribution, accounts, payments, push notifications, and broader coverage are later stages.
+HTTP fixtures do not constitute live provider testing. Automated viewport/accessibility checks do not establish real-device coverage or full WCAG conformance. No model accuracy or production latency claims have been established.
+
+## Privacy and limits
+
+- Original image files are not saved by StillValid. Necessary result quotes are session-owned and available for 24 hours.
+- Individual and session-wide deletion are supported. Expiry is enforced before reads and periodically cleaned up.
+- Writes require the same origin and an HTTP-only anonymous-session cookie.
+- Source requests reject unsafe addresses and pin public DNS results. Retrieval fails closed under a generic forward proxy.
+- Global paid-model request limits and per-session/concurrent-check limits reduce exposure; request ceilings are not dollar billing caps.
+- Provider handling follows [Meta's terms and documentation](https://dev.meta.ai/docs/models).
+
+Use permitted public notices or clearly labeled synthetic material. Do not commit keys, student records, private school notices or personal contact details. The app does not determine individual eligibility, give medical/legal judgments or issue emergency instructions.
 
 ## License
 
-Original project code is licensed under the [MIT License](LICENSE).
-
-Third-party libraries, models, images, and notice content retain their own licenses and terms. This repository's MIT license does not grant rights to those materials.
+Original project code is licensed under [MIT](LICENSE). Third-party libraries, models, notice content and images retain their own licenses and terms.

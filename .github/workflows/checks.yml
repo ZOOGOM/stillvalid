@@ -1,0 +1,22 @@
+name: Application checks
+on:
+  push:
+    branches: [main, feat/stillvalid-webapp]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
