@@ -1,15 +1,13 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { MetaClient, configured } from "@/lib/meta";
 import {
   AppError,
-  noticeSchema,
+  checkRequestSchema,
   type Candidate,
   type ModelComparison,
   type Source,
 } from "@/lib/schema";
-import { isCountry } from "@/lib/countries";
 import { authorityFor, fetchSource, publicUrl } from "@/lib/source";
 import {
   createCheck,
@@ -23,19 +21,12 @@ import { assembleResult } from "@/lib/compare";
 import { errorResponse, readJson } from "@/lib/http";
 export const runtime = "nodejs";
 export const maxDuration = 180;
-const schema = z.object({
-  notice: noticeSchema,
-  country: z.string().refine(isCountry).nullable(),
-  lang: z.enum(["ko", "en"]),
-  sourceUrl: z.string().max(2000).default(""),
-  requestKey: z.string().uuid(),
-});
 export async function POST(request: NextRequest) {
   try {
     sameOrigin(request);
     const actor = owner(request);
     if (!configured()) throw new AppError("not_configured", 503);
-    const input = schema.safeParse(await readJson(request, 150000));
+    const input = checkRequestSchema.safeParse(await readJson(request, 150000));
     if (!input.success) throw new AppError("input");
     const { notice, country, lang, sourceUrl, requestKey } = input.data;
     if (sourceUrl) publicUrl(sourceUrl);

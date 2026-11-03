@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { demoIds, demoResult, type DemoId } from "@/lib/demo";
+import { isResultLang } from "@/lib/languages";
 export const dynamic = "force-dynamic";
 export function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id") || "deadline";
-  const lang = request.nextUrl.searchParams.get("lang") === "en" ? "en" : "ko";
+  const lang = request.nextUrl.searchParams.get("lang") ?? "ko";
+  if (!isResultLang(lang))
+    return NextResponse.json({ error: "input" }, { status: 400 });
   if (!demoIds.includes(id as DemoId))
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   return NextResponse.json(

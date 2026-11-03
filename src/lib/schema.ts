@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isCountry } from "./countries";
+import { resultLanguages, type ResultLang } from "./languages";
 
 const countrySchema = z
   .string()
@@ -28,6 +29,13 @@ export const noticeSchema = z.object({
   country: countrySchema,
   originalText: z.string().min(1).max(18000),
   fields: z.array(fieldSchema).max(12),
+});
+export const checkRequestSchema = z.object({
+  notice: noticeSchema,
+  country: z.string().refine(isCountry).nullable(),
+  lang: z.enum(resultLanguages),
+  sourceUrl: z.string().max(2000).default(""),
+  requestKey: z.string().uuid(),
 });
 export const comparisonSchema = z.object({
   same_notice: z.boolean(),
@@ -87,7 +95,7 @@ export type Result = {
   sources: Omit<Source, "text">[];
   candidates: Candidate[];
   warnings: string[];
-  lang: Lang;
+  lang: ResultLang;
   elapsedMs: number;
 };
 

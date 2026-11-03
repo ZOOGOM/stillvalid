@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { MetaClient } from "../src/lib/meta";
 import { comparisonSchema, noticeSchema } from "../src/lib/schema";
+import { resultLanguages } from "../src/lib/languages";
 const notice = {
   title: "Workshop",
   institution: "Library",
@@ -218,5 +219,98 @@ test("built-in web search uses Responses and preserves actual source candidates"
     );
     assert.deepEqual(await client.discover(notice, "US"), [
       { url: "https://nypl.org/notice", title: "Notice" },
+    ]);
+  }));
+test("comparison sends the selected result language without changing source facts", () =>
+  withTestKey(async () => {
+    let expected: string;
+    const source = {
+      id: "source-0",
+      url: "https://nypl.org/notice",
+      title: "Notice",
+      text: "Workshop. Open.",
+      authority: "registered" as const,
+      fetchedAt: "2026-11-03T00:00:00Z",
+    };
+    const client = new MetaClient(
+      async (_input, init) => {
+        const body = JSON.parse(String(init?.body));
+        const payload = JSON.parse(body.messages[1].content);
+        assert.equal(payload.result_language, expected);
+        assert.deepEqual(payload.notice, notice);
+        assert.equal(payload.source.text, source.text);
+        return Response.json({
+          choices: [
+            {
+              finish_reason: "stop",
+              message: {
+                content: JSON.stringify({
+                  same_notice: false,
+                  identity_quote: "",
+                  country: null,
+                  source_role: "unknown",
+                  comparisons: [],
+                  summary: "invented fact",
+                  next_action: "invented action",
+                }),
+              },
+            },
+          ],
+        });
+      },
+      () => {},
+    );
+    for (const lang of resultLanguages) {
+      expected = lang;
+      await client.compare(notice, source, lang);
+    }
+  }));
+test("extraction rejects values and quotes rewritten from the original", () =>
+  withTestKey(async () => {
+    const originalText = "Workshop. Status: Open ２０２６";
+    const client = new MetaClient(
+      async () =>
+        Response.json({
+          choices: [
+            {
+              finish_reason: "stop",
+              message: {
+                content: JSON.stringify({
+                  title: "Workshop",
+                  institution: "Library",
+                  edition: null,
+                  country: null,
+                  fields: [
+                    {
+                      key: "status",
+                      value: "open ２０２６",
+                      quote: "Status: Open ２０２６",
+                    },
+                    {
+                      key: "status",
+                      value: "Open 2026",
+                      quote: "Status: Open 2026",
+                    },
+                    {
+                      key: "status",
+                      value: "Open ２０２６",
+                      quote: "Status: Open  ２０２６",
+                    },
+                    {
+                      key: "status",
+                      value: "Open ２０２６",
+                      quote: "Status: Open ２０２６",
+                    },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+      () => {},
+    );
+    const extracted = await client.extract(originalText, undefined, null);
+    assert.deepEqual(extracted.fields, [
+      { key: "status", value: "Open ２０２６", quote: "Status: Open ２０２６" },
     ]);
   }));

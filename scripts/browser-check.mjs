@@ -29,6 +29,68 @@ async function audit(page, label) {
     });
 }
 try {
+  const japaneseContext = await browser.newContext({ locale: "ja-JP" });
+  const japanesePage = await japaneseContext.newPage();
+  await japanesePage.goto(origin, { waitUntil: "networkidle" });
+  await japanesePage
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
+  assert.equal(
+    await japanesePage
+      .getByRole("combobox", { name: "Result language" })
+      .inputValue(),
+    "ja",
+  );
+  assert.equal(
+    await japanesePage
+      .getByRole("combobox", { name: "Interface language" })
+      .inputValue(),
+    "en",
+  );
+  assert.equal(
+    await japanesePage.evaluate(() => localStorage.getItem("sv_country")),
+    null,
+  );
+  await japaneseContext.close();
+  results.push(
+    "supported browser locale initializes result language independently of UI and region",
+  );
+  const blockedStorageContext = await browser.newContext({ locale: "ja-JP" });
+  await blockedStorageContext.addInitScript(() => {
+    Object.defineProperty(window, "localStorage", {
+      get() {
+        throw new DOMException("Storage access blocked", "SecurityError");
+      },
+    });
+  });
+  const blockedStoragePage = await blockedStorageContext.newPage();
+  blockedStoragePage.on("pageerror", (e) => errors.push(e.message));
+  await blockedStoragePage.goto(origin, { waitUntil: "networkidle" });
+  assert.match(
+    await blockedStoragePage
+      .getByRole("button", { name: /Region of use/ })
+      .innerText(),
+    /Not selected/,
+  );
+  await blockedStoragePage
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
+  assert.equal(
+    await blockedStoragePage
+      .getByRole("combobox", { name: "Result language" })
+      .inputValue(),
+    "ja",
+  );
+  assert.equal(
+    await blockedStoragePage
+      .getByRole("combobox", { name: "Interface language" })
+      .inputValue(),
+    "en",
+  );
+  await blockedStorageContext.close();
+  results.push(
+    "blocked local storage retains browser language defaults and no region",
+  );
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1050 },
     locale: "ko-KR",
@@ -40,7 +102,7 @@ try {
   await audit(page, "desktop home");
   await page.screenshot({ path: screenshots + "/desktop.png", fullPage: true });
   results.push("desktop home");
-  await page.getByRole("button", { name: /공고 국가/ }).click();
+  await page.getByRole("button", { name: /사용 지역/ }).click();
   await page.getByRole("textbox", { name: "국가 이름 검색" }).fill("미국");
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: /US미국|US 미국/ }).click();
@@ -50,17 +112,43 @@ try {
   );
   await page.reload({ waitUntil: "networkidle" });
   assert.match(
-    await page.getByRole("button", { name: /공고 국가/ }).innerText(),
+    await page.getByRole("button", { name: /사용 지역/ }).innerText(),
     /미국/,
   );
-  await page.getByRole("button", { name: /공고 국가/ }).click();
+  await page.getByRole("button", { name: /사용 지역/ }).click();
+  await page.getByRole("combobox", { name: "결과 언어" }).selectOption("es");
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem("sv_country")),
+    "US",
+  );
   await page.getByRole("button", { name: "기억한 국가 지우기" }).click();
   await page.getByRole("button", { name: "Close / 닫기" }).click();
   assert.equal(
     await page.evaluate(() => localStorage.getItem("sv_country")),
     null,
   );
-  results.push("optional country, opt-in memory, reload and clear");
+  await page.getByRole("button", { name: "설정", exact: true }).click();
+  await page.getByRole("combobox", { name: "결과 언어" }).selectOption("es");
+  assert.equal(
+    await page.getByRole("combobox", { name: "화면 언어" }).inputValue(),
+    "ko",
+  );
+  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "설정", exact: true }).click();
+  assert.equal(
+    await page.getByRole("combobox", { name: "결과 언어" }).inputValue(),
+    "es",
+  );
+  assert.equal(
+    await page.getByRole("combobox", { name: "화면 언어" }).inputValue(),
+    "ko",
+  );
+  await page.getByRole("combobox", { name: "결과 언어" }).selectOption("ko");
+  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  results.push(
+    "optional region memory and clear; independent result language persists on reload",
+  );
   await page.getByRole("button", { name: "신청 기한이 바뀌었다면?" }).click();
   await page.getByRole("heading", { name: "달라진 내용을 찾았어요" }).waitFor();
   assert.ok(await page.getByText("합성 예제", { exact: true }).isVisible());
@@ -72,12 +160,88 @@ try {
   );
   await audit(page, "changed example result");
   await page.screenshot({ path: screenshots + "/result.png", fullPage: true });
-  await page.getByRole("button", { name: "Switch to English" }).click();
+  let checkRequests = 0;
+  page.on("request", (request) => {
+    if (/\/api\/(?:checks|demo)(?:[/?]|$)/.test(request.url())) checkRequests++;
+  });
+  await page.getByRole("button", { name: "설정", exact: true }).click();
+  const resultLanguage = page.getByRole("combobox", { name: "결과 언어" });
+  const interfaceLanguage = page.getByRole("combobox", { name: "화면 언어" });
+  await page.screenshot({
+    path: screenshots + "/desktop-settings.png",
+    fullPage: true,
+  });
+  const translatedHeadings = new Set();
+  for (const code of [
+    "en",
+    "zh",
+    "es",
+    "fr",
+    "de",
+    "ja",
+    "ko",
+    "pt",
+    "ar",
+    "ru",
+  ]) {
+    await resultLanguage.selectOption(code);
+    assert.equal(await interfaceLanguage.inputValue(), "ko");
+    assert.equal(
+      await page.locator(".result-container").getAttribute("lang"),
+      code,
+    );
+    assert.equal(
+      await page.locator(".result-container").getAttribute("dir"),
+      code === "ar" ? "rtl" : "ltr",
+    );
+    assert.ok(
+      await page.getByText("2026년 11월 10일", { exact: true }).isVisible(),
+    );
+    translatedHeadings.add(
+      await page.locator(".result-heading h1").innerText(),
+    );
+  }
+  assert.equal(translatedHeadings.size, 10);
+  await resultLanguage.selectOption("ar");
+  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  await page.screenshot({
+    path: screenshots + "/desktop-arabic-result.png",
+    fullPage: true,
+  });
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.locator(".next-step-card button.secondary").click();
+  assert.equal(await page.locator(".toast").getAttribute("lang"), "ar");
+  assert.equal(await page.locator(".toast").getAttribute("dir"), "rtl");
+  const arabicSummary = await page.evaluate(() =>
+    navigator.clipboard.readText(),
+  );
+  assert.match(arabicSummary, /[\u0600-\u06ff]/);
+  assert.match(arabicSummary, /2026년 11월 10일/);
+  await page.getByRole("button", { name: "설정", exact: true }).click();
+  await resultLanguage.selectOption("en");
+  await interfaceLanguage.selectOption("en");
+  assert.equal(
+    await page.getByRole("combobox", { name: "Result language" }).inputValue(),
+    "en",
+  );
+  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  assert.equal(
+    checkRequests,
+    0,
+    "changing display language must not make an API request",
+  );
   await page.getByRole("heading", { name: "We found a few changes" }).waitFor();
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.getByRole("button", { name: "Copy summary" }).click();
+  const summary = await page.evaluate(() => navigator.clipboard.readText());
+  assert.match(summary, /We found a few changes/);
+  assert.match(summary, /2026년 11월 10일/);
   assert.ok(
     await page.getByText("2026년 11월 10일", { exact: true }).isVisible(),
   );
-  results.push("example comparison, evidence, language switch preserves facts");
+  results.push(
+    "ten result languages, independent interface, RTL, copy and preserved facts without new requests",
+  );
   await page
     .getByRole("button", { name: "Check another notice", exact: true })
     .first()
@@ -201,7 +365,7 @@ try {
   });
   assert.equal(await readCountry.inputValue(), "GB");
   assert.match(
-    await page.getByRole("button", { name: /Notice country/ }).innerText(),
+    await page.getByRole("button", { name: /Region of use/ }).innerText(),
     /Not selected/,
   );
   await readCountry.selectOption("US");
@@ -209,10 +373,10 @@ try {
   await readCountry.selectOption("GB");
   assert.equal(await readCountry.inputValue(), "GB");
   assert.match(
-    await page.getByRole("button", { name: /Notice country/ }).innerText(),
+    await page.getByRole("button", { name: /Region of use/ }).innerText(),
     /Not selected/,
   );
-  await page.getByRole("button", { name: /Notice country/ }).click();
+  await page.getByRole("button", { name: /Region of use/ }).click();
   await page
     .getByRole("textbox", { name: "Search countries" })
     .fill("United States");
@@ -222,8 +386,14 @@ try {
   await page
     .getByRole("textbox", { name: "Year or edition" })
     .fill("2026 corrected");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "Result language" })
+    .selectOption("es");
+  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  assert.equal(await readCountry.inputValue(), "GB");
   assert.match(
-    await page.getByRole("button", { name: /Notice country/ }).innerText(),
+    await page.getByRole("button", { name: /Region of use/ }).innerText(),
     /United States/,
   );
   assert.equal(
@@ -273,8 +443,15 @@ try {
   await page
     .getByRole("button", { name: "Check official sources", exact: true })
     .click();
-  await page.getByRole("heading", { name: "We found a few changes" }).waitFor();
+  await page.locator('.result-container[lang="es"]').waitFor();
   assert.equal(sentNotice.notice.edition, "2026 corrected");
+  assert.equal(sentNotice.lang, "es");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "Result language" })
+    .selectOption("en");
+  await page.getByRole("button", { name: "Close / 닫기" }).click();
+  await page.getByRole("heading", { name: "We found a few changes" }).waitFor();
   assert.ok(
     await page
       .getByText(/A candidate is not necessarily a verified official source/)
@@ -347,11 +524,21 @@ try {
   const phone = await mobile.newPage();
   phone.on("pageerror", (e) => errors.push(e.message));
   await phone.goto(origin, { waitUntil: "networkidle" });
-  await phone.getByRole("button", { name: /공고 국가/ }).click();
+  await phone.getByRole("button", { name: /사용 지역/ }).click();
   assert.ok(
     (await phone
       .getByRole("textbox", { name: "국가 이름 검색" })
       .evaluate((el) => parseFloat(getComputedStyle(el).fontSize))) >= 16,
+  );
+  await phone.screenshot({
+    path: screenshots + "/mobile-settings.png",
+    fullPage: true,
+  });
+  assert.equal(
+    await phone.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+    true,
   );
   const closeSize = await phone
     .getByRole("button", { name: "Close / 닫기" })
@@ -398,8 +585,77 @@ try {
     ),
     true,
   );
+  await phone.getByRole("button", { name: "설정", exact: true }).click();
+  await phone.getByRole("combobox", { name: "결과 언어" }).selectOption("ar");
+  await phone.getByRole("button", { name: "Close / 닫기" }).click();
+  assert.equal(
+    await phone.locator(".result-container").getAttribute("dir"),
+    "rtl",
+  );
+  assert.equal(
+    await phone.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+    true,
+  );
+  await phone.screenshot({
+    path: screenshots + "/mobile-arabic-result.png",
+    fullPage: true,
+  });
   await audit(phone, "mobile result");
   results.push("390px touch viewport and result without horizontal overflow");
+  for (const width of [320, 390]) {
+    await phone.setViewportSize({ width, height: 800 });
+    await phone.getByRole("button", { name: "설정", exact: true }).click();
+    assert.equal(
+      await phone.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      true,
+    );
+    assert.equal(
+      await phone
+        .locator(".modal")
+        .evaluate((el) => el.scrollWidth <= el.clientWidth),
+      true,
+    );
+    assert.ok(
+      await phone.getByRole("textbox", { name: "국가 이름 검색" }).isVisible(),
+    );
+    await phone.locator(".modal").evaluate(async (el) => {
+      await Promise.all(
+        el.getAnimations().map((animation) => animation.finished),
+      );
+    });
+    await audit(phone, `${width}px settings`);
+    await phone.getByRole("button", { name: "Close / 닫기" }).click();
+    for (const code of ["ar", "de", "fr"]) {
+      await phone.getByRole("button", { name: "설정", exact: true }).click();
+      await phone
+        .getByRole("combobox", { name: "결과 언어" })
+        .selectOption(code);
+      await phone.getByRole("button", { name: "Close / 닫기" }).click();
+      assert.equal(
+        await phone.locator(".result-container").getAttribute("lang"),
+        code,
+      );
+      assert.equal(
+        await phone.locator(".result-container").getAttribute("dir"),
+        code === "ar" ? "rtl" : "ltr",
+      );
+      assert.equal(
+        await phone.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+        true,
+        `${width}px ${code} result overflow`,
+      );
+      await audit(phone, `${width}px ${code} result`);
+    }
+  }
+  results.push(
+    "320px and 390px settings and Arabic, German and French results without overflow; RTL and axe checks",
+  );
   await phone.setViewportSize({ width: 360, height: 800 });
   assert.equal(
     await phone.evaluate(

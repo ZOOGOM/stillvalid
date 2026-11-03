@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { assembleResult, validExplicitTimestamp } from "../src/lib/compare";
 import { demoResult } from "../src/lib/demo";
 import type { ModelComparison, Notice, Source } from "../src/lib/schema";
+import { resultLanguages } from "../src/lib/languages";
 
 const notice: Notice = {
   title: "2026 Garden workshop",
@@ -272,4 +273,93 @@ test("exactly matching explicit deadlines can be marked expired only with a time
 test("all three example scenarios exercise the production comparison guard", () => {
   assert.equal(demoResult("deadline", "ko").status, "changed");
   assert.equal(demoResult("identity", "ko").status, "review");
+});
+test("result languages do not modify verified facts or expose model prose", () => {
+  const a = {
+    ...analysis,
+    summary: "invented new deadline",
+    next_action: "call 555-0000",
+  };
+  const baseline = assembleResult({
+    id: "test",
+    notice,
+    sources: [source],
+    analyses: [a],
+    lang: "en",
+    checkedAt: "2026-11-03T00:00:00Z",
+  });
+  for (const lang of resultLanguages) {
+    const result = assembleResult({
+      id: "test",
+      notice,
+      sources: [source],
+      analyses: [a],
+      lang,
+      checkedAt: "2026-11-03T00:00:00Z",
+    });
+    assert.deepEqual({ ...result, lang: "en" }, baseline);
+    assert.equal(JSON.stringify(result).includes(a.summary), false);
+    assert.equal(JSON.stringify(result).includes(a.next_action), false);
+  }
+});
+test("case, Unicode width and whitespace changes cannot become verified excerpts", () => {
+  const original = "Status: Open ２０２６";
+  const updated = "Status: Closed ２０２６";
+  const n: Notice = {
+    ...notice,
+    originalText: `2026 Garden workshop. ${original}`,
+    fields: [{ key: "status", value: "Open ２０２６", quote: original }],
+  };
+  const s: Source = {
+    ...source,
+    text: `2026 Garden workshop. Example Library. ${updated}`,
+  };
+  const a: ModelComparison = {
+    ...analysis,
+    comparisons: [
+      {
+        key: "status",
+        before: "Open ２０２６",
+        after: "Closed ２０２６",
+        before_quote: original,
+        after_quote: updated,
+        relation: "changed",
+      },
+    ],
+  };
+  assert.equal(run(n, s, a).status, "changed");
+  for (const [key, variants] of [
+    ["before", ["open ２０２６", "Open 2026", "Open  ２０２６"]],
+    ["after", ["closed ２０２６", "Closed 2026", "Closed  ２０２６"]],
+    [
+      "before_quote",
+      ["Status: open ２０２６", "Status: Open 2026", "Status: Open  ２０２６"],
+    ],
+    [
+      "after_quote",
+      [
+        "Status: closed ２０２６",
+        "Status: Closed 2026",
+        "Status: Closed  ２０２６",
+      ],
+    ],
+  ] as const) {
+    for (const variant of variants) {
+      const altered = structuredClone(a);
+      altered.comparisons[0][key] = variant;
+      const result = run(n, s, altered);
+      assert.equal(result.status, "review", `${key}: ${variant}`);
+      assert.equal(result.comparisons[0].verified, false);
+      assert.equal(result.comparisons[0].relation, "unclear");
+      assert.equal(
+        JSON.stringify(result.comparisons[0]).includes(variant),
+        false,
+      );
+    }
+  }
+  const alteredIdentity = {
+    ...a,
+    identity_quote: "2026 garden workshop. Example Library.",
+  };
+  assert.equal(run(n, s, alteredIdentity).status, "review");
 });

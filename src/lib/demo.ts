@@ -1,9 +1,10 @@
 import { assembleResult } from "./compare";
-import type { Lang, ModelComparison, Notice, Result, Source } from "./schema";
+import type { ModelComparison, Notice, Result, Source } from "./schema";
+import type { ResultLang } from "./languages";
 
 export const demoIds = ["deadline", "cancelled", "identity"] as const;
 export type DemoId = (typeof demoIds)[number];
-export function demoResult(id: DemoId, lang: Lang): Result {
+export function demoResult(id: DemoId, lang: ResultLang): Result {
   const ko = lang === "ko";
   const notice: Notice = {
     title: ko
