@@ -201,6 +201,7 @@ const ko = {
   privacy: "개인정보 안내",
   github: "GitHub",
   footer: "좋은 정보가, 필요한 순간에도 좋은 정보이도록.",
+  codeLicense: "코드: MIT",
   aboutTitle: "안내와 지금 사이를 연결해요.",
   aboutBody:
     "StillValid는 오래된 공고 사진과 공식 자료 사이의 차이를 이해하도록 돕는 독립 프로젝트예요. 공개 행사·강좌·공공시설 안내부터 시작해요. 전 세계 사용자를 위한 국가 설정을 제공하지만 모든 기관과 언어의 확인 품질을 보증하지는 않아요.",
@@ -434,6 +435,7 @@ const en: Copy = {
   privacy: "Privacy",
   github: "GitHub",
   footer: "Useful information, still useful when you need it.",
+  codeLicense: "Code: MIT",
   aboutTitle: "Between a saved notice and now.",
   aboutBody:
     "StillValid is an independent project helping people understand differences between old notice photos and official material. It starts with public events, programs and facility notices. Global country settings don't imply verified coverage of every institution or language.",
