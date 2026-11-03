@@ -11,6 +11,7 @@
   --text: #1b2a40;
   --muted: #33425c;
   --green: #0a63ff;
+  --link: #064dcf;
   --green-soft: rgba(255, 255, 255, 0.55);
   --line: rgba(255, 255, 255, 0.55);
   --orange: #b84a00;
@@ -326,8 +327,11 @@ html[lang="en"] .hero h1 {
   font-size: 16px;
 }
 .text-button {
-  color: var(--green);
+  color: var(--link);
   font-weight: 500;
+}
+.modal .muted a {
+  color: var(--link);
 }
 .country-select {
   border: 1px solid var(--edge2);

@@ -4,15 +4,19 @@ Choose **GitHub + Vercel + Upstash Redis** for deployment without maintaining a 
 
 ## Vercel Git deployment
 
-Import `ZOOGOM/stillvalid` into a new Vercel project and connect its Git integration. Vercel can build and deploy pushes independently of GitHub Actions. The user reports that the Actions quota is exhausted; CI status has not been independently verified. Run local `npm run check`, `npm run build`, and `npm run test:browser` before pushing; the browser test needs a running app and Chromium. Vercel does not wait for those local checks or the GitHub checks before deploying.
+The existing `stillvalid` Vercel project is connected to `ZOOGOM/stillvalid` through native Git integration. Vercel builds pushes independently of GitHub Actions; the user reports that the Actions quota is exhausted. Run local `npm run check`, `npm run build`, and `npm run test:browser` before pushing; the browser test needs a running app and Chromium. Vercel does not wait for those local checks or the GitHub checks before deploying.
 
-The current `main` contains setup documentation, while the application is on `feat/stillvalid-webapp`. For a new review project, set its Production Branch in the Vercel project's Git settings to `feat/stillvalid-webapp`, then redeploy that branch or push a new commit. The initial import may try `main` and fail before this setting is changed. Once the app is merged into `main`, change the Production Branch back to `main`. The Git integration needs no `VERCEL_TOKEN`, `VERCEL_ORG_ID`, or `VERCEL_PROJECT_ID`; CLI alternatives are described in the [Korean setup guide](deployment.ko.md).
+The known production URL is [https://stillvalid-beta.vercel.app](https://stillvalid-beta.vercel.app). The current `main` contains setup documentation rather than the app, which is on `feat/stillvalid-webapp`. Feature-branch pushes create previews through Git integration. Verify the branch, commit and deployment status for each review; do not assume a branch setting was changed or a merge occurred. Git integration needs no `VERCEL_TOKEN`, `VERCEL_ORG_ID`, or `VERCEL_PROJECT_ID`; CLI alternatives are described in the [Korean setup guide](deployment.ko.md).
 
-The UI, location control and synthetic examples can be reviewed without application secrets. For live checks, register `META_API_KEY`, `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in Vercel for the relevant environment; live checks fail closed without Meta or shared storage. After Vercel issues an HTTPS domain, set production `APP_URL` to its exact origin and redeploy. Leave it unset for independent preview domains or set their own exact origin. Configure Deployment Protection so the intended review URL is accessible externally and test it in a separate browser before giving it to Claude. Do not put passwords or bypass tokens in chat or documentation.
+The UI, location control and synthetic examples can be reviewed without application secrets. `META_API_KEY` and `META_MODEL=muse-spark-1.3` are registered for Production only; Preview needs its own Meta configuration to perform live checks. Upstash was connected through Vercel Marketplace, which provided `KV_REST_API_URL` and `KV_REST_API_TOKEN` for Production and Preview. The app accepts that pair automatically, or the canonical `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` pair. Use the full, writable REST token, not `KV_REST_API_READ_ONLY_TOKEN`; raw `REDIS_URL` and `KV_URL` are not used. If both complete pairs are configured, the canonical pair takes precedence and should point to the same database. An incomplete selected pair fails closed; URL and token are never mixed across pairs. Meta or shared storage configuration is required for live checks. Environment changes require a new deployment to take effect.
+
+Set production `APP_URL` to the exact external origin and redeploy; leave it unset for independent preview domains or set their own exact origin. Configure Deployment Protection so the intended review URL is accessible externally and test it in a separate browser before giving it to Claude. Do not put keys, tokens, passwords or bypass tokens in chat or documentation.
+
+The hosting build runs `npm run vercel-build`. By default its hosted probe is skipped. For one reviewed production deployment, set `STILLVALID_VERIFY_DEPLOYMENT=1` to require a real Redis PING/write/read/delete check and one actual Meta text extraction using a visibly synthetic diagnostic notice and the global request allowance. Failure stops that build; a previous production deployment remains available. Logs contain only a fixed phase, numeric provider status and safe success flags. Reset the flag to `0` after the check, and rebuild after changing credentials. This probe does not validate images, search, official sources, real-notice accuracy or browser access.
 
 Vercel runs server-side functions and hosts the interface; GitHub stores source and triggers deployments. Redis holds expiring results and atomic request/concurrency counters shared between function instances. No always-on server purchase is required. Provider plans, quotas and Meta API charges still apply separately.
 
-See [Vercel Git integration](https://vercel.com/docs/git), [Deployment Protection](https://vercel.com/docs/deployment-protection), and [Upstash Redis REST](https://upstash.com/docs/redis/features/restapi). Hosted accounts and secrets are not created by the code. No Vercel deployment or hosted Redis connection has been verified, and no hosted URL is available yet.
+See [Vercel Git integration](https://vercel.com/docs/git), [Deployment Protection](https://vercel.com/docs/deployment-protection), and [Upstash Redis REST](https://upstash.com/docs/redis/features/restapi). Marketplace connection and environment registration do not prove app connectivity. Check the deployment's opt-in probe result in its build logs, then validate the complete public-notice flow separately.
 
 ## Local development
 
@@ -32,8 +36,8 @@ The interface and three synthetic examples work without a key. Live input is nev
 | --- | --- |
 | `META_API_KEY` | Server secret; `MODEL_API_KEY` is an accepted alias. |
 | `META_MODEL` | Default `muse-spark-1.3`, Standard mode. |
-| `UPSTASH_REDIS_REST_URL` | Shared Redis REST endpoint for serverless deployment. |
-| `UPSTASH_REDIS_REST_TOKEN` | Server-only Redis token. Both Redis variables are required together. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Canonical shared Redis REST endpoint and writable server-only token, required together. |
+| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | Marketplace aliases accepted together when the canonical pair is absent. |
 | `APP_URL` | Exact external origin, such as `https://your-domain.example`; controls origin checks and secure cookies. |
 | `DATABASE_PATH` | Persistent writable SQLite file. Compose sets `/app/data/stillvalid.sqlite`. |
 | `DAILY_MODEL_CALL_LIMIT` | Global paid model requests per UTC day, default 100; not a monetary cap. |
@@ -57,7 +61,7 @@ The Meta adapter needs approved HTTPS access to `api.meta.ai`. Source retrieval 
 
 A generic forward proxy cannot preserve destination pinning, so source retrieval fails closed when `HTTP_PROXY` or `HTTPS_PROXY` is configured. The fixed-host Meta adapter supports the configured egress proxy. Preserve the authoring environment's network controls; use its supported configuration workflow for denied destinations, not a proxy bypass.
 
-The inspected authoring environment did not provide the Sites starter/publishing helper. No hosted service URL is claimed. Verify the Docker image on the selected host before production use.
+Verify the Docker image on the selected host before production use.
 
 ## Data and operations
 
