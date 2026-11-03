@@ -1,25 +1,29 @@
 # Product acceptance and release checks
 
-StillValid helps a person compare a saved notice with official material, then understand changes, supporting quotes and the next confirmation step. The first release is a mobile web app with English and Korean interfaces, optional notice-country settings and no GPS requirement.
+StillValid helps a person compare a saved notice with official material, then understand changes, supporting quotes and the next confirmation step. The first release is a mobile web app with English and Korean interfaces, ten result languages, an optional usage region and no GPS requirement.
 
 This checklist translates the existing StillValid product plan into inspectable implementation and release criteria. Code and automated checks are separate from live provider, hosted-storage and real-device validation. See [validation evidence](validation.md) for results actually observed.
 
 ## Complete user flow
 
-1. Choose English or Korean and optionally select the notice country. Country is independent of interface language, citizenship, residence and time zone. Remembering a country is opt-in and reversible.
+1. In one settings dialog choose English or Korean for the interface, choose a result language, and optionally select a usage region from 249 countries and regions. These choices are independent. Remembering the region is opt-in and reversible; the app does not infer nationality, residence or time zone, or establish the notice country from GPS or IP.
 2. Upload or photograph one JPEG, PNG or WebP, or paste notice text. Crop, rotate and preview the image locally before sending it. Recover from an unsupported file, oversized upload or unreadable image by choosing another input.
-3. Review and correct the title, institution, edition, country read from the notice, and original text. The selected country and the extracted country are displayed separately. Confirm a disagreement between the selected country and the country read from the notice.
+3. Review and correct the title, institution, edition, country read from the notice, and original text. The usage region and extracted notice country are separate. Confirm a disagreement between them.
 4. Search official-source candidates using Meta's built-in web search, or supply a public HTTPS source URL. Retrieve actual source text and check notice identity and quoted evidence.
 5. Read the result, individual before/after values, uncertainty, source URLs and retrieval times. Open supporting quotes. An incomplete check stays a review or unavailable result.
 6. If identity remains unclear, inspect the displayed candidates and choose one for a new check. Candidate links are labeled as unverified until the source and notice have been checked. This is a recovery path on the result screen; a separate pre-comparison candidate-selection API is not implemented.
-7. Switch language without changing quoted facts, copy a summary, check again, or delete a result. Session-wide deletion is available in the privacy dialog.
+7. Switch result language without changing the verdict or original dates, amounts, institution names, addresses, before/after values or quotes, and without another model call. Copy a summary, check again, or delete a result. Session-wide deletion is available in the privacy dialog.
+
+Result languages are English (`en`), Simplified Chinese (`zh`), Spanish (`es`), French (`fr`), German (`de`), Japanese (`ja`), Korean (`ko`), Portuguese (`pt`), Arabic (`ar`) and Russian (`ru`). The selected language applies to result status, descriptions, comparison labels, next actions, warnings and copied summaries. Arabic results use RTL and isolate original text direction; Traditional Chinese is a later consideration. `sv_result_lang` and `sv_lang` store result and interface language separately. The checks API `lang` field is the result language. Selecting a region does not change either language; selecting a language does not change the region or `notice.country`.
+
+Initialize the result language from a valid saved preference first, otherwise from the browser language's supported base code, and finally from the default Korean or English interface language. For example, `ja-JP` selects Japanese results even with an English interface. Never infer usage region from language. Chinese uses `zh-CN` and Portuguese uses `pt-BR`.
 
 ## Feature coverage
 
 | Requirement | Implementation | Acceptance evidence |
 | --- | --- | --- |
 | Anonymous mobile use | Main app and session cookie | Browser flow, session isolation and origin checks |
-| Optional country and independent language | Country picker and bilingual UI | Country memory/clear, mismatch confirmation and language-preservation checks |
+| Optional region and independent languages | Usage-region picker, bilingual UI and ten result-language dictionaries | Region memory/clear, mismatch confirmation and fact-preservation checks; live language quality remains unverified |
 | Image/text input and local editing | Browser preparation, crop and rotation | Real browser file input and canvas flow; unsupported-file recovery |
 | Extraction review | Editable title, institution, edition and transcript | HTTP-fixture extraction and review checks |
 | Official-source discovery | Meta Responses search and actual returned URL evidence | Provider-contract tests; live search still requires deployment validation |
@@ -40,6 +44,7 @@ Complete these on the deployed HTTPS service before describing it as ready for j
 - [ ] Register `META_API_KEY`, both Upstash REST variables and the correct production `APP_URL` as server environment variables.
 - [ ] Check account/model access, then perform actual image extraction, web search, source retrieval and comparison. A models-list response alone is insufficient.
 - [ ] Run the ten real-notice tasks below, record human reference answers and investigate every incorrect definitive result.
+- [ ] Evaluate actual Meta output quality for each result language separately from the implemented dictionaries; record observed evidence and limitations. Selecting 249 regions does not establish worldwide notice coverage.
 - [ ] Exercise a different anonymous session, individual deletion, session-wide deletion, expiry, duplicate submission and shared request/concurrency limits on hosted Redis.
 - [ ] Test a real iPhone Safari and Android Chrome, including camera permission failure, upload, editing, keyboard, zoom and network interruption.
 - [ ] Check source-site failures, provider timeout/limit errors, insufficient configuration and recovery without returning a synthetic result as live output.

@@ -1,0 +1,730 @@
+import { copy } from "./i18n";
+import type { ResultLang } from "./languages";
+
+// These keys cover the result view, its warnings, and the copied summary.
+const resultKeys = [
+  "resultEyebrow",
+  "status_changed",
+  "status_matched",
+  "status_cancelled",
+  "status_expired",
+  "status_review",
+  "status_unavailable",
+  "desc_changed",
+  "desc_matched",
+  "desc_cancelled",
+  "desc_expired",
+  "desc_review",
+  "desc_unavailable",
+  "originalValue",
+  "currentValue",
+  "changed",
+  "same",
+  "uncertain",
+  "showEvidence",
+  "originalQuote",
+  "sourceQuote",
+  "noEvidence",
+  "key_deadline",
+  "key_date",
+  "key_location",
+  "key_status",
+  "key_cost",
+  "key_eligibility",
+  "nextTitle",
+  "nextLive",
+  "nextReview",
+  "openSource",
+  "sourcesTitle",
+  "sourceUnverified",
+  "sourceRegistered",
+  "fetched",
+  "checked",
+  "synthetic",
+  "syntheticDesc",
+  "syntheticSource",
+  "demoStamp",
+  "scope",
+  "candidatesTitle",
+  "candidatesHint",
+  "useCandidate",
+  "copy",
+  "copied",
+  "copyFailed",
+  "recheck",
+  "newCheck",
+  "deleteResult",
+  "noComparison",
+  "warning_identity",
+  "warning_authority",
+  "warning_evidence",
+  "warning_conflict",
+  "warning_partial",
+  "warning_search",
+  "warning_fetch",
+  "warning_network",
+  "warning_budget",
+] as const;
+
+export type ResultCopyKey = (typeof resultKeys)[number];
+type ResultCopy = Record<ResultCopyKey, string>;
+
+// Reuse the established Korean and English wording exactly.
+function existingCopy(lang: "ko" | "en"): ResultCopy {
+  const source = copy(lang);
+  return Object.fromEntries(
+    resultKeys.map((key) => [key, source[key]]),
+  ) as ResultCopy;
+}
+
+const translations: Record<ResultLang, ResultCopy> = {
+  ko: existingCopy("ko"),
+  en: existingCopy("en"),
+  zh: {
+    resultEyebrow: "公告核查结果",
+    status_changed: "发现了几处变化",
+    status_matched: "已核查的内容一致",
+    status_cancelled: "已确认有取消公告",
+    status_expired: "明确注明的申请截止时间已过",
+    status_review: "需要进一步核查",
+    status_unavailable: "无法核实来源",
+    desc_changed: "这些差异有获取的资料支持。请查看下方证据及原始公告。",
+    desc_matched:
+      "比较的项目与获取的来源一致，但不能排除其他地方随后发布更新。",
+    desc_cancelled: "官方来源明确取消了这一期活动。请打开原文确认取消范围。",
+    desc_expired:
+      "截止时间明确包含时间和时区。请在原始来源中确认当前申请状态。",
+    desc_review:
+      "公告是否相同、来源权威性或证据尚不充分。请勿将下方差异视为已确认的变化。",
+    desc_unavailable:
+      "未找到来源或无法访问。这并不意味着活动已取消或没有变化。",
+    originalValue: "您保存的公告",
+    currentValue: "获取的资料",
+    changed: "有变化",
+    same: "一致",
+    uncertain: "需要核查",
+    showEvidence: "查看依据原文",
+    originalQuote: "输入的公告",
+    sourceQuote: "获取的来源",
+    noEvidence: "无法核实充分的引用依据。",
+    key_deadline: "申请截止时间",
+    key_date: "活动日期",
+    key_location: "地点",
+    key_status: "状态",
+    key_cost: "费用",
+    key_eligibility: "申请对象",
+    nextTitle: "下一步",
+    nextLive: "打开机构的原始公告，确认申请方式和适用对象。",
+    nextReview: "确认机构和期次，然后提供正确的官方链接。",
+    openSource: "打开官方来源",
+    sourcesTitle: "已核查的来源",
+    sourceUnverified: "与机构的官方关系未经独立验证",
+    sourceRegistered: "已登记的机构域名 · 公告是否相同需另行核查",
+    fetched: "获取时间",
+    checked: "核查时间",
+    synthetic: "合成示例",
+    syntheticDesc:
+      "此处比较的是虚构公告和虚构更新，未调用 Meta API，也未实时查询网页。",
+    syntheticSource: "虚构来源 · 非真实网页",
+    demoStamp: "示例资料",
+    scope: "结果仅涵盖核查的来源和时间。原始日期、名称和地址均予以保留。",
+    candidatesTitle: "其他候选来源",
+    candidatesHint:
+      "请先确认候选来源是否为同一公告，再选择链接重新核查。候选来源不一定是经过验证的官方来源。",
+    useCandidate: "使用此链接重新核查",
+    copy: "复制结果摘要",
+    copied: "已复制",
+    copyFailed: "复制失败，请检查浏览器权限。",
+    recheck: "重新查询并核查",
+    newCheck: "核查另一则公告",
+    deleteResult: "删除此结果",
+    noComparison:
+      "目前没有证据支持的比较项目。请补充官方链接或更清晰的公告内容。",
+    warning_identity: "无法确认机构、地点、年份或期次是否相同。",
+    warning_authority: "未独立验证该来源与机构的官方关系。",
+    warning_evidence: "部分值或引文与所提供的来源原文不符。",
+    warning_conflict: "不同来源对同一项目给出了不同的值。",
+    warning_partial: "并未核实原始公告中的所有内容。",
+    warning_search: "搜索未完成，因此核查范围有限。",
+    warning_fetch: "部分资料无法获取，因此核查范围有限。",
+    warning_network: "当前网络无法访问来源网页。",
+    warning_budget: "已达到今日可用的请求额度。",
+  },
+  es: {
+    resultEyebrow: "Resultado de la comprobación",
+    status_changed: "Encontramos algunos cambios",
+    status_matched: "Los datos comprobados coinciden",
+    status_cancelled: "Se ha documentado una cancelación",
+    status_expired: "El plazo explícito ha vencido",
+    status_review: "Hace falta revisar de nuevo",
+    status_unavailable: "No pudimos verificar las fuentes",
+    desc_changed:
+      "Estas diferencias están respaldadas por el material obtenido. Revisa las pruebas y el aviso original a continuación.",
+    desc_matched:
+      "Los campos comparados coinciden con la fuente consultada. Esto no descarta una actualización posterior en otro lugar.",
+    desc_cancelled:
+      "Una fuente oficial cancela expresamente esta edición. Ábrela para comprobar el alcance de la cancelación.",
+    desc_expired:
+      "El plazo incluye una hora y zona horaria explícitas. Consulta la fuente original para conocer el estado actual de la solicitud.",
+    desc_review:
+      "La identidad del aviso, la autoridad de la fuente o las pruebas son insuficientes. No consideres confirmadas las diferencias siguientes.",
+    desc_unavailable:
+      "No se encontró la fuente o no se pudo acceder a ella. Esto no significa que el evento se haya cancelado o no haya cambiado.",
+    originalValue: "Tu aviso guardado",
+    currentValue: "Material consultado",
+    changed: "Cambió",
+    same: "Coincide",
+    uncertain: "Requiere revisión",
+    showEvidence: "Ver el texto de respaldo",
+    originalQuote: "Tu aviso",
+    sourceQuote: "Fuente consultada",
+    noEvidence: "No pudimos verificar una cita de respaldo suficiente.",
+    key_deadline: "Plazo de solicitud",
+    key_date: "Fecha del evento",
+    key_location: "Lugar",
+    key_status: "Estado",
+    key_cost: "Coste",
+    key_eligibility: "Quién puede solicitarlo",
+    nextTitle: "Siguiente paso",
+    nextLive:
+      "Abre el aviso original de la institución para confirmar cómo solicitarlo y a quién se aplica.",
+    nextReview:
+      "Confirma la institución y la edición y proporciona el enlace oficial correcto.",
+    openSource: "Abrir fuente oficial",
+    sourcesTitle: "Fuentes consultadas",
+    sourceUnverified: "Relación oficial no verificada de forma independiente",
+    sourceRegistered:
+      "Dominio registrado de la institución · identidad del aviso comprobada por separado",
+    fetched: "Consulta",
+    checked: "Comprobación",
+    synthetic: "Ejemplo sintético",
+    syntheticDesc:
+      "Se compara un aviso ficticio con una actualización ficticia. No se llamó a la API de Meta ni se consultó la web en directo.",
+    syntheticSource: "Fuente ficticia · no es una página real",
+    demoStamp: "Material de ejemplo",
+    scope:
+      "Los resultados solo abarcan las fuentes y el momento de la consulta. Se conservan las fechas, nombres y direcciones originales.",
+    candidatesTitle: "Otras fuentes candidatas",
+    candidatesHint:
+      "Revisa si corresponden al mismo aviso y elige un enlace para comprobarlo de nuevo. Una fuente candidata no es necesariamente una fuente oficial verificada.",
+    useCandidate: "Comprobar con este enlace",
+    copy: "Copiar resumen",
+    copied: "Copiado",
+    copyFailed: "No se pudo copiar. Comprueba los permisos del navegador.",
+    recheck: "Realizar una nueva comprobación",
+    newCheck: "Comprobar otro aviso",
+    deleteResult: "Eliminar este resultado",
+    noComparison:
+      "Aún no hay comparaciones respaldadas por pruebas. Añade una URL oficial o un texto más claro del aviso.",
+    warning_identity:
+      "No se pudo confirmar que coincidan la institución, el lugar, el año o la edición.",
+    warning_authority:
+      "No se verificó de forma independiente la relación oficial entre la fuente y la institución.",
+    warning_evidence:
+      "Algunos valores o citas no coinciden con el texto de la fuente proporcionada.",
+    warning_conflict: "Las fuentes discrepan sobre el mismo campo.",
+    warning_partial: "No se verificaron todos los datos del aviso original.",
+    warning_search:
+      "La búsqueda no terminó, por lo que la comprobación tiene un alcance limitado.",
+    warning_fetch:
+      "No se pudieron obtener algunos materiales, por lo que la cobertura es limitada.",
+    warning_network:
+      "La red actual no permite acceder a las páginas de las fuentes.",
+    warning_budget: "Se ha alcanzado el límite de solicitudes de hoy.",
+  },
+  fr: {
+    resultEyebrow: "Résultat de la vérification",
+    status_changed: "Nous avons trouvé des changements",
+    status_matched: "Les éléments vérifiés correspondent",
+    status_cancelled: "Une annulation est documentée",
+    status_expired: "La date limite explicite est passée",
+    status_review: "Une nouvelle vérification est nécessaire",
+    status_unavailable: "Nous n’avons pas pu vérifier les sources",
+    desc_changed:
+      "Ces différences sont étayées par les documents consultés. Examinez les preuves et l’avis original ci-dessous.",
+    desc_matched:
+      "Les éléments comparés correspondent à la source consultée. Une mise à jour ultérieure ailleurs reste possible.",
+    desc_cancelled:
+      "Une source officielle annule explicitement cette édition. Ouvrez-la pour vérifier la portée de l’annulation.",
+    desc_expired:
+      "La date limite précise une heure et un fuseau horaire. Consultez la source originale pour connaître l’état actuel des inscriptions.",
+    desc_review:
+      "L’identité de l’avis, l’autorité de la source ou les preuves sont insuffisantes. Ne considérez pas les différences ci-dessous comme confirmées.",
+    desc_unavailable:
+      "La source est introuvable ou inaccessible. Cela ne signifie pas que l’événement a été annulé ou qu’il est inchangé.",
+    originalValue: "Votre avis enregistré",
+    currentValue: "Document consulté",
+    changed: "Modifié",
+    same: "Correspond",
+    uncertain: "À vérifier",
+    showEvidence: "Voir le texte justificatif",
+    originalQuote: "Votre avis",
+    sourceQuote: "Source consultée",
+    noEvidence:
+      "Nous n’avons pas pu vérifier une citation suffisamment probante.",
+    key_deadline: "Date limite de candidature",
+    key_date: "Date de l’événement",
+    key_location: "Lieu",
+    key_status: "Statut",
+    key_cost: "Coût",
+    key_eligibility: "Personnes admissibles",
+    nextTitle: "Prochaine étape",
+    nextLive:
+      "Ouvrez l’avis original de l’organisme pour vérifier les modalités et les personnes concernées.",
+    nextReview:
+      "Confirmez l’organisme et l’édition, puis fournissez le lien officiel correct.",
+    openSource: "Ouvrir la source officielle",
+    sourcesTitle: "Sources consultées",
+    sourceUnverified: "Lien officiel non vérifié indépendamment",
+    sourceRegistered:
+      "Domaine enregistré de l’organisme · identité de l’avis vérifiée séparément",
+    fetched: "Consultation",
+    checked: "Vérification",
+    synthetic: "Exemple synthétique",
+    syntheticDesc:
+      "Cet exemple compare un avis fictif à une mise à jour fictive. Aucun appel à l’API Meta ni aucune recherche Web en direct n’a été effectué.",
+    syntheticSource: "Source fictive · page non réelle",
+    demoStamp: "Document d’exemple",
+    scope:
+      "Les résultats portent uniquement sur les sources et le moment de la vérification. Les dates, noms et adresses d’origine sont conservés.",
+    candidatesTitle: "Autres sources possibles",
+    candidatesHint:
+      "Vérifiez qu’elles concernent le même avis, puis choisissez un lien pour relancer la vérification. Une source proposée n’est pas nécessairement une source officielle vérifiée.",
+    useCandidate: "Vérifier avec ce lien",
+    copy: "Copier le résumé",
+    copied: "Copié",
+    copyFailed: "Échec de la copie. Vérifiez les autorisations du navigateur.",
+    recheck: "Relancer la vérification",
+    newCheck: "Vérifier un autre avis",
+    deleteResult: "Supprimer ce résultat",
+    noComparison:
+      "Aucune comparaison étayée n’est disponible. Ajoutez une URL officielle ou un texte d’avis plus clair.",
+    warning_identity:
+      "L’organisme, le lieu, l’année ou l’édition n’ont pas pu être rapprochés avec certitude.",
+    warning_authority:
+      "Le lien officiel entre la source et l’organisme n’a pas été vérifié indépendamment.",
+    warning_evidence:
+      "Certaines valeurs ou citations ne correspondent pas au texte de la source fournie.",
+    warning_conflict:
+      "Les sources donnent des valeurs différentes pour un même élément.",
+    warning_partial:
+      "Tous les éléments de l’avis original n’ont pas été vérifiés.",
+    warning_search:
+      "La recherche n’a pas abouti ; la portée de la vérification est donc limitée.",
+    warning_fetch:
+      "Certains documents n’ont pas pu être récupérés ; la couverture est donc limitée.",
+    warning_network:
+      "Le réseau actuel ne permet pas d’accéder aux pages des sources.",
+    warning_budget: "Le quota de demandes du jour est atteint.",
+  },
+  de: {
+    resultEyebrow: "Ergebnis der Prüfung",
+    status_changed: "Wir haben Änderungen gefunden",
+    status_matched: "Die geprüften Angaben stimmen überein",
+    status_cancelled: "Eine Absage ist dokumentiert",
+    status_expired: "Die ausdrücklich genannte Frist ist abgelaufen",
+    status_review: "Eine weitere Prüfung ist nötig",
+    status_unavailable: "Die Quellen konnten nicht geprüft werden",
+    desc_changed:
+      "Diese Unterschiede werden durch das abgerufene Material belegt. Prüfen Sie unten die Nachweise und die ursprüngliche Bekanntmachung.",
+    desc_matched:
+      "Die verglichenen Angaben stimmen mit der abgerufenen Quelle überein. Eine spätere Aktualisierung an anderer Stelle ist damit nicht ausgeschlossen.",
+    desc_cancelled:
+      "Eine offizielle Quelle sagt diese Ausgabe ausdrücklich ab. Öffnen Sie sie, um den Umfang der Absage zu prüfen.",
+    desc_expired:
+      "Für die Frist sind Uhrzeit und Zeitzone ausdrücklich angegeben. Prüfen Sie den aktuellen Anmeldestatus in der Originalquelle.",
+    desc_review:
+      "Die Identität der Bekanntmachung, die Autorität der Quelle oder die Nachweise sind nicht ausreichend geklärt. Betrachten Sie die folgenden Unterschiede nicht als bestätigte Änderungen.",
+    desc_unavailable:
+      "Die Quelle wurde nicht gefunden oder war nicht zugänglich. Das bedeutet nicht, dass die Veranstaltung abgesagt wurde oder unverändert ist.",
+    originalValue: "Ihre gespeicherte Bekanntmachung",
+    currentValue: "Abgerufenes Material",
+    changed: "Geändert",
+    same: "Stimmt überein",
+    uncertain: "Prüfung nötig",
+    showEvidence: "Belegtext ansehen",
+    originalQuote: "Ihre Bekanntmachung",
+    sourceQuote: "Abgerufene Quelle",
+    noEvidence:
+      "Ein ausreichendes belegendes Zitat konnte nicht geprüft werden.",
+    key_deadline: "Anmeldefrist",
+    key_date: "Veranstaltungsdatum",
+    key_location: "Ort",
+    key_status: "Status",
+    key_cost: "Kosten",
+    key_eligibility: "Wer sich anmelden kann",
+    nextTitle: "Nächster Schritt",
+    nextLive:
+      "Öffnen Sie die Originalbekanntmachung der Einrichtung und prüfen Sie das Anmeldeverfahren und den betroffenen Personenkreis.",
+    nextReview:
+      "Prüfen Sie Einrichtung und Ausgabe und ergänzen Sie den richtigen offiziellen Link.",
+    openSource: "Offizielle Quelle öffnen",
+    sourcesTitle: "Geprüfte Quellen",
+    sourceUnverified: "Offizielle Beziehung nicht unabhängig geprüft",
+    sourceRegistered:
+      "Registrierte Domain der Einrichtung · Identität der Bekanntmachung wird separat geprüft",
+    fetched: "Abgerufen",
+    checked: "Geprüft",
+    synthetic: "Synthetisches Beispiel",
+    syntheticDesc:
+      "Hier werden eine fiktive Bekanntmachung und eine fiktive Aktualisierung verglichen. Es erfolgte kein Meta-API-Aufruf und keine Live-Websuche.",
+    syntheticSource: "Fiktive Quelle · keine echte Webseite",
+    demoStamp: "Beispielmaterial",
+    scope:
+      "Die Ergebnisse gelten nur für die geprüften Quellen und den Prüfzeitpunkt. Ursprüngliche Daten, Namen und Adressen bleiben erhalten.",
+    candidatesTitle: "Weitere mögliche Quellen",
+    candidatesHint:
+      "Prüfen Sie, ob sie dieselbe Bekanntmachung betreffen, und wählen Sie einen Link für eine erneute Prüfung. Ein Vorschlag ist nicht automatisch eine verifizierte offizielle Quelle.",
+    useCandidate: "Mit diesem Link erneut prüfen",
+    copy: "Zusammenfassung kopieren",
+    copied: "Kopiert",
+    copyFailed:
+      "Kopieren fehlgeschlagen. Prüfen Sie die Browserberechtigungen.",
+    recheck: "Erneut abrufen und prüfen",
+    newCheck: "Weitere Bekanntmachung prüfen",
+    deleteResult: "Dieses Ergebnis löschen",
+    noComparison:
+      "Es gibt noch keine durch Nachweise gestützten Vergleiche. Ergänzen Sie eine offizielle URL oder einen klareren Bekanntmachungstext.",
+    warning_identity:
+      "Einrichtung, Ort, Jahr oder Ausgabe konnten nicht sicher zugeordnet werden.",
+    warning_authority:
+      "Die offizielle Beziehung zwischen Quelle und Einrichtung wurde nicht unabhängig überprüft.",
+    warning_evidence:
+      "Einige Werte oder Zitate stimmen nicht mit dem angegebenen Quelltext überein.",
+    warning_conflict:
+      "Quellen nennen unterschiedliche Werte für dieselbe Angabe.",
+    warning_partial:
+      "Nicht alle Angaben der ursprünglichen Bekanntmachung wurden geprüft.",
+    warning_search:
+      "Die Suche wurde nicht abgeschlossen, daher ist der Prüfumfang begrenzt.",
+    warning_fetch:
+      "Einige Materialien konnten nicht abgerufen werden, daher ist der Umfang begrenzt.",
+    warning_network:
+      "Das aktuelle Netzwerk kann nicht auf die Quellseiten zugreifen.",
+    warning_budget: "Das heutige Anfragekontingent ist erreicht.",
+  },
+  ja: {
+    resultEyebrow: "お知らせの確認結果",
+    status_changed: "変更点が見つかりました",
+    status_matched: "確認した内容は一致しています",
+    status_cancelled: "中止の案内を確認しました",
+    status_expired: "明記された申込期限が過ぎています",
+    status_review: "もう一度確認が必要です",
+    status_unavailable: "情報源を確認できませんでした",
+    desc_changed:
+      "取得した資料に基づく差異です。以下の根拠と元のお知らせを確認してください。",
+    desc_matched:
+      "比較した項目は取得した情報源と一致しています。別の場所で後から更新された可能性は残ります。",
+    desc_cancelled:
+      "公式情報源にこの回の中止が明記されています。原文を開いて中止の範囲を確認してください。",
+    desc_expired:
+      "期限には時刻とタイムゾーンが明記されています。現在の申込状況は元の情報源で確認してください。",
+    desc_review:
+      "同じお知らせかどうか、情報源の権威性、または根拠が不十分です。以下の差異を確定した変更として扱わないでください。",
+    desc_unavailable:
+      "情報源が見つからないか、アクセスできませんでした。中止された、または変更がないという意味ではありません。",
+    originalValue: "お手元のお知らせ",
+    currentValue: "取得した資料",
+    changed: "変更",
+    same: "一致",
+    uncertain: "要確認",
+    showEvidence: "根拠の文章を見る",
+    originalQuote: "入力したお知らせ",
+    sourceQuote: "取得した情報源",
+    noEvidence: "十分な引用根拠を確認できませんでした。",
+    key_deadline: "申込締切",
+    key_date: "開催日",
+    key_location: "場所",
+    key_status: "状況",
+    key_cost: "費用",
+    key_eligibility: "申込対象",
+    nextTitle: "次にすること",
+    nextLive: "機関の元のお知らせを開き、申込方法と対象者を確認してください。",
+    nextReview: "機関と回が同じか確認し、正しい公式リンクを追加してください。",
+    openSource: "公式情報源を開く",
+    sourcesTitle: "確認した情報源",
+    sourceUnverified: "機関との公式な関係は独立して検証されていません",
+    sourceRegistered: "登録済み機関ドメイン · お知らせの同一性は別途確認",
+    fetched: "取得日時",
+    checked: "確認日時",
+    synthetic: "合成例",
+    syntheticDesc:
+      "架空のお知らせと架空の更新を比較した例です。Meta API の呼び出しや実際のウェブ検索は行っていません。",
+    syntheticSource: "架空の情報源 · 実在するページではありません",
+    demoStamp: "体験用資料",
+    scope:
+      "結果は確認した情報源と時点に限られます。原文の日付、名称、住所はそのまま保持されます。",
+    candidatesTitle: "その他の情報源候補",
+    candidatesHint:
+      "同じお知らせか確認してからリンクを選び、再確認してください。候補は必ずしも検証済みの公式情報源ではありません。",
+    useCandidate: "このリンクで再確認",
+    copy: "結果の要約をコピー",
+    copied: "コピーしました",
+    copyFailed: "コピーできませんでした。ブラウザの権限を確認してください。",
+    recheck: "新たに取得して再確認",
+    newCheck: "別のお知らせを確認",
+    deleteResult: "この結果を削除",
+    noComparison:
+      "根拠に基づく比較項目がまだありません。公式 URL またはより明確なお知らせの文章を追加してください。",
+    warning_identity:
+      "機関、場所、年、回が一致するか確実に確認できませんでした。",
+    warning_authority:
+      "情報源と機関の公式な関係を独立して検証できませんでした。",
+    warning_evidence:
+      "一部の値や引用が提供された情報源の文章と一致しませんでした。",
+    warning_conflict: "同じ項目について情報源間で値が異なります。",
+    warning_partial: "元のお知らせのすべての内容を確認したわけではありません。",
+    warning_search: "検索が完了していないため、確認範囲は限定されています。",
+    warning_fetch:
+      "一部の資料を取得できなかったため、確認範囲は限定されています。",
+    warning_network:
+      "現在のネットワークでは情報源のページにアクセスできません。",
+    warning_budget: "本日のリクエスト上限に達しました。",
+  },
+  pt: {
+    resultEyebrow: "Resultado da verificação",
+    status_changed: "Encontramos algumas alterações",
+    status_matched: "Os dados verificados coincidem",
+    status_cancelled: "Há um cancelamento documentado",
+    status_expired: "O prazo explícito terminou",
+    status_review: "É preciso verificar novamente",
+    status_unavailable: "Não foi possível verificar as fontes",
+    desc_changed:
+      "Essas diferenças são sustentadas pelo material consultado. Confira as evidências e o aviso original abaixo.",
+    desc_matched:
+      "Os campos comparados coincidem com a fonte consultada. Isso não descarta uma atualização posterior em outro lugar.",
+    desc_cancelled:
+      "Uma fonte oficial cancela explicitamente esta edição. Abra-a para verificar o alcance do cancelamento.",
+    desc_expired:
+      "O prazo inclui horário e fuso horário explícitos. Consulte a fonte original para saber a situação atual das inscrições.",
+    desc_review:
+      "A identidade do aviso, a autoridade da fonte ou as evidências são insuficientes. Não trate as diferenças abaixo como alterações confirmadas.",
+    desc_unavailable:
+      "A fonte não foi encontrada ou não pôde ser acessada. Isso não significa que o evento foi cancelado ou permaneceu igual.",
+    originalValue: "Seu aviso salvo",
+    currentValue: "Material consultado",
+    changed: "Alterado",
+    same: "Coincide",
+    uncertain: "Precisa de revisão",
+    showEvidence: "Ver o texto de apoio",
+    originalQuote: "Seu aviso",
+    sourceQuote: "Fonte consultada",
+    noEvidence: "Não foi possível verificar uma citação de apoio suficiente.",
+    key_deadline: "Prazo de inscrição",
+    key_date: "Data do evento",
+    key_location: "Local",
+    key_status: "Situação",
+    key_cost: "Custo",
+    key_eligibility: "Quem pode se inscrever",
+    nextTitle: "Próximo passo",
+    nextLive:
+      "Abra o aviso original da instituição para confirmar como se inscrever e a quem ele se aplica.",
+    nextReview:
+      "Confirme a instituição e a edição e informe o link oficial correto.",
+    openSource: "Abrir fonte oficial",
+    sourcesTitle: "Fontes consultadas",
+    sourceUnverified: "Relação oficial não verificada de forma independente",
+    sourceRegistered:
+      "Domínio registrado da instituição · identidade do aviso verificada separadamente",
+    fetched: "Consulta",
+    checked: "Verificação",
+    synthetic: "Exemplo sintético",
+    syntheticDesc:
+      "Este exemplo compara um aviso fictício com uma atualização fictícia. Nenhuma chamada à API da Meta ou consulta à web em tempo real foi feita.",
+    syntheticSource: "Fonte fictícia · não é uma página real",
+    demoStamp: "Material de exemplo",
+    scope:
+      "Os resultados cobrem apenas as fontes e o momento da verificação. Datas, nomes e endereços originais são preservados.",
+    candidatesTitle: "Outras fontes candidatas",
+    candidatesHint:
+      "Confira se são do mesmo aviso e escolha um link para verificar novamente. Uma fonte candidata não é necessariamente uma fonte oficial verificada.",
+    useCandidate: "Verificar com este link",
+    copy: "Copiar resumo",
+    copied: "Copiado",
+    copyFailed:
+      "Não foi possível copiar. Verifique as permissões do navegador.",
+    recheck: "Fazer uma nova verificação",
+    newCheck: "Verificar outro aviso",
+    deleteResult: "Excluir este resultado",
+    noComparison:
+      "Ainda não há comparações sustentadas por evidências. Adicione uma URL oficial ou um texto de aviso mais claro.",
+    warning_identity:
+      "Não foi possível confirmar a correspondência da instituição, do local, do ano ou da edição.",
+    warning_authority:
+      "A relação oficial entre a fonte e a instituição não foi verificada de forma independente.",
+    warning_evidence:
+      "Alguns valores ou citações não correspondem ao texto da fonte fornecida.",
+    warning_conflict:
+      "As fontes apresentam valores diferentes para o mesmo campo.",
+    warning_partial:
+      "Nem todos os detalhes do aviso original foram verificados.",
+    warning_search:
+      "A busca não foi concluída, por isso a verificação tem alcance limitado.",
+    warning_fetch:
+      "Alguns materiais não puderam ser obtidos, por isso a cobertura é limitada.",
+    warning_network: "A rede atual não consegue acessar as páginas das fontes.",
+    warning_budget: "O limite de solicitações de hoje foi atingido.",
+  },
+  ar: {
+    resultEyebrow: "نتيجة التحقق من الإعلان",
+    status_changed: "وجدنا بعض التغييرات",
+    status_matched: "التفاصيل التي تم التحقق منها متطابقة",
+    status_cancelled: "تم توثيق إلغاء",
+    status_expired: "انتهى الموعد النهائي المحدد صراحةً",
+    status_review: "يلزم التحقق مرة أخرى",
+    status_unavailable: "تعذر التحقق من المصادر",
+    desc_changed:
+      "تستند هذه الاختلافات إلى المواد التي تم جلبها. راجع الأدلة والإعلان الأصلي أدناه.",
+    desc_matched:
+      "تتطابق الحقول المقارنة مع المصدر الذي تم جلبه. ولا يستبعد ذلك صدور تحديث لاحق في مكان آخر.",
+    desc_cancelled:
+      "يلغي مصدر رسمي هذه الدورة صراحةً. افتحه للتحقق من نطاق الإلغاء.",
+    desc_expired:
+      "يتضمن الموعد النهائي وقتًا ومنطقة زمنية محددين صراحةً. تحقق من حالة التقديم الحالية في المصدر الأصلي.",
+    desc_review:
+      "هوية الإعلان أو صفة المصدر الرسمية أو الأدلة غير كافية. لا تعتبر الاختلافات أدناه تغييرات مؤكدة.",
+    desc_unavailable:
+      "لم يُعثر على المصدر أو تعذر الوصول إليه. لا يعني ذلك إلغاء الفعالية أو عدم تغيرها.",
+    originalValue: "إعلانك المحفوظ",
+    currentValue: "المواد التي تم جلبها",
+    changed: "تغيّر",
+    same: "متطابق",
+    uncertain: "يحتاج إلى مراجعة",
+    showEvidence: "عرض النص الداعم",
+    originalQuote: "إعلانك",
+    sourceQuote: "المصدر الذي تم جلبه",
+    noEvidence: "تعذر التحقق من اقتباس داعم كافٍ.",
+    key_deadline: "الموعد النهائي للتقديم",
+    key_date: "تاريخ الفعالية",
+    key_location: "المكان",
+    key_status: "الحالة",
+    key_cost: "التكلفة",
+    key_eligibility: "من يحق له التقديم",
+    nextTitle: "الخطوة التالية",
+    nextLive:
+      "افتح الإعلان الأصلي للجهة للتأكد من طريقة التقديم والفئات المشمولة.",
+    nextReview: "تأكد من الجهة والدورة، ثم أضف الرابط الرسمي الصحيح.",
+    openSource: "فتح المصدر الرسمي",
+    sourcesTitle: "المصادر التي تم التحقق منها",
+    sourceUnverified: "لم يتم التحقق مستقلًا من العلاقة الرسمية",
+    sourceRegistered: "نطاق جهة مسجل · يتم التحقق من هوية الإعلان بشكل منفصل",
+    fetched: "وقت الجلب",
+    checked: "وقت التحقق",
+    synthetic: "مثال مُصطنع",
+    syntheticDesc:
+      "يقارن هذا المثال إعلانًا افتراضيًا بتحديث افتراضي. لم يُجرَ أي اتصال بواجهة Meta API أو بحث مباشر على الويب.",
+    syntheticSource: "مصدر افتراضي · ليس صفحة حقيقية",
+    demoStamp: "مادة تجريبية",
+    scope:
+      "تقتصر النتائج على المصادر ووقت التحقق. تُحفظ التواريخ والأسماء والعناوين الأصلية.",
+    candidatesTitle: "مصادر أخرى محتملة",
+    candidatesHint:
+      "تحقق من أنها تخص الإعلان نفسه ثم اختر رابطًا لإعادة التحقق. المصدر المقترح ليس بالضرورة مصدرًا رسميًا تم التحقق منه.",
+    useCandidate: "التحقق باستخدام هذا الرابط",
+    copy: "نسخ الملخص",
+    copied: "تم النسخ",
+    copyFailed: "تعذر النسخ. تحقق من أذونات المتصفح.",
+    recheck: "إجراء تحقق جديد",
+    newCheck: "التحقق من إعلان آخر",
+    deleteResult: "حذف هذه النتيجة",
+    noComparison:
+      "لا توجد مقارنات مدعومة بالأدلة بعد. أضف رابطًا رسميًا أو نصًا أوضح للإعلان.",
+    warning_identity:
+      "تعذر التأكد من تطابق الجهة أو المكان أو السنة أو الدورة.",
+    warning_authority:
+      "لم يتم التحقق مستقلًا من العلاقة الرسمية بين المصدر والجهة.",
+    warning_evidence: "بعض القيم أو الاقتباسات لا تطابق نص المصدر المقدّم.",
+    warning_conflict: "تختلف المصادر في قيمة الحقل نفسه.",
+    warning_partial: "لم يتم التحقق من جميع تفاصيل الإعلان الأصلي.",
+    warning_search: "لم يكتمل البحث، لذا فإن نطاق التحقق محدود.",
+    warning_fetch: "تعذر جلب بعض المواد، لذا فإن نطاق التحقق محدود.",
+    warning_network: "لا تستطيع الشبكة الحالية الوصول إلى صفحات المصادر.",
+    warning_budget: "تم بلوغ الحد المتاح لطلبات اليوم.",
+  },
+  ru: {
+    resultEyebrow: "Результат проверки объявления",
+    status_changed: "Мы нашли изменения",
+    status_matched: "Проверенные сведения совпадают",
+    status_cancelled: "Отмена подтверждена документом",
+    status_expired: "Указанный срок подачи истёк",
+    status_review: "Требуется дополнительная проверка",
+    status_unavailable: "Не удалось проверить источники",
+    desc_changed:
+      "Эти различия подтверждаются полученными материалами. Ознакомьтесь с доказательствами и исходным объявлением ниже.",
+    desc_matched:
+      "Сравниваемые поля совпадают с полученным источником. Это не исключает более позднего обновления в другом месте.",
+    desc_cancelled:
+      "Официальный источник прямо сообщает об отмене этого выпуска. Откройте его, чтобы уточнить, на что распространяется отмена.",
+    desc_expired:
+      "Для срока явно указаны время и часовой пояс. Проверьте текущий статус подачи заявок в исходном источнике.",
+    desc_review:
+      "Идентичность объявления, официальный статус источника или доказательства установлены недостаточно. Не считайте различия ниже подтверждёнными изменениями.",
+    desc_unavailable:
+      "Источник не найден или недоступен. Это не означает, что мероприятие отменено или осталось без изменений.",
+    originalValue: "Ваше сохранённое объявление",
+    currentValue: "Полученный материал",
+    changed: "Изменено",
+    same: "Совпадает",
+    uncertain: "Нужна проверка",
+    showEvidence: "Посмотреть подтверждающий текст",
+    originalQuote: "Ваше объявление",
+    sourceQuote: "Полученный источник",
+    noEvidence: "Не удалось проверить достаточную подтверждающую цитату.",
+    key_deadline: "Срок подачи заявки",
+    key_date: "Дата мероприятия",
+    key_location: "Место",
+    key_status: "Статус",
+    key_cost: "Стоимость",
+    key_eligibility: "Кто может подать заявку",
+    nextTitle: "Следующий шаг",
+    nextLive:
+      "Откройте исходное объявление учреждения, чтобы проверить порядок подачи и круг участников.",
+    nextReview:
+      "Проверьте учреждение и выпуск, затем укажите правильную официальную ссылку.",
+    openSource: "Открыть официальный источник",
+    sourcesTitle: "Проверенные источники",
+    sourceUnverified: "Официальная связь не проверена независимо",
+    sourceRegistered:
+      "Зарегистрированный домен учреждения · идентичность объявления проверяется отдельно",
+    fetched: "Получено",
+    checked: "Проверено",
+    synthetic: "Синтетический пример",
+    syntheticDesc:
+      "Здесь сравниваются вымышленное объявление и вымышленное обновление. Обращения к Meta API и поиска в интернете в реальном времени не было.",
+    syntheticSource: "Вымышленный источник · не реальная страница",
+    demoStamp: "Пример материала",
+    scope:
+      "Результаты относятся только к проверенным источникам и времени проверки. Исходные даты, имена и адреса сохраняются.",
+    candidatesTitle: "Другие возможные источники",
+    candidatesHint:
+      "Проверьте, относятся ли они к тому же объявлению, и выберите ссылку для повторной проверки. Предложенный источник не обязательно является проверенным официальным источником.",
+    useCandidate: "Проверить по этой ссылке",
+    copy: "Копировать сводку",
+    copied: "Скопировано",
+    copyFailed: "Не удалось скопировать. Проверьте разрешения браузера.",
+    recheck: "Выполнить новую проверку",
+    newCheck: "Проверить другое объявление",
+    deleteResult: "Удалить этот результат",
+    noComparison:
+      "Пока нет сравнений, подтверждённых доказательствами. Добавьте официальный URL или более понятный текст объявления.",
+    warning_identity:
+      "Не удалось уверенно установить совпадение учреждения, места, года или выпуска.",
+    warning_authority:
+      "Официальная связь источника с учреждением не проверена независимо.",
+    warning_evidence:
+      "Некоторые значения или цитаты не совпадают с текстом предоставленного источника.",
+    warning_conflict:
+      "Источники указывают разные значения одного и того же поля.",
+    warning_partial: "Проверены не все сведения исходного объявления.",
+    warning_search: "Поиск не завершён, поэтому охват проверки ограничен.",
+    warning_fetch:
+      "Некоторые материалы не удалось получить, поэтому охват ограничен.",
+    warning_network:
+      "Текущая сеть не позволяет получить доступ к страницам источников.",
+    warning_budget: "Достигнут сегодняшний лимит запросов.",
+  },
+};
+
+export function resultCopy(lang: ResultLang): Record<ResultCopyKey, string> {
+  return translations[lang];
+}

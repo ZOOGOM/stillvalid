@@ -1,13 +1,19 @@
 import {
-  containsQuote,
   normalize,
   type FieldComparison,
-  type Lang,
   type ModelComparison,
   type Notice,
   type Result,
   type Source,
 } from "./schema";
+import type { ResultLang } from "./languages";
+
+function exactExcerpt(
+  text: string,
+  excerpt: string | null | undefined,
+): boolean {
+  return !!excerpt?.trim() && text.includes(excerpt);
+}
 
 export function verifyComparison(
   notice: Notice,
@@ -26,7 +32,7 @@ export function verifyComparison(
   const identity =
     model.same_notice &&
     editionMatches &&
-    containsQuote(source.text, model.identity_quote) &&
+    exactExcerpt(source.text, model.identity_quote) &&
     (!notice.country ||
       !model.country ||
       notice.country.toUpperCase() === model.country.toUpperCase());
@@ -37,17 +43,25 @@ export function verifyComparison(
       (x) =>
         x.key === f.key &&
         f.before !== null &&
-        normalize(x.value) === normalize(f.before),
+        x.value === f.before &&
+        exactExcerpt(notice.originalText, x.value),
     );
+    // Never display a model-rewritten value or quotation as if it were source text.
+    const before = original?.value ?? null;
+    const after = exactExcerpt(source.text, f.after) ? f.after : null;
+    const beforeQuote = exactExcerpt(notice.originalText, f.before_quote)
+      ? f.before_quote
+      : null;
+    const afterQuote = exactExcerpt(source.text, f.after_quote)
+      ? f.after_quote
+      : null;
     const quoteSupported =
       identity &&
       source.authority === "registered" &&
       model.source_role !== "unknown" &&
       !!original &&
-      containsQuote(notice.originalText, f.before_quote) &&
-      containsQuote(f.before_quote || "", f.before) &&
-      containsQuote(source.text, f.after_quote) &&
-      containsQuote(f.after_quote || "", f.after);
+      exactExcerpt(beforeQuote || "", before) &&
+      exactExcerpt(afterQuote || "", after);
     const ambiguousRelation =
       f.relation === "unclear" ||
       (f.relation === "same" &&
@@ -80,10 +94,10 @@ export function verifyComparison(
     if (!verified) warnings.push("evidence");
     return {
       key: f.key,
-      before: f.before,
-      after: f.after,
-      beforeQuote: f.before_quote,
-      afterQuote: f.after_quote,
+      before,
+      after,
+      beforeQuote,
+      afterQuote,
       sourceId: source.id,
       relation,
       verified,
@@ -97,7 +111,7 @@ export function assembleResult(args: {
   notice: Notice;
   sources: Source[];
   analyses: ModelComparison[];
-  lang: Lang;
+  lang: ResultLang;
   mode?: "live" | "demo";
   warnings?: string[];
   checkedAt?: string;

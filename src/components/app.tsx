@@ -43,6 +43,14 @@ import {
 } from "lucide-react";
 import { countryCodes } from "@/lib/countries";
 import { copy, errorText, type CopyKey } from "@/lib/i18n";
+import { resultCopy, type ResultCopyKey } from "@/lib/result-i18n";
+import {
+  isResultLang,
+  resultDirection,
+  resultLanguageOptions,
+  resultLocale,
+  type ResultLang,
+} from "@/lib/languages";
 import type { Lang, Notice, Result } from "@/lib/schema";
 import type { DemoId } from "@/lib/demo";
 import { loadImage, prepareImage, transformImage } from "./image";
@@ -51,13 +59,15 @@ type Stage = "input" | "review" | "processing" | "result";
 type Dialog = "how" | "about" | "privacy" | "delete" | null;
 type ProgressStep = "extract" | "search" | "sources" | "compare" | "resume";
 const GitHub = "https://github.com/ZOOGOM/stillvalid";
-function countryName(code: string | null, lang: Lang) {
+function countryName(code: string | null, lang: ResultLang) {
   return code
-    ? new Intl.DisplayNames([lang], { type: "region" }).of(code) || code
-    : copy(lang).unset;
+    ? new Intl.DisplayNames([resultLocale(lang)], { type: "region" }).of(
+        code,
+      ) || code
+    : copy(lang === "ko" ? "ko" : "en").unset;
 }
-function timeLabel(value: string, lang: Lang) {
-  return new Intl.DateTimeFormat(lang === "ko" ? "ko-KR" : "en-GB", {
+function timeLabel(value: string, lang: ResultLang) {
+  return new Intl.DateTimeFormat(resultLocale(lang), {
     dateStyle: "medium",
     timeStyle: "short",
     timeZoneName: undefined,
@@ -143,11 +153,17 @@ function CountryPicker({
   value,
   setValue,
   lang,
+  setLang,
+  resultLanguage,
+  setResultLanguage,
   close,
 }: {
   value: string | null;
   setValue: (v: string | null) => void;
   lang: Lang;
+  setLang: (v: Lang) => void;
+  resultLanguage: ResultLang;
+  setResultLanguage: (v: ResultLang) => void;
   close: () => void;
 }) {
   const t = copy(lang),
@@ -176,6 +192,36 @@ function CountryPicker({
   };
   return (
     <>
+      <div className="settings-language-fields">
+        <label className="settings-field">
+          {t.resultLanguage}
+          <select
+            value={resultLanguage}
+            onChange={(e) => {
+              if (isResultLang(e.target.value))
+                setResultLanguage(e.target.value);
+            }}
+          >
+            {resultLanguageOptions.map(({ code, nativeName, englishName }) => (
+              <option key={code} value={code}>
+                {nativeName}
+                {nativeName !== englishName ? ` · ${englishName}` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="settings-field">
+          {t.interfaceLanguage}
+          <select
+            value={lang}
+            onChange={(e) => setLang(e.target.value === "ko" ? "ko" : "en")}
+          >
+            <option value="ko">한국어</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+      </div>
+      <h3>{t.country}</h3>
       <p className="muted modal-intro">{t.countryHint}</p>
       <div className="country-search">
         <Search size={18} />
@@ -347,8 +393,10 @@ function CropModal({
 
 export default function StillValidApp() {
   const [lang, setLang] = useState<Lang>("ko"),
+    [resultLanguage, setResultLanguage] = useState<ResultLang>("ko"),
     [prefsLoaded, setPrefsLoaded] = useState(false),
-    t = copy(lang);
+    t = copy(lang),
+    rt = resultCopy(resultLanguage);
   const [stage, setStage] = useState<Stage>("input"),
     [mode, setMode] = useState<"photo" | "text">("photo");
   const [country, setCountry] = useState<string | null>(null),
@@ -365,7 +413,9 @@ export default function StillValidApp() {
     [result, setResult] = useState<Result | null>(null);
   const [live, setLive] = useState<boolean | null>(null),
     [error, setError] = useState<string | null>(null),
-    [toast, setToast] = useState<string | null>(null),
+    [toast, setToast] = useState<{ text: string; lang: ResultLang } | null>(
+      null,
+    ),
     [step, setStep] = useState<ProgressStep>("extract"),
     [dialog, setDialog] = useState<Dialog>(null);
   const controller = useRef<AbortController | null>(null),
@@ -383,18 +433,32 @@ export default function StillValidApp() {
     closeCrop = useCallback(() => setCropping(false), []);
 
   useEffect(() => {
-    try {
-      const savedLang = localStorage.getItem("sv_lang");
-      if (savedLang === "en" || savedLang === "ko") setLang(savedLang);
-      else
-        setLang(
-          navigator.language.toLowerCase().startsWith("ko") ? "ko" : "en",
-        );
-      if (localStorage.getItem("sv_remember_country") === "true") {
-        const saved = localStorage.getItem("sv_country");
-        if (saved && countryCodes.includes(saved)) setCountry(saved);
+    const browserLang = navigator.language.toLowerCase();
+    const defaultLang: Lang = browserLang.startsWith("ko") ? "ko" : "en";
+    const browserResultLang = browserLang.split(/[-_]/)[0];
+    const readPreference = (key: string) => {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
       }
-    } catch {}
+    };
+    const savedLang = readPreference("sv_lang");
+    const initialLang =
+      savedLang === "en" || savedLang === "ko" ? savedLang : defaultLang;
+    const savedResultLang = readPreference("sv_result_lang");
+    setLang(initialLang);
+    setResultLanguage(
+      isResultLang(savedResultLang)
+        ? savedResultLang
+        : isResultLang(browserResultLang)
+          ? browserResultLang
+          : initialLang,
+    );
+    if (readPreference("sv_remember_country") === "true") {
+      const saved = readPreference("sv_country");
+      if (saved && countryCodes.includes(saved)) setCountry(saved);
+    }
     setPrefsLoaded(true);
     let stopped = false;
     const initialOperation = operation.current;
@@ -462,6 +526,13 @@ export default function StillValidApp() {
       } catch {}
     }
   }, [lang, prefsLoaded]);
+  useEffect(() => {
+    if (prefsLoaded) {
+      try {
+        localStorage.setItem("sv_result_lang", resultLanguage);
+      } catch {}
+    }
+  }, [resultLanguage, prefsLoaded]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(null), 4500);
@@ -596,7 +667,7 @@ export default function StillValidApp() {
         body: JSON.stringify({
           notice,
           country,
-          lang,
+          lang: resultLanguage,
           sourceUrl: overrideUrl ?? sourceUrl,
           requestKey: crypto.randomUUID(),
         }),
@@ -690,9 +761,12 @@ export default function StillValidApp() {
     busy.current = true;
     setError(null);
     try {
-      const response = await fetch(`/api/demo?id=${id}&lang=${lang}`, {
-        cache: "no-store",
-      });
+      const response = await fetch(
+        `/api/demo?id=${id}&lang=${resultLanguage}`,
+        {
+          cache: "no-store",
+        },
+      );
       if (!response.ok) throw new Error("network");
       const data = await response.json();
       if (generation !== operation.current) return;
@@ -718,37 +792,46 @@ export default function StillValidApp() {
         );
         if (!response.ok) throw new Error("not_found");
       } catch {
-        setToast(errorText("network", lang));
+        setToast({ text: errorText("network", lang), lang });
         setDialog(null);
         return;
       }
     }
     setDialog(null);
     reset();
-    setToast(t.deleted);
+    setToast({ text: t.deleted, lang });
   };
   const copySummary = async () => {
     if (!result) return;
     const summary = [
-      "StillValid · " + t[("status_" + result.status) as CopyKey],
+      "StillValid · " + rt[("status_" + result.status) as ResultCopyKey],
       result.title,
+      rt[("desc_" + result.status) as ResultCopyKey],
       result.mode === "demo"
-        ? t.syntheticDesc
-        : t.checked + ": " + timeLabel(result.checkedAt, lang),
+        ? rt.syntheticDesc
+        : rt.checked + ": " + timeLabel(result.checkedAt, resultLanguage),
       ...result.comparisons.map(
         (f) =>
-          `${t[("key_" + f.key) as CopyKey]}: ${f.before ?? "—"} → ${f.after ?? "—"} (${f.verified ? t[f.relation === "same" ? "same" : "changed"] : t.uncertain})`,
+          `${rt[("key_" + f.key) as ResultCopyKey]}: ${f.before ?? "—"} → ${f.after ?? "—"} (${f.verified ? rt[f.relation === "same" ? "same" : "changed"] : rt.uncertain})`,
       ),
+      ...result.warnings.map(
+        (w) => rt[("warning_" + w) as ResultCopyKey] || rt.warning_evidence,
+      ),
+      rt.nextTitle +
+        ": " +
+        (["review", "unavailable"].includes(result.status)
+          ? rt.nextReview
+          : rt.nextLive),
       ...result.sources.map((s) =>
-        result.mode === "demo" ? t.syntheticSource : s.url,
+        result.mode === "demo" ? rt.syntheticSource : s.url,
       ),
-      t.scope,
+      rt.scope,
     ].join("\n");
     try {
       await navigator.clipboard.writeText(summary);
-      setToast(t.copied);
+      setToast({ text: rt.copied, lang: resultLanguage });
     } catch {
-      setToast(t.copyFailed);
+      setToast({ text: rt.copyFailed, lang: resultLanguage });
     }
   };
 
@@ -782,11 +865,11 @@ export default function StillValidApp() {
             <span className="nav-divider" />
             <button
               className="language-button"
-              onClick={() => setLang(lang === "ko" ? "en" : "ko")}
-              aria-label={lang === "ko" ? "Switch to English" : "한국어로 전환"}
+              onClick={() => setCountryOpen(true)}
+              aria-label={t.settings}
             >
               <Globe2 size={16} />
-              {lang === "ko" ? "KO" : "EN"}
+              {t.settings}
               <ChevronDown size={12} />
             </button>
           </nav>
@@ -1027,7 +1110,12 @@ export default function StillValidApp() {
                     <Globe2 size={17} />
                     <span>
                       <small>{t.country}</small>
-                      {countryName(country, lang)}
+                      {countryName(country, lang)} · {t.resultLanguage}:{" "}
+                      {
+                        resultLanguageOptions.find(
+                          (item) => item.code === resultLanguage,
+                        )?.nativeName
+                      }
                     </span>
                     <ChevronDown size={15} />
                   </button>
@@ -1395,17 +1483,21 @@ export default function StillValidApp() {
         )}
 
         {stage === "result" && result && (
-          <section className="result-container">
+          <section
+            className="result-container"
+            lang={resultLanguage}
+            dir={resultDirection(resultLanguage)}
+          >
             <button className="back-button" onClick={reset}>
               <ArrowLeft size={16} />
-              {t.newCheck}
+              {rt.newCheck}
             </button>
             {result.mode === "demo" && (
               <div className="demo-banner">
                 <Sparkles size={18} />
                 <div>
-                  <strong>{t.synthetic}</strong>
-                  <p>{t.syntheticDesc}</p>
+                  <strong>{rt.synthetic}</strong>
+                  <p>{rt.syntheticDesc}</p>
                 </div>
               </div>
             )}
@@ -1419,26 +1511,30 @@ export default function StillValidApp() {
                   <CheckCheck size={28} />
                 )}
               </div>
-              <span className="tiny-label">{t.resultEyebrow}</span>
-              <h1 tabIndex={-1}>{t[("status_" + result.status) as CopyKey]}</h1>
-              <p>{t[("desc_" + result.status) as CopyKey]}</p>
-              <div className="result-notice-name">{result.title}</div>
+              <span className="tiny-label">{rt.resultEyebrow}</span>
+              <h1 tabIndex={-1}>
+                {rt[("status_" + result.status) as ResultCopyKey]}
+              </h1>
+              <p>{rt[("desc_" + result.status) as ResultCopyKey]}</p>
+              <div className="result-notice-name">
+                <bdi>{result.title}</bdi>
+              </div>
               <div className="result-meta">
                 <span>
                   <Building2 size={14} />
-                  {result.institution || "—"}
+                  <bdi>{result.institution || "—"}</bdi>
                 </span>
                 {result.country && (
                   <span>
                     <Globe2 size={14} />
-                    {countryName(result.country, lang)}
+                    {countryName(result.country, resultLanguage)}
                   </span>
                 )}
                 <span>
                   <Clock3 size={14} />
                   {result.mode === "demo"
-                    ? t.demoStamp
-                    : timeLabel(result.checkedAt, lang)}
+                    ? rt.demoStamp
+                    : timeLabel(result.checkedAt, resultLanguage)}
                 </span>
               </div>
             </div>
@@ -1447,7 +1543,7 @@ export default function StillValidApp() {
                 {!result.comparisons.length && (
                   <div className="empty-comparison">
                     <FileText size={25} />
-                    <p>{t.noComparison}</p>
+                    <p>{rt.noComparison}</p>
                   </div>
                 )}
                 {result.comparisons.map((f, i) => (
@@ -1456,60 +1552,60 @@ export default function StillValidApp() {
                     key={f.sourceId + f.key + i}
                   >
                     <div className="comparison-title">
-                      <h2>{t[("key_" + f.key) as CopyKey]}</h2>
+                      <h2>{rt[("key_" + f.key) as ResultCopyKey]}</h2>
                       <span className="comparison-badge">
                         {!f.verified ? (
-                          t.uncertain
+                          rt.uncertain
                         ) : f.relation === "same" ? (
                           <>
                             <Check size={12} />
-                            {t.same}
+                            {rt.same}
                           </>
                         ) : (
                           <>
                             <RefreshCw size={12} />
-                            {t.changed}
+                            {rt.changed}
                           </>
                         )}
                       </span>
                     </div>
                     <div className="value-comparison">
                       <div>
-                        <small>{t.originalValue}</small>
-                        <p>{f.before || "—"}</p>
+                        <small>{rt.originalValue}</small>
+                        <p dir="auto">{f.before || "—"}</p>
                       </div>
                       <span className="compare-arrow">
                         <ArrowRight size={17} />
                       </span>
                       <div>
-                        <small>{t.currentValue}</small>
-                        <p>{f.after || "—"}</p>
+                        <small>{rt.currentValue}</small>
+                        <p dir="auto">{f.after || "—"}</p>
                       </div>
                     </div>
                     <details className="evidence-details">
                       <summary>
                         <FileCheck2 size={15} />
-                        {t.showEvidence}
+                        {rt.showEvidence}
                         <ChevronDown size={14} />
                       </summary>
                       <div className="evidence-quotes">
                         <div>
-                          <small>{t.originalQuote}</small>
-                          <blockquote>
-                            {f.beforeQuote || t.noEvidence}
+                          <small>{rt.originalQuote}</small>
+                          <blockquote dir="auto">
+                            {f.beforeQuote || rt.noEvidence}
                           </blockquote>
                         </div>
                         <div>
-                          <small>{t.sourceQuote}</small>
-                          <blockquote>
-                            {f.afterQuote || t.noEvidence}
+                          <small>{rt.sourceQuote}</small>
+                          <blockquote dir="auto">
+                            {f.afterQuote || rt.noEvidence}
                           </blockquote>
                         </div>
                       </div>
                       {!f.verified && (
                         <p className="evidence-warning">
                           <Info size={14} />
-                          {t.noEvidence}
+                          {rt.noEvidence}
                         </p>
                       )}
                       {result.mode !== "demo" &&
@@ -1522,7 +1618,7 @@ export default function StillValidApp() {
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            {t.openSource}
+                            {rt.openSource}
                             <ExternalLink size={13} />
                           </a>
                         )}
@@ -1535,7 +1631,8 @@ export default function StillValidApp() {
                       <p key={w}>
                         <Info size={15} />
                         <span>
-                          {t[("warning_" + w) as CopyKey] || t.warning_evidence}
+                          {rt[("warning_" + w) as ResultCopyKey] ||
+                            rt.warning_evidence}
                         </span>
                       </p>
                     ))}
@@ -1546,12 +1643,12 @@ export default function StillValidApp() {
                 <section className="next-step-card">
                   <span className="tiny-label">
                     <span />
-                    {t.nextTitle}
+                    {rt.nextTitle}
                   </span>
                   <h2>
                     {["review", "unavailable"].includes(result.status)
-                      ? t.nextReview
-                      : t.nextLive}
+                      ? rt.nextReview
+                      : rt.nextLive}
                   </h2>
                   {result.sources[0] && result.mode !== "demo" && (
                     <a
@@ -1560,7 +1657,7 @@ export default function StillValidApp() {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {t.openSource}
+                      {rt.openSource}
                       <ArrowUpRight size={17} />
                     </a>
                   )}
@@ -1569,7 +1666,7 @@ export default function StillValidApp() {
                     onClick={() => void copySummary()}
                   >
                     <Copy size={15} />
-                    {t.copy}
+                    {rt.copy}
                   </button>
                   {notice && result.mode === "live" && (
                     <button
@@ -1577,42 +1674,45 @@ export default function StillValidApp() {
                       onClick={() => void runCheck()}
                     >
                       <RefreshCw size={14} />
-                      {t.recheck}
+                      {rt.recheck}
                     </button>
                   )}
                 </section>
                 <section className="sources-card">
                   <h2>
                     <ShieldCheck size={17} />
-                    {t.sourcesTitle}
+                    {rt.sourcesTitle}
                   </h2>
                   {result.sources.map((s) => (
                     <div className="source-entry" key={s.id}>
                       <div className="source-index">
                         <FileText size={16} />
                         <span>
-                          {result.mode === "demo"
-                            ? t.syntheticSource
-                            : new URL(s.url).hostname}
+                          {result.mode === "demo" ? (
+                            rt.syntheticSource
+                          ) : (
+                            <bdi>{new URL(s.url).hostname}</bdi>
+                          )}
                         </span>
                       </div>
-                      <p>{s.title}</p>
+                      <p dir="auto">{s.title}</p>
                       {result.mode !== "demo" && (
                         <>
                           <small>
                             {s.authority === "registered"
-                              ? t.sourceRegistered
-                              : t.sourceUnverified}
+                              ? rt.sourceRegistered
+                              : rt.sourceUnverified}
                           </small>
                           <small>
-                            {t.fetched}: {timeLabel(s.fetchedAt, lang)}
+                            {rt.fetched}:{" "}
+                            {timeLabel(s.fetchedAt, resultLanguage)}
                           </small>
                           <a
                             href={s.url}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            {t.openSource}
+                            {rt.openSource}
                             <ArrowUpRight size={13} />
                           </a>
                         </>
@@ -1620,17 +1720,19 @@ export default function StillValidApp() {
                     </div>
                   ))}
                   {!result.sources.length && (
-                    <p className="muted">{t.noComparison}</p>
+                    <p className="muted">{rt.noComparison}</p>
                   )}
                 </section>
                 {!!result.candidates.length && notice && (
                   <section className="sources-card">
-                    <h2>{t.candidatesTitle}</h2>
-                    <p className="muted">{t.candidatesHint}</p>
+                    <h2>{rt.candidatesTitle}</h2>
+                    <p className="muted">{rt.candidatesHint}</p>
                     {result.candidates.map((c) => (
                       <div className="source-entry" key={c.url}>
-                        <p>{c.title}</p>
-                        <small>{new URL(c.url).hostname}</small>
+                        <p dir="auto">{c.title}</p>
+                        <small>
+                          <bdi>{new URL(c.url).hostname}</bdi>
+                        </small>
                         <button
                           className="text-button"
                           onClick={() => {
@@ -1638,7 +1740,7 @@ export default function StillValidApp() {
                             void runCheck(c.url);
                           }}
                         >
-                          {t.useCandidate}
+                          {rt.useCandidate}
                           <ArrowRight size={13} />
                         </button>
                       </div>
@@ -1650,11 +1752,11 @@ export default function StillValidApp() {
             <div className="result-bottom">
               <p>
                 <Info size={15} />
-                {t.scope}
+                {rt.scope}
               </p>
               <div>
                 <button className="secondary" onClick={reset}>
-                  {t.newCheck}
+                  {rt.newCheck}
                   <ArrowRight size={16} />
                 </button>
                 <button
@@ -1662,7 +1764,7 @@ export default function StillValidApp() {
                   onClick={() => setDialog("delete")}
                 >
                   <Trash2 size={14} />
-                  {t.deleteResult}
+                  {rt.deleteResult}
                 </button>
               </div>
             </div>
@@ -1696,17 +1798,25 @@ export default function StillValidApp() {
         </p>
       </footer>
       {toast && (
-        <div className="toast" role="status">
+        <div
+          className="toast"
+          role="status"
+          lang={toast.lang}
+          dir={resultDirection(toast.lang)}
+        >
           <CircleCheck size={17} />
-          {toast}
+          {toast.text}
         </div>
       )}
       {countryOpen && (
-        <Modal title={t.country} close={closeCountry}>
+        <Modal title={t.settings} close={closeCountry}>
           <CountryPicker
             value={country}
             setValue={setCountryValue}
             lang={lang}
+            setLang={setLang}
+            resultLanguage={resultLanguage}
+            setResultLanguage={setResultLanguage}
             close={closeCountry}
           />
         </Modal>
@@ -1795,9 +1905,9 @@ export default function StillValidApp() {
                     if (!response.ok) throw new Error("network");
                     reset();
                     setDialog(null);
-                    setToast(t.deleted);
+                    setToast({ text: t.deleted, lang });
                   } catch {
-                    setToast(errorText("network", lang));
+                    setToast({ text: errorText("network", lang), lang });
                   }
                 }}
               >
