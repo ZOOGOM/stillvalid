@@ -363,3 +363,289 @@ test("case, Unicode width and whitespace changes cannot become verified excerpts
   };
   assert.equal(run(n, s, alteredIdentity).status, "review");
 });
+
+test("a cancellation document cannot silently match an unchanged deadline", () => {
+  const s = {
+    ...source,
+    text: `${analysis.identity_quote} The event is cancelled. Apply by 4 November 2026.`,
+  };
+  const a: ModelComparison = {
+    ...analysis,
+    source_role: "cancellation",
+    comparisons: [
+      {
+        ...analysis.comparisons[0],
+        after: "4 November 2026",
+        after_quote: "Apply by 4 November 2026.",
+        relation: "same",
+      },
+    ],
+  };
+  const result = run(notice, s, a);
+  assert.equal(result.status, "review");
+  assert.ok(result.warnings.includes("evidence"));
+});
+
+function cancellationCase(
+  statement: string,
+  after = "cancelled",
+  quote = statement,
+) {
+  const s = {
+    ...source,
+    text: `${analysis.identity_quote} Apply by 10 November 2026. ${statement}`,
+  };
+  const a: ModelComparison = {
+    ...analysis,
+    source_role: "cancellation",
+    comparisons: [
+      ...analysis.comparisons,
+      {
+        key: "status",
+        before: null,
+        before_quote: null,
+        after,
+        after_quote: quote,
+        relation: "changed",
+      },
+    ],
+  };
+  return run(notice, s, a);
+}
+
+test("new explicit cancellation is verified without an original status field", () => {
+  const result = cancellationCase("The event is cancelled.");
+  assert.equal(result.status, "cancelled");
+  assert.deepEqual(result.comparisons[1], {
+    key: "status",
+    before: null,
+    beforeQuote: null,
+    after: "cancelled",
+    afterQuote: "The event is cancelled.",
+    sourceId: source.id,
+    relation: "changed",
+    verified: true,
+  });
+});
+
+test("truncated cancellation quotations cannot remove conditional or historical context", () => {
+  for (const statement of [
+    "If severe weather occurs, the event will be cancelled.",
+    "The event is not cancelled.",
+    "The event was cancelled last year.",
+    "The organiser said ‘The event is cancelled.’",
+    "The picnic is cancelled.",
+    "If severe weather occurs. The event is cancelled.",
+    "The event is cancelled. This decision was reversed.",
+  ]) {
+    const result = cancellationCase(statement, "cancelled", "cancelled");
+    assert.equal(result.status, "review", statement);
+    assert.equal(result.comparisons[1].verified, false, statement);
+  }
+});
+
+test("uncertain cancellation is blocked even with an original status", () => {
+  const n: Notice = {
+    ...notice,
+    fields: [{ key: "status", value: "Open", quote: "Status: Open." }],
+  };
+  const statement = "If severe weather occurs, the event will be cancelled.";
+  const s = { ...source, text: `${analysis.identity_quote} ${statement}` };
+  const a: ModelComparison = {
+    ...analysis,
+    source_role: "cancellation",
+    comparisons: [
+      {
+        key: "status",
+        before: "Open",
+        before_quote: "Status: Open.",
+        after: "cancelled",
+        after_quote: "cancelled",
+        relation: "changed",
+      },
+    ],
+  };
+  assert.equal(run(n, s, a).comparisons[0].verified, false);
+  assert.equal(run(n, s, a).status, "review");
+});
+
+test("same-year edition, institution and event contradictions override model identity", () => {
+  for (const edition of [
+    "session 1",
+    "round 1",
+    "1st edition",
+    "cohort 1",
+    "제1회",
+    "1차",
+    "1기",
+  ]) {
+    const title = `2026 Garden workshop ${edition}`;
+    const n = { ...notice, title, edition: `2026 ${edition}` };
+    const identity = `2026 ${edition}. ${title}. Example Library.`;
+    const s = { ...source, text: `${identity} Apply by 10 November 2026.` };
+    const a = { ...analysis, identity_quote: identity };
+    assert.equal(run(n, s, a).status, "changed", edition);
+    const wrong = identity.replaceAll("1", "2");
+    assert.equal(
+      run(
+        n,
+        { ...s, text: s.text.replace(identity, wrong) },
+        { ...a, identity_quote: wrong },
+      ).status,
+      "review",
+      edition,
+    );
+    assert.equal(
+      run(n, { ...s, title: title.replaceAll("1", "2") }, a).status,
+      "review",
+      edition,
+    );
+  }
+  for (const identity of [
+    "2026 Garden workshop. Another Library.",
+    "2026 Music workshop. Example Library.",
+  ]) {
+    assert.equal(
+      run(
+        notice,
+        { ...source, text: `${identity} Apply by 10 November 2026.` },
+        { ...analysis, identity_quote: identity },
+      ).status,
+      "review",
+    );
+  }
+});
+
+test("numeric date ambiguity is detected in timestamps and sentences, preserving clear dates", () => {
+  for (const [before, after, expected] of [
+    ["03/04/2026 17:00", "04/03/2026 17:00", "review"],
+    ["by 03.04.2026 at 17:00", "by 04.03.2026 at 17:00", "review"],
+    ["03-04-2026 17:00", "04-03-2026 17:00", "review"],
+    ["03/04/2026 17:00", "03/04/2026 17:00", "review"],
+    ["2026-11-04 17:00", "2026-11-05 17:00", "changed"],
+    ["13/11/2026 17:00", "14/11/2026 17:00", "changed"],
+    ["11/11/2026 17:00", "11/11/2026 17:00", "matched"],
+    ["4 November 2026", "4 November 2026", "matched"],
+  ] as const) {
+    const n: Notice = {
+      ...notice,
+      originalText: `Deadline: ${before}`,
+      fields: [
+        { key: "deadline", value: before, quote: `Deadline: ${before}` },
+      ],
+    };
+    const s = {
+      ...source,
+      text: `${analysis.identity_quote} Deadline: ${after}`,
+    };
+    const a: ModelComparison = {
+      ...analysis,
+      comparisons: [
+        {
+          key: "deadline",
+          before,
+          after,
+          before_quote: `Deadline: ${before}`,
+          after_quote: `Deadline: ${after}`,
+          relation: before === after ? "same" : "changed",
+        },
+      ],
+    };
+    const result = run(n, s, a);
+    assert.equal(result.status, expected, `${before} → ${after}`);
+    assert.equal(result.comparisons[0].after, after);
+  }
+});
+
+test("Korean exact identity and explicit cancellation remain supported", () => {
+  assert.equal(demoResult("cancelled", "ko").status, "cancelled");
+  assert.equal(demoResult("deadline", "ko").status, "changed");
+});
+
+test("a conflicting event heading cannot be overridden by a matching paragraph", () => {
+  assert.equal(
+    run(notice, { ...source, title: "2026 Music workshop" }).status,
+    "review",
+  );
+  assert.equal(
+    run(notice, { ...source, title: "2026 Garden workshop — update" }).status,
+    "changed",
+  );
+});
+
+test("exact non-English event and edition identities can confirm clear changes", () => {
+  for (const [title, institution, edition] of [
+    ["Atelier du jardin 2026", "Bibliothèque municipale", "2026"],
+    ["2026 園芸講座 第2回", "市立図書館", "第2回"],
+    ["2026 가을 정원 교실 제2회", "시립도서관", "제2회"],
+  ]) {
+    const identity = `${title}. ${institution}.`;
+    const n = { ...notice, title, institution, edition };
+    const s = {
+      ...source,
+      title,
+      text: `${identity} Apply by 10 November 2026.`,
+    };
+    assert.equal(
+      run(n, s, { ...analysis, identity_quote: identity }).status,
+      "changed",
+      title,
+    );
+  }
+});
+
+test("unrelated months, refund policies and quoted titles do not veto explicit cancellation", () => {
+  for (const extra of [
+    "Scheduled for May 5.",
+    "Tickets are not refundable.",
+    "Read “Garden news” for updates.",
+    "Registration may require identification.",
+  ]) {
+    assert.equal(
+      cancellationCase(
+        `The event is cancelled. ${extra}`,
+        "cancelled",
+        "The event is cancelled.",
+      ).status,
+      "cancelled",
+      extra,
+    );
+  }
+});
+
+test("adjacent conditions and reversals still qualify an otherwise explicit cancellation", () => {
+  for (const statement of [
+    "If severe weather occurs. The event is cancelled.",
+    "The event is cancelled. This decision was reversed.",
+    "The event is cancelled. The cancellation was withdrawn.",
+    "Archive. The event is cancelled.",
+  ]) {
+    assert.equal(
+      cancellationCase(statement, "cancelled", "The event is cancelled.")
+        .status,
+      "review",
+      statement,
+    );
+  }
+});
+
+test("generic multilingual site headings do not contradict an exact notice identity", () => {
+  for (const title of [
+    "Events | Example Library",
+    "News / Example Library",
+    "Accueil | Example Library",
+    "Événements | Example Library",
+    "행사안내 | Example Library",
+    "お知らせ | Example Library",
+    "公告 | Example Library",
+  ]) {
+    assert.equal(run(notice, { ...source, title }).status, "changed", title);
+  }
+  for (const title of [
+    "2026 Different Festival",
+    "2027 Events | Example Library",
+    "2026 Music workshop",
+  ]) {
+    assert.equal(run(notice, { ...source, title }).status, "review", title);
+  }
+});

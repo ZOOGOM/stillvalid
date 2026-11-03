@@ -8,6 +8,13 @@ import { fork } from "node:child_process";
 import * as store from "../src/lib/sqlite-store";
 const directory = mkdtempSync(join(tmpdir(), "stillvalid-store-"));
 process.env.DATABASE_PATH = join(directory, "test.sqlite");
+test.afterEach(() => {
+  store
+    .db()
+    .exec(
+      "DELETE FROM checks; DELETE FROM limits; DELETE FROM work_leases; DELETE FROM work_admissions",
+    );
+});
 test.after(() => {
   store.db().close();
   rmSync(directory, { recursive: true, force: true });
@@ -110,6 +117,7 @@ test("simultaneous SQLite processes share idempotency and the concurrency limit"
   );
   assert.equal(new Set(duplicates.map((entry) => entry.job?.id)).size, 1);
   store.failCheck(duplicates[0].job!.id, "parallel");
+  store.releaseWork(duplicates[0].job!.id, "parallel");
   const attempts = await run(Array.from({ length: 6 }, () => randomUUID()));
   assert.equal(attempts.filter((entry) => entry.job).length, 3);
   assert.equal(attempts.filter((entry) => entry.error === "busy").length, 3);

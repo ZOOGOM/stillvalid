@@ -61,6 +61,8 @@ Browser → Next.js API routes → Meta Model API
 
 The default model is `muse-spark-1.3` at `https://api.meta.ai/v1`. Keys stay on the server. Deterministic quote checks supplement model interpretation; they do not establish general factual accuracy. Unknown authority, ambiguous fields, different editions and conflicting sources remain review states.
 
+Cancellation needs an exact, current assertion for the same notice. A document role or cancellation keyword alone cannot establish it. The current deterministic cancellation grammar accepts limited English and Korean assertions; other or uncertain wording stays in review. Institution/title/edition checks are conservative and can also require review for aliases or unsupported source headings. Numeric dates remain ambiguous even when followed by a time. The ten display languages do not imply validated ten-language fact checking.
+
 The existing **Vercel + Upstash Redis** setup deploys from GitHub without an always-on server. The Marketplace-provided `KV_REST_API_URL` and `KV_REST_API_TOKEN` pair is accepted, as is the canonical Upstash REST pair. A local/persistent Node server with SQLite and Docker Compose is also supported. See [deployment and secret setup](docs/deployment.md) for details and remaining verification. GitHub Pages alone cannot execute the protected Meta API routes.
 
 ## Validation
@@ -76,13 +78,15 @@ CHROMIUM_PATH=/usr/bin/chromium SCREENSHOT_DIR=./test-results/screenshots \
 
 HTTP fixtures do not constitute live provider testing. Automated viewport/accessibility checks do not establish real-device coverage or full WCAG conformance. No model accuracy or production latency claims have been established.
 
+The [opt-in live evaluation harness](docs/evaluation.md) runs extraction, checking, anonymous-session isolation and individual deletion against a permitted deployment. It defaults to a dry run and keeps fixture checks separate from human-reviewed real-notice accuracy.
+
 ## Privacy and limits
 
 - Original image files are not saved by StillValid. Necessary result quotes are session-owned and available for 24 hours.
 - Individual and session-wide deletion are supported. Expiry is enforced before reads and periodically cleaned up.
 - Writes require the same origin and an HTTP-only anonymous-session cookie.
 - Source requests reject unsafe addresses and pin public DNS results. Retrieval fails closed under a generic forward proxy.
-- Global paid-model request limits and per-session/concurrent-check limits reduce exposure; request ceilings are not dollar billing caps.
+- Extraction and checks share three execution slots and ten starts per rolling minute; deleting a result does not release running work. Per-session and daily model limits also apply. Anonymous quota exhaustion remains possible; request ceilings are not dollar billing caps.
 - Provider handling follows [Meta's terms and documentation](https://dev.meta.ai/docs/models).
 
 Use permitted public notices or clearly labeled synthetic material. Do not commit keys, student records, private school notices or personal contact details. The app does not determine individual eligibility, give medical/legal judgments or issue emergency instructions.

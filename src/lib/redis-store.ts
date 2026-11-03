@@ -72,6 +72,9 @@ export class RedisStore {
       86400000,
     );
   }
+  // Admissions share a rolling 60-second window and three execution leases
+  // across both paid routes. 210 seconds exceeds their 180s/90s hard deadlines.
+  // Versioned execution metadata is isolated from legacy result-deletion Lua.
   async createCheck(
     actor: string,
     requestKey: string,
@@ -82,27 +85,39 @@ export class RedisStore {
     const row = (await this.command(
       "EVAL",
       `
+      local running=redis.call('GET',KEYS[8]);
+      if running and tonumber(redis.call('ZSCORE',KEYS[2],running) or '0')>tonumber(ARGV[1]) then return {running,'1'} end;
       local existing=redis.call('GET',KEYS[1]);
       if existing then
-        if redis.call('HGET',ARGV[6]..existing,'owner')==ARGV[3] then return {existing,'1'} end;
+        if redis.call('HGET',ARGV[6]..existing,'owner')==ARGV[3] or tonumber(redis.call('ZSCORE',KEYS[2],existing) or '0')>tonumber(ARGV[1]) then return {existing,'1'} end;
         redis.call('DEL',KEYS[1]);
       end;
       redis.call('ZREMRANGEBYSCORE',KEYS[2],'-inf',ARGV[1]);
       if redis.call('ZCARD',KEYS[2])>=3 then return {'busy','error'} end;
       local count=tonumber(redis.call('GET',KEYS[3]) or '0'); if count>=12 then return {'rate_limit','error'} end;
+      redis.call('ZREMRANGEBYSCORE',KEYS[6],'-inf',tonumber(ARGV[1])-60000);
+      if redis.call('ZCARD',KEYS[6])>=10 then return {'rate_limit','error'} end;
+      redis.call('ZADD',KEYS[6],ARGV[1],ARGV[2]);redis.call('PEXPIRE',KEYS[6],60000);
+      redis.call('SET',KEYS[7],ARGV[3],'PX',210000);
+      redis.call('SET',KEYS[8],ARGV[2],'PX',210000);
+      redis.call('SET',KEYS[9],KEYS[8],'PX',210000);
       redis.call('INCR',KEYS[3]); redis.call('PEXPIREAT',KEYS[3],ARGV[5]);
       redis.call('SET',KEYS[1],ARGV[2],'EX',86400);
       redis.call('HSET',KEYS[4],'owner',ARGV[3],'state','processing','result','','created',ARGV[1],'expires',ARGV[4],'request_key',ARGV[7]);redis.call('EXPIRE',KEYS[4],86400);
-      redis.call('ZADD',KEYS[2],tonumber(ARGV[1])+180000,ARGV[2]); redis.call('EXPIRE',KEYS[2],86400);
+      redis.call('ZADD',KEYS[2],tonumber(ARGV[1])+210000,ARGV[2]); redis.call('EXPIRE',KEYS[2],86400);
       redis.call('SADD',KEYS[5],ARGV[2]);redis.call('EXPIRE',KEYS[5],86400);
       return {ARGV[2],'0'};
     `,
-      5,
+      9,
       this.key("idem:" + actor + ":" + requestKey),
-      this.key("active"),
+      this.key("active:v2"),
       this.key("check-limit:" + actor + ":" + slot),
       this.key("check:" + id),
       this.key("owner:" + actor),
+      this.key("admissions"),
+      this.key("lease-owner:v2:" + id),
+      this.key("inflight:v2:" + actor + ":" + requestKey),
+      this.key("lease-request:v2:" + id),
       now,
       id,
       actor,
@@ -114,6 +129,8 @@ export class RedisStore {
     if (row[1] === "error") throw new AppError(row[0], 429);
     return { id: row[0], existing: row[1] === "1" };
   }
+  // State changes and deletion never release execution leases. The runner
+  // releases only after awaited work settles; crashes recover through expiry.
   async transition(
     id: string,
     actor: string,
@@ -124,11 +141,11 @@ export class RedisStore {
       "EVAL",
       `
       if redis.call('HGET',KEYS[1],'owner')~=ARGV[1] or redis.call('HGET',KEYS[1],'state')~='processing' then return 0 end;
-      redis.call('HSET',KEYS[1],'state',ARGV[2],'result',ARGV[3]);redis.call('ZREM',KEYS[2],ARGV[4]);return 1;
+      redis.call('HSET',KEYS[1],'state',ARGV[2],'result',ARGV[3]);return 1;
     `,
       2,
       this.key("check:" + id),
-      this.key("active"),
+      this.key("active:v2"),
       actor,
       state,
       JSON.stringify(result),
@@ -164,7 +181,7 @@ export class RedisStore {
     };
     if (row.owner !== actor || row.expires < Date.now())
       throw new AppError("not_found", 404);
-    if (row.state === "processing" && row.created < Date.now() - 180000) {
+    if (row.state === "processing" && row.created < Date.now() - 210000) {
       await this.failCheck(id, actor);
       return { state: "interrupted", result: null };
     }
@@ -173,10 +190,10 @@ export class RedisStore {
   async deleteCheck(id: string, actor: string) {
     await this.command(
       "EVAL",
-      `if redis.call('HGET',KEYS[1],'owner')~=ARGV[1] then return 0 end;local request=redis.call('HGET',KEYS[1],'request_key');if request then local idem=ARGV[3]..request;if redis.call('GET',idem)==ARGV[2] then redis.call('DEL',idem) end;end;redis.call('DEL',KEYS[1]);redis.call('ZREM',KEYS[2],ARGV[2]);redis.call('SREM',KEYS[3],ARGV[2]);return 1`,
+      `if redis.call('HGET',KEYS[1],'owner')~=ARGV[1] then return 0 end;local request=redis.call('HGET',KEYS[1],'request_key');if request then local idem=ARGV[3]..request;if redis.call('GET',idem)==ARGV[2] and not redis.call('ZSCORE',KEYS[2],ARGV[2]) then redis.call('DEL',idem) end;end;redis.call('DEL',KEYS[1]);redis.call('SREM',KEYS[3],ARGV[2]);return 1`,
       3,
       this.key("check:" + id),
-      this.key("active"),
+      this.key("active:v2"),
       this.key("owner:" + actor),
       actor,
       id,
@@ -186,13 +203,60 @@ export class RedisStore {
   async deleteAllChecks(actor: string) {
     await this.command(
       "EVAL",
-      `local ids=redis.call('SMEMBERS',KEYS[1]);for _,id in ipairs(ids) do local key=ARGV[2]..id;if redis.call('HGET',key,'owner')==ARGV[1] then local request=redis.call('HGET',key,'request_key');if request then local idem=ARGV[3]..request;if redis.call('GET',idem)==id then redis.call('DEL',idem) end;end;redis.call('DEL',key);redis.call('ZREM',KEYS[2],id);end;end;redis.call('DEL',KEYS[1]);return 1`,
+      `local ids=redis.call('SMEMBERS',KEYS[1]);for _,id in ipairs(ids) do local key=ARGV[2]..id;if redis.call('HGET',key,'owner')==ARGV[1] then local request=redis.call('HGET',key,'request_key');if request then local idem=ARGV[3]..request;if redis.call('GET',idem)==id and not redis.call('ZSCORE',KEYS[2],id) then redis.call('DEL',idem) end;end;redis.call('DEL',key);end;end;redis.call('DEL',KEYS[1]);return 1`,
       2,
       this.key("owner:" + actor),
-      this.key("active"),
+      this.key("active:v2"),
       actor,
       this.key("check:"),
       this.key("idem:" + actor + ":"),
+    );
+  }
+  async acquireExtraction(actor: string): Promise<string> {
+    const now = Date.now(),
+      id = randomUUID(),
+      slot = Math.floor(now / 3600000);
+    const outcome = await this.command(
+      "EVAL",
+      `
+      redis.call('ZREMRANGEBYSCORE',KEYS[1],'-inf',ARGV[1]);
+      if redis.call('ZCARD',KEYS[1])>=3 then return 'busy' end;
+      redis.call('ZREMRANGEBYSCORE',KEYS[2],'-inf',tonumber(ARGV[1])-60000);
+      if redis.call('ZCARD',KEYS[2])>=10 then return 'rate_limit' end;
+      if tonumber(redis.call('GET',KEYS[3]) or '0')>=20 then return 'rate_limit' end;
+      redis.call('INCR',KEYS[3]);redis.call('PEXPIREAT',KEYS[3],ARGV[5]);
+      redis.call('ZADD',KEYS[1],tonumber(ARGV[1])+210000,ARGV[2]);redis.call('EXPIRE',KEYS[1],86400);
+      redis.call('ZADD',KEYS[2],ARGV[1],ARGV[2]);redis.call('PEXPIRE',KEYS[2],60000);
+      redis.call('SET',KEYS[4],ARGV[3],'PX',210000);
+      return 'ok';`,
+      4,
+      this.key("active:v2"),
+      this.key("admissions"),
+      this.key("limit:extract:" + actor + ":" + slot),
+      this.key("lease-owner:v2:" + id),
+      now,
+      id,
+      actor,
+      210000,
+      (slot + 1) * 3600000,
+    );
+    if (outcome !== "ok") throw new AppError(String(outcome), 429);
+    return id;
+  }
+  async releaseWork(id: string, actor: string) {
+    await this.command(
+      "EVAL",
+      `
+      if redis.call('GET',KEYS[1])~=ARGV[1] then return 0 end;
+      local request=redis.call('GET',KEYS[3]);
+      if request and redis.call('GET',request)==ARGV[2] then redis.call('DEL',request) end;
+      redis.call('DEL',KEYS[1],KEYS[3]);redis.call('ZREM',KEYS[2],ARGV[2]);return 1;`,
+      3,
+      this.key("lease-owner:v2:" + id),
+      this.key("active:v2"),
+      this.key("lease-request:v2:" + id),
+      actor,
+      id,
     );
   }
 }
