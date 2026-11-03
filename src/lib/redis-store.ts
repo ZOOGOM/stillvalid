@@ -82,13 +82,17 @@ export class RedisStore {
     const row = (await this.command(
       "EVAL",
       `
-      local existing=redis.call('GET',KEYS[1]); if existing then return {existing,'1'} end;
+      local existing=redis.call('GET',KEYS[1]);
+      if existing then
+        if redis.call('HGET',ARGV[6]..existing,'owner')==ARGV[3] then return {existing,'1'} end;
+        redis.call('DEL',KEYS[1]);
+      end;
       redis.call('ZREMRANGEBYSCORE',KEYS[2],'-inf',ARGV[1]);
       if redis.call('ZCARD',KEYS[2])>=3 then return {'busy','error'} end;
       local count=tonumber(redis.call('GET',KEYS[3]) or '0'); if count>=12 then return {'rate_limit','error'} end;
       redis.call('INCR',KEYS[3]); redis.call('PEXPIREAT',KEYS[3],ARGV[5]);
       redis.call('SET',KEYS[1],ARGV[2],'EX',86400);
-      redis.call('HSET',KEYS[4],'owner',ARGV[3],'state','processing','result','','created',ARGV[1],'expires',ARGV[4]);redis.call('EXPIRE',KEYS[4],86400);
+      redis.call('HSET',KEYS[4],'owner',ARGV[3],'state','processing','result','','created',ARGV[1],'expires',ARGV[4],'request_key',ARGV[7]);redis.call('EXPIRE',KEYS[4],86400);
       redis.call('ZADD',KEYS[2],tonumber(ARGV[1])+180000,ARGV[2]); redis.call('EXPIRE',KEYS[2],86400);
       redis.call('SADD',KEYS[5],ARGV[2]);redis.call('EXPIRE',KEYS[5],86400);
       return {ARGV[2],'0'};
@@ -104,6 +108,8 @@ export class RedisStore {
       actor,
       now + 86400000,
       (slot + 1) * 3600000,
+      this.key("check:"),
+      requestKey,
     )) as string[];
     if (row[1] === "error") throw new AppError(row[0], 429);
     return { id: row[0], existing: row[1] === "1" };
@@ -167,24 +173,26 @@ export class RedisStore {
   async deleteCheck(id: string, actor: string) {
     await this.command(
       "EVAL",
-      `if redis.call('HGET',KEYS[1],'owner')~=ARGV[1] then return 0 end;redis.call('DEL',KEYS[1]);redis.call('ZREM',KEYS[2],ARGV[2]);redis.call('SREM',KEYS[3],ARGV[2]);return 1`,
+      `if redis.call('HGET',KEYS[1],'owner')~=ARGV[1] then return 0 end;local request=redis.call('HGET',KEYS[1],'request_key');if request then local idem=ARGV[3]..request;if redis.call('GET',idem)==ARGV[2] then redis.call('DEL',idem) end;end;redis.call('DEL',KEYS[1]);redis.call('ZREM',KEYS[2],ARGV[2]);redis.call('SREM',KEYS[3],ARGV[2]);return 1`,
       3,
       this.key("check:" + id),
       this.key("active"),
       this.key("owner:" + actor),
       actor,
       id,
+      this.key("idem:" + actor + ":"),
     );
   }
   async deleteAllChecks(actor: string) {
     await this.command(
       "EVAL",
-      `local ids=redis.call('SMEMBERS',KEYS[1]);for _,id in ipairs(ids) do local key=ARGV[2]..id;if redis.call('HGET',key,'owner')==ARGV[1] then redis.call('DEL',key);redis.call('ZREM',KEYS[2],id);end;end;redis.call('DEL',KEYS[1]);return 1`,
+      `local ids=redis.call('SMEMBERS',KEYS[1]);for _,id in ipairs(ids) do local key=ARGV[2]..id;if redis.call('HGET',key,'owner')==ARGV[1] then local request=redis.call('HGET',key,'request_key');if request then local idem=ARGV[3]..request;if redis.call('GET',idem)==id then redis.call('DEL',idem) end;end;redis.call('DEL',key);redis.call('ZREM',KEYS[2],id);end;end;redis.call('DEL',KEYS[1]);return 1`,
       2,
       this.key("owner:" + actor),
       this.key("active"),
       actor,
       this.key("check:"),
+      this.key("idem:" + actor + ":"),
     );
   }
 }

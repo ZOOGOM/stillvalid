@@ -1,4 +1,12 @@
 import { z } from "zod";
+import { isCountry } from "./countries";
+
+const countrySchema = z
+  .string()
+  .length(2)
+  .regex(/^[A-Z]{2}$/)
+  .refine(isCountry)
+  .nullable();
 
 export const fieldKeys = [
   "deadline",
@@ -17,14 +25,14 @@ export const noticeSchema = z.object({
   title: z.string().min(1).max(300),
   institution: z.string().max(300),
   edition: z.string().max(100).nullable(),
-  country: z.string().max(2).nullable(),
+  country: countrySchema,
   originalText: z.string().min(1).max(18000),
   fields: z.array(fieldSchema).max(12),
 });
 export const comparisonSchema = z.object({
   same_notice: z.boolean(),
   identity_quote: z.string().max(2000),
-  country: z.string().max(2).nullable(),
+  country: countrySchema,
   source_role: z.enum(["original", "amendment", "cancellation", "unknown"]),
   comparisons: z
     .array(

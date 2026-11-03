@@ -267,7 +267,15 @@ function CropModal({
     [area, setArea] = useState<Area | null>(null),
     [ratio, setRatio] = useState(4 / 3),
     [aspect, setAspect] = useState("photo"),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState<string | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   useEffect(() => {
     loadImage(image)
       .then((i) => setRatio(i.width / i.height))
@@ -307,16 +315,26 @@ function CropModal({
           </select>
         </label>
       </div>
+      {error && (
+        <p className="inline-error" role="alert">
+          {errorText(error, lang)}
+        </p>
+      )}
       <button
         className="primary full"
         disabled={!area || busy}
         onClick={async () => {
           if (!area) return;
           setBusy(true);
+          setError(null);
           try {
-            done(await transformImage(image, 0, area));
+            const updated = await transformImage(image, 0, area);
+            if (mounted.current) done(updated);
+          } catch (e) {
+            if (mounted.current)
+              setError(e instanceof Error ? e.message : "image_type");
           } finally {
-            setBusy(false);
+            if (mounted.current) setBusy(false);
           }
         }}
       >
@@ -353,6 +371,8 @@ export default function StillValidApp() {
   const controller = useRef<AbortController | null>(null),
     busy = useRef(false),
     activeId = useRef<string | null>(null),
+    inFlightId = useRef<string | null>(null),
+    interacted = useRef(false),
     uploadGeneration = useRef(0),
     operation = useRef(0),
     fileRef = useRef<HTMLInputElement>(null),
@@ -377,6 +397,7 @@ export default function StillValidApp() {
     } catch {}
     setPrefsLoaded(true);
     let stopped = false;
+    const initialOperation = operation.current;
     fetch("/api/status", { cache: "no-store" })
       .then((r) => r.json())
       .then(async (status) => {
@@ -387,26 +408,41 @@ export default function StillValidApp() {
           id = sessionStorage.getItem("sv_active_check");
         } catch {}
         if (id) {
-          const response = await fetch(
-            `/api/checks/${encodeURIComponent(id)}`,
-            { cache: "no-store" },
-          );
-          if (stopped) return;
-          if (response.ok) {
-            const saved = await response.json();
-            if (saved.result) {
-              setResult(saved.result);
-              setStage("result");
-              activeId.current = id;
+          try {
+            const response = await fetch(
+              `/api/checks/${encodeURIComponent(id)}`,
+              { cache: "no-store" },
+            );
+            if (
+              stopped ||
+              interacted.current ||
+              operation.current !== initialOperation
+            )
+              return;
+            if (response.ok) {
+              const saved = await response.json();
+              if (
+                stopped ||
+                interacted.current ||
+                operation.current !== initialOperation
+              )
+                return;
+              if (saved.result) {
+                setResult(saved.result);
+                setStage("result");
+                activeId.current = id;
+              } else {
+                try {
+                  sessionStorage.removeItem("sv_active_check");
+                } catch {}
+              }
             } else {
               try {
                 sessionStorage.removeItem("sv_active_check");
               } catch {}
             }
-          } else {
-            try {
-              sessionStorage.removeItem("sv_active_check");
-            } catch {}
+          } catch {
+            // Failure to restore a previous check must not disable new checks.
           }
         }
       })
@@ -434,6 +470,9 @@ export default function StillValidApp() {
   useEffect(() => {
     if (stage !== "input") {
       mainRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+      mainRef.current
+        ?.querySelector<HTMLElement>("h1")
+        ?.focus({ preventScroll: true });
     }
   }, [stage]);
   const mismatch =
@@ -461,6 +500,7 @@ export default function StillValidApp() {
     setError(null);
     setSourceUrl("");
     activeId.current = null;
+    inFlightId.current = null;
     try {
       sessionStorage.removeItem("sv_active_check");
     } catch {}
@@ -516,12 +556,19 @@ export default function StillValidApp() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "default");
+      if (abort.signal.aborted || operation.current !== generation) return;
       setNotice(data.notice);
       setCountryConfirmed(false);
       setStage("review");
     } catch (e) {
       if (!abort.signal.aborted) {
-        setError(e instanceof Error ? e.message : "network");
+        setError(
+          e instanceof TypeError || e instanceof SyntaxError
+            ? "network"
+            : e instanceof Error
+              ? e.message
+              : "network",
+        );
         setStage("input");
       }
     } finally {
@@ -535,6 +582,7 @@ export default function StillValidApp() {
       return;
     }
     const generation = ++operation.current;
+    inFlightId.current = null;
     busy.current = true;
     setError(null);
     setStage("processing");
@@ -561,6 +609,7 @@ export default function StillValidApp() {
       if (response.headers.get("content-type")?.includes("application/json")) {
         const saved = await response.json();
         if (!saved.result) throw new Error("busy");
+        if (abort.signal.aborted || operation.current !== generation) return;
         setResult(saved.result);
         setStage("result");
         return;
@@ -572,6 +621,7 @@ export default function StillValidApp() {
         completed = false;
       for (;;) {
         const part = await reader.read();
+        if (abort.signal.aborted || operation.current !== generation) return;
         buffer += decoder.decode(part.value, { stream: !part.done });
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
@@ -580,6 +630,7 @@ export default function StillValidApp() {
           const event = JSON.parse(line);
           if (event.type === "created") {
             activeId.current = event.data.id;
+            inFlightId.current = event.data.id;
             try {
               sessionStorage.setItem("sv_active_check", event.data.id);
             } catch {}
@@ -589,6 +640,7 @@ export default function StillValidApp() {
           if (event.type === "result") {
             setResult(event.data);
             setStage("result");
+            inFlightId.current = null;
             completed = true;
           }
         }
@@ -597,7 +649,13 @@ export default function StillValidApp() {
       if (!completed) throw new Error("network");
     } catch (e) {
       if (!abort.signal.aborted) {
-        setError(e instanceof Error ? e.message : "network");
+        setError(
+          e instanceof TypeError || e instanceof SyntaxError
+            ? "network"
+            : e instanceof Error
+              ? e.message
+              : "network",
+        );
         setStage("review");
       }
     } finally {
@@ -610,7 +668,8 @@ export default function StillValidApp() {
     busy.current = false;
     setStage(notice ? "review" : "input");
     setError(null);
-    const id = activeId.current;
+    const id = inFlightId.current;
+    inFlightId.current = null;
     if (id) {
       try {
         await fetch(`/api/checks/${encodeURIComponent(id)}`, {
@@ -627,6 +686,8 @@ export default function StillValidApp() {
   };
   const example = async (id: DemoId) => {
     if (busy.current) return;
+    const generation = ++operation.current;
+    busy.current = true;
     setError(null);
     try {
       const response = await fetch(`/api/demo?id=${id}&lang=${lang}`, {
@@ -634,6 +695,7 @@ export default function StillValidApp() {
       });
       if (!response.ok) throw new Error("network");
       const data = await response.json();
+      if (generation !== operation.current) return;
       setResult(data.result);
       setStage("result");
       setNotice(null);
@@ -642,7 +704,9 @@ export default function StillValidApp() {
         sessionStorage.removeItem("sv_active_check");
       } catch {}
     } catch {
-      setError("network");
+      if (generation === operation.current) setError("network");
+    } finally {
+      if (generation === operation.current) busy.current = false;
     }
   };
   const deleteResult = async () => {
@@ -654,7 +718,7 @@ export default function StillValidApp() {
         );
         if (!response.ok) throw new Error("not_found");
       } catch {
-        setError("network");
+        setToast(errorText("network", lang));
         setDialog(null);
         return;
       }
@@ -728,7 +792,16 @@ export default function StillValidApp() {
           </nav>
         </div>
       </header>
-      <main id="main" ref={mainRef}>
+      <main
+        id="main"
+        ref={mainRef}
+        onPointerDownCapture={() => {
+          interacted.current = true;
+        }}
+        onKeyDownCapture={() => {
+          interacted.current = true;
+        }}
+      >
         {stage === "input" && (
           <>
             <section className="hero">
@@ -840,6 +913,7 @@ export default function StillValidApp() {
                           <button
                             aria-label={t.crop}
                             title={t.crop}
+                            disabled={preparing}
                             onClick={() => setCropping(true)}
                           >
                             <Crop size={17} />
@@ -849,13 +923,22 @@ export default function StillValidApp() {
                             title={t.rotate}
                             disabled={preparing}
                             onClick={async () => {
+                              const generation = ++uploadGeneration.current;
                               setPreparing(true);
                               try {
-                                setImage(await transformImage(image, 90));
-                              } catch {
-                                setError("image_type");
+                                const rotated = await transformImage(image, 90);
+                                if (generation === uploadGeneration.current)
+                                  setImage(rotated);
+                              } catch (e) {
+                                if (generation === uploadGeneration.current)
+                                  setError(
+                                    e instanceof Error
+                                      ? e.message
+                                      : "image_type",
+                                  );
                               } finally {
-                                setPreparing(false);
+                                if (generation === uploadGeneration.current)
+                                  setPreparing(false);
                               }
                             }}
                           >
@@ -1102,7 +1185,7 @@ export default function StillValidApp() {
             </button>
             <div className="flow-heading">
               <span className="tiny-label">01 / 03</span>
-              <h1>{t.reviewTitle}</h1>
+              <h1 tabIndex={-1}>{t.reviewTitle}</h1>
               <p>{t.reviewDesc}</p>
             </div>
             <div className="review-card">
@@ -1129,19 +1212,43 @@ export default function StillValidApp() {
                   }
                 />
               </label>
+              <label className="field-label">
+                {t.edition}
+                <input
+                  value={notice.edition ?? ""}
+                  maxLength={100}
+                  onChange={(e) =>
+                    setNotice({ ...notice, edition: e.target.value || null })
+                  }
+                />
+              </label>
+              <label className="field-label">
+                {t.noticeCountry}
+                <select
+                  value={notice.country || ""}
+                  onChange={(e) => {
+                    setNotice({ ...notice, country: e.target.value || null });
+                    setCountryConfirmed(false);
+                  }}
+                >
+                  <option value="">{t.unset}</option>
+                  {countryCodes
+                    .map((code) => ({ code, name: countryName(code, lang) }))
+                    .sort((a, b) => a.name.localeCompare(b.name, lang))
+                    .map(({ code, name }) => (
+                      <option key={code} value={code}>
+                        {name}
+                      </option>
+                    ))}
+                </select>
+              </label>
               <div className="notice-metadata">
-                {notice.edition && (
-                  <span>
-                    <CalendarDays size={15} />
-                    {notice.edition}
-                  </span>
-                )}
                 <button
                   className="text-button"
                   onClick={() => setCountryOpen(true)}
                 >
                   <Globe2 size={15} />
-                  {countryName(notice.country || country, lang)}
+                  {t.country}: {countryName(country, lang)}
                   <ChevronDown size={13} />
                 </button>
               </div>
@@ -1247,7 +1354,7 @@ export default function StillValidApp() {
               <ScanLine size={36} strokeWidth={1.3} />
               <i />
             </div>
-            <h1>{t.progressTitle}</h1>
+            <h1 tabIndex={-1}>{t.progressTitle}</h1>
             <p>{t.progressDesc}</p>
             <div className="progress-steps">
               {(step === "extract"
@@ -1313,7 +1420,7 @@ export default function StillValidApp() {
                 )}
               </div>
               <span className="tiny-label">{t.resultEyebrow}</span>
-              <h1>{t[("status_" + result.status) as CopyKey]}</h1>
+              <h1 tabIndex={-1}>{t[("status_" + result.status) as CopyKey]}</h1>
               <p>{t[("desc_" + result.status) as CopyKey]}</p>
               <div className="result-notice-name">{result.title}</div>
               <div className="result-meta">
@@ -1519,6 +1626,7 @@ export default function StillValidApp() {
                 {!!result.candidates.length && notice && (
                   <section className="sources-card">
                     <h2>{t.candidatesTitle}</h2>
+                    <p className="muted">{t.candidatesHint}</p>
                     {result.candidates.map((c) => (
                       <div className="source-entry" key={c.url}>
                         <p>{c.title}</p>

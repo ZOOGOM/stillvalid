@@ -86,8 +86,16 @@ export class MetaClient {
         response.status === 429 ? 429 : 503,
       );
     }
-    const result = (await response.json()) as Record<string, unknown>;
-    return result;
+    try {
+      const result: unknown = await response.json();
+      if (!result || typeof result !== "object" || Array.isArray(result))
+        throw new Error("invalid provider response");
+      return result as Record<string, unknown>;
+    } catch {
+      throw signal?.aborted
+        ? new AppError("cancelled", 503)
+        : new AppError("model_output", 422);
+    }
   }
   async structured<T>(
     name: string,

@@ -6,6 +6,13 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
     image.src = src;
   });
 }
+function encodeImage(canvas: HTMLCanvasElement): string {
+  for (const quality of [0.92, 0.8, 0.68, 0.55]) {
+    const encoded = canvas.toDataURL("image/jpeg", quality);
+    if (encoded.length <= 3800000) return encoded;
+  }
+  throw new Error("image_compression");
+}
 export async function prepareImage(file: File): Promise<string> {
   if (file.size > 10 * 1024 * 1024) throw new Error("too_large");
   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type))
@@ -22,9 +29,7 @@ export async function prepareImage(file: File): Promise<string> {
     context.fillStyle = "white";
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const encoded = canvas.toDataURL("image/jpeg", 0.92);
-    if (encoded.length > 3800000) throw new Error("too_large");
-    return encoded;
+    return encodeImage(canvas);
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -51,7 +56,7 @@ export async function transformImage(
   ctx.translate(canvas.width / 2, canvas.height / 2);
   ctx.rotate(radians);
   ctx.drawImage(image, -image.width / 2, -image.height / 2);
-  if (!crop) return canvas.toDataURL("image/jpeg", 0.92);
+  if (!crop) return encodeImage(canvas);
   const output = document.createElement("canvas");
   output.width = Math.max(1, Math.round(crop.width));
   output.height = Math.max(1, Math.round(crop.height));
@@ -68,5 +73,5 @@ export async function transformImage(
       output.width,
       output.height,
     );
-  return output.toDataURL("image/jpeg", 0.92);
+  return encodeImage(output);
 }

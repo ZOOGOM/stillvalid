@@ -104,6 +104,33 @@ test("a changed deadline requires quotes in both actual documents", () => {
   assert.equal(run().status, "changed");
   assert.equal(run().comparisons[0].verified, true);
 });
+test("a missing comparison leaves the overall result in review", () => {
+  const n: Notice = {
+    ...notice,
+    fields: [
+      ...notice.fields,
+      { key: "status", value: "Open", quote: "Status: Open." },
+    ],
+  };
+  const result = run(n);
+  assert.equal(result.comparisons[0].verified, true);
+  assert.equal(result.status, "review");
+  assert.ok(result.warnings.includes("partial"));
+});
+test("failed searches and source retrieval do not yield a confirmed result", () => {
+  for (const warning of ["search", "budget", "network", "fetch"]) {
+    const result = assembleResult({
+      id: "test",
+      notice,
+      sources: [source],
+      analyses: [analysis],
+      lang: "en",
+      warnings: [warning],
+    });
+    assert.equal(result.status, "review", warning);
+    assert.equal(result.comparisons[0].verified, true);
+  }
+});
 test("a fabricated supporting quote cannot confirm a change", () => {
   const a = structuredClone(analysis);
   a.comparisons[0].after_quote = "Apply by 20 November 2026.";
