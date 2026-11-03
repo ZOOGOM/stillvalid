@@ -147,3 +147,12 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Local deployment metadata and OS files
+.vercel/
+.DS_Store
+Thumbs.db
+
+# Local user uploads and transient check data
+/uploads/
+/tmp/
