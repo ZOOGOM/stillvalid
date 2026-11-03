@@ -9,16 +9,17 @@
   --paper: rgba(255, 255, 255, 0.62);
   --ink: #0b1320;
   --text: #1b2a40;
-  --muted: #33425c;
+  --muted: #263650;
   --green: #0a63ff;
-  --link: #064dcf;
+  --link: #00318f;
+  --ink2: #1b2a40;
   --green-soft: rgba(255, 255, 255, 0.55);
   --line: rgba(255, 255, 255, 0.55);
   --orange: #b84a00;
   --serif: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", "Malgun Gothic", "Segoe UI", sans-serif;
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", "Malgun Gothic", "Segoe UI", sans-serif;
   --glass: rgba(255, 255, 255, 0.5);
-  --glass-strong: rgba(255, 255, 255, 0.68);
+  --glass-strong: rgba(255, 255, 255, 0.78);
   --edge: rgba(255, 255, 255, 0.85);
   --edge2: rgba(255, 255, 255, 0.35);
   --glass-shadow: rgba(20, 40, 90, 0.18);
@@ -320,7 +321,9 @@ html[lang="en"] .hero h1 {
   background: #0053e0;
 }
 .primary:disabled {
-  opacity: 0.55;
+  opacity: 1;
+  background: #4d6a99;
+  box-shadow: none;
 }
 .start-button {
   min-height: 56px;
@@ -712,4 +715,72 @@ summary:focus-visible {
     padding: 0 14px;
     gap: 4px;
   }
+}
+
+/* legibility pass: darker small text over color fields, firmer modal glass */
+.modal {
+  background: rgba(255, 255, 255, 0.92);
+}
+.modal,
+.modal p,
+.modal label,
+.modal .muted,
+.prose,
+.prose p,
+.modal-footnote,
+.modal-intro,
+.how-list p,
+.how-list > div > span,
+.settings-field,
+.country-code,
+.checkbox-row,
+.hero-eyebrow,
+.trust-row span,
+.file-hint,
+.illustration-caption,
+.examples-section h2,
+.examples-section > div > p,
+.result-bottom > p,
+.result-warnings,
+.evidence-details summary,
+.evidence-quotes small,
+.site-footer p,
+.site-footer button,
+.site-footer a,
+.footer-mark {
+  color: var(--ink2);
+}
+.how-list > div > span {
+  font-family: var(--sans);
+  font-weight: 900;
+  color: var(--green);
+}
+.prose a,
+.modal a,
+.source-entry a,
+.evidence-details > a,
+.text-button,
+.site-footer a:hover,
+.site-footer button:hover {
+  color: var(--link);
+}
+.evidence-quotes blockquote {
+  color: var(--ink2);
+  background: rgba(255, 255, 255, 0.7);
+  border-left: 0;
+  border-radius: 14px;
+  font-size: 13px;
+}
+.footer-mark {
+  font-weight: 700;
+}
+.site-footer {
+  position: relative;
+}
+.country-list button:hover,
+.country-list button.selected {
+  background: rgba(10, 99, 255, 0.1);
+}
+.country-code {
+  font-weight: 500;
 }
