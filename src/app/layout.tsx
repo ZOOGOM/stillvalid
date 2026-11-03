@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./glass.css";
 export const metadata: Metadata = {
   title: "StillValid — 지금도 맞나요?",
   description:
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#faf9f5",
+  themeColor: "#dfeaff",
 };
 export default function RootLayout({
   children,
