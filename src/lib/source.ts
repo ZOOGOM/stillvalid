@@ -1,3 +1,4 @@
+import { abortable } from "./request-efficiency";
 import { lookup } from "node:dns/promises";
 import type { LookupFunction } from "node:net";
 import { Agent, fetch as request } from "undici";
@@ -303,14 +304,23 @@ export async function fetchSource(
   // A generic forward proxy cannot preserve the DNS-to-connection pin below. Fail closed.
   if (process.env.HTTPS_PROXY || process.env.HTTP_PROXY)
     throw new AppError("source_network", 503);
+  const budget = AbortSignal.any([
+    AbortSignal.timeout(15000),
+    ...(signal ? [signal] : []),
+  ]);
   let url = publicUrl(value);
   for (let redirects = 0; redirects <= 3; redirects++) {
     let addresses: { address: string; family: number }[];
     try {
-      addresses = await lookup(url.hostname, { all: true, verbatim: true });
-    } catch {
+      addresses = await abortable(
+        lookup(url.hostname, { all: true, verbatim: true }),
+        budget,
+      );
+    } catch (error) {
+      if (budget.aborted) throw sourceTransportError(budget.reason);
       throw new AppError("source_unavailable", 422);
     }
+    budget.throwIfAborted();
     if (!addresses.length || addresses.some((a) => !isPublicAddress(a.address)))
       throw new AppError("source_url");
     const pinnedLookup: LookupFunction = (_hostname, options, callback) => {
@@ -322,10 +332,7 @@ export async function fetchSource(
       const response = await request(url, {
         dispatcher,
         redirect: "manual",
-        signal: AbortSignal.any([
-          AbortSignal.timeout(12000),
-          ...(signal ? [signal] : []),
-        ]),
+        signal: AbortSignal.any([AbortSignal.timeout(12000), budget]),
         headers: {
           "User-Agent":
             "StillValid/0.1 (+https://github.com/ZOOGOM/stillvalid)",
@@ -371,12 +378,16 @@ export async function fetchSource(
         chunks.push(chunk);
       }
       const parsed = pdf
-        ? await pdfText(new Uint8Array(Buffer.concat(chunks)), url)
+        ? await abortable(
+            pdfText(new Uint8Array(Buffer.concat(chunks)), url),
+            budget,
+          )
         : parseSourceDocument(
             decodeSourceBody(Buffer.concat(chunks), type),
             type,
             url,
           );
+      budget.throwIfAborted();
       return {
         id,
         url: url.href,
@@ -388,7 +399,7 @@ export async function fetchSource(
     } catch (error) {
       throw sourceTransportError(error);
     } finally {
-      await dispatcher.close();
+      await dispatcher.destroy();
     }
   }
   throw new AppError("source_unavailable", 422);

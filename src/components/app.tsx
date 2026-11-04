@@ -44,6 +44,7 @@ import {
   X,
   AlertTriangle,
 } from "lucide-react";
+import { ReadingCache, evidenceKey } from "@/lib/request-efficiency";
 import { printedUrl } from "@/lib/printed-url";
 import { countryCodes } from "@/lib/countries";
 import { copy, errorText, type CopyKey } from "@/lib/i18n";
@@ -847,6 +848,7 @@ export default function StillValidApp() {
   };
   const reset = () => {
     setReadUncertain(false);
+    readingCache.current.clear();
     setClientTiming({});
     timings.current = {};
     controller.current?.abort();
@@ -1001,6 +1003,13 @@ export default function StillValidApp() {
     if (found.length === 1 && generation === uploadGeneration.current)
       await applyBox(image, found[0]);
   };
+  const readingCache = useRef(
+    new ReadingCache<{
+      notice: Notice;
+      readability?: string;
+      timing?: { extractMs: number; modelCalls: number };
+    }>(),
+  );
   const extract = async () => {
     if (busy.current) return;
     if (!live) {
@@ -1030,35 +1039,48 @@ export default function StillValidApp() {
       abort.abort();
     }, extractClientMs);
     try {
-      const response = await abortable(
-        fetch("/api/extract", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: mode === "text" ? text : "",
-            image: mode === "photo" ? image : undefined,
-            country,
+      const requestBody = JSON.stringify({
+        text: mode === "text" ? text : "",
+        image: mode === "photo" ? image : undefined,
+        country,
+      });
+      // Only the extraction is reused; every check still fetches current sources.
+      let data = readingCache.current.get(requestBody);
+      const reused = Boolean(data);
+      if (!data) {
+        const response = await abortable(
+          fetch("/api/extract", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: requestBody,
+            signal: abort.signal,
           }),
-          signal: abort.signal,
-        }),
-        abort.signal,
-      );
-      if (!response.ok)
-        throw new Error(
-          await abortable(
-            responseError(response, "upload_too_large"),
-            abort.signal,
-          ),
+          abort.signal,
         );
-      const data = await abortable(response.json(), abort.signal);
+        if (!response.ok)
+          throw new Error(
+            await abortable(
+              responseError(response, "upload_too_large"),
+              abort.signal,
+            ),
+          );
+        data = await abortable(response.json(), abort.signal);
+        if (!data?.notice) throw new Error("network");
+        if (
+          !abort.signal.aborted &&
+          operation.current === generation &&
+          data.readability !== "uncertain"
+        )
+          readingCache.current.set(requestBody, data);
+      }
       if (abort.signal.aborted || operation.current !== generation) return;
       timings.current = {
         prepareMs: timings.current.prepareMs,
         locateMs: timings.current.locateMs,
         locateCalls: timings.current.locateCalls,
         extractMs: performance.now() - extractStart,
-        extractServerMs: data.timing?.extractMs,
-        extractCalls: data.timing?.modelCalls,
+        extractServerMs: reused ? 0 : data.timing?.extractMs,
+        extractCalls: reused ? 0 : data.timing?.modelCalls,
         extractedAt: performance.now(),
       };
       setReadUncertain(data.readability === "uncertain");
@@ -1108,38 +1130,69 @@ export default function StillValidApp() {
   };
   // Time saving: the check starts right after reading (with the official link
   // when it is known, otherwise including the source search), while the user reviews
-  // the fields. It is used only if the notice, region, language and link are
+  // the fields. It is used only if the notice, region and link are
   // unchanged when the button is tapped; otherwise it is dropped and a normal
   // check runs. At most one background check is started per reading.
   const early = useRef<{
     key: string;
     response: Promise<Response | null>;
+    controller: AbortController;
   } | null>(null);
-  const checkKey = (n: Notice, c: string | null, l: string, url: string) =>
-    JSON.stringify([n, c, l, url]);
+  const checkKey = (n: Notice, c: string | null, url: string) =>
+    evidenceKey(n, c, url);
   const dropEarly = () => {
     const pending = early.current;
     early.current = null;
     setEarlyStarted(false);
+    pending?.controller.abort();
     void pending?.response.then((r) => r?.body?.cancel().catch(() => {}));
   };
   const startEarlyCheck = (n: Notice, url: string) => {
+    const control = new AbortController();
+    const response = new Promise<Response | null>((resolve) => {
+      const timer = setTimeout(() => {
+        control.signal.removeEventListener("abort", cancel);
+        if (control.signal.aborted) return resolve(null);
+        if (early.current?.controller === control) setEarlyStarted(true);
+        void fetch("/api/checks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            notice: n,
+            country,
+            lang,
+            sourceUrl: url,
+            requestKey: crypto.randomUUID(),
+          }),
+          signal: control.signal,
+        }).then(resolve, () => resolve(null));
+      }, 350);
+      const cancel = () => {
+        clearTimeout(timer);
+        resolve(null);
+      };
+      control.signal.addEventListener("abort", cancel, { once: true });
+    });
     early.current = {
-      key: checkKey(n, country, lang, url),
-      response: fetch("/api/checks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          notice: n,
-          country,
-          lang,
-          sourceUrl: url,
-          requestKey: crypto.randomUUID(),
-        }),
-      }).catch(() => null),
+      key: checkKey(n, country, url),
+      response,
+      controller: control,
     };
-    setEarlyStarted(true);
   };
+  useEffect(() => {
+    if (
+      early.current &&
+      (!notice || early.current.key !== checkKey(notice, country, sourceUrl))
+    )
+      dropEarly();
+  }, [notice, country, sourceUrl]);
+  useEffect(
+    () => () => {
+      early.current?.controller.abort();
+      readingCache.current.clear();
+    },
+    [],
+  );
   const runCheck = async (overrideUrl?: string) => {
     if (!notice || busy.current) return;
     if (mismatch) {
@@ -1199,19 +1252,25 @@ export default function StillValidApp() {
       busy.current = false;
     };
     let checkId: string | null = null;
+    let usedEarly: AbortController | undefined;
+    const cancelEarly = () => usedEarly?.abort();
+    abort.signal.addEventListener("abort", cancelEarly, { once: true });
     try {
       const url = overrideUrl ?? sourceUrl;
       const pending = early.current;
       early.current = null;
       setEarlyStarted(false);
       let response: Response | null = null;
-      if (pending && pending.key === checkKey(notice, country, lang, url)) {
+      if (pending && pending.key === checkKey(notice, country, url)) {
+        usedEarly = pending.controller;
+        if (abort.signal.aborted) cancelEarly();
         response = await abortable(pending.response, abort.signal);
         if (response && !response.ok) {
           void response.body?.cancel().catch(() => {});
           response = null;
         }
       } else if (pending) {
+        pending.controller.abort();
         void pending.response.then((r) => r?.body?.cancel().catch(() => {}));
       }
       response ??= await abortable(
@@ -1305,6 +1364,8 @@ export default function StillValidApp() {
       );
       setStage("review");
     } finally {
+      abort.signal.removeEventListener("abort", cancelEarly);
+      usedEarly?.abort();
       clearTimeout(total);
       clearTimeout(silence);
       if (operation.current === generation) busy.current = false;

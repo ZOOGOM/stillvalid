@@ -600,7 +600,7 @@ export function candidatesFromResponse(
       /* unsafe search results are discarded */
     }
   }
-  return [...unique.values()].slice(0, 3);
+  return [...unique.values()];
 }
 
 export type NoticeBox = {
