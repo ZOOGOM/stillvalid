@@ -10,7 +10,8 @@ const warnings: Record<
     | "missing"
     | "timeout"
     | "technical"
-    | "unrelated",
+    | "unrelated"
+    | "script",
     string
   >
 > = {
@@ -22,6 +23,8 @@ const warnings: Record<
     timeout: "출처 응답 시간이 초과됐어요.",
     technical: "이 주소는 공고가 아닌 기술 파일이에요.",
     unrelated: "가져온 출처가 이 공고와 관련 없어 보여 비교하지 않았어요.",
+    script:
+      "이 페이지는 내용을 스크립트로만 보여줘서 읽을 수 없어요. 공고 본문 페이지의 주소를 입력해 보세요.",
   },
   en: {
     format: "The source format or text encoding is not supported.",
@@ -32,6 +35,8 @@ const warnings: Record<
     technical: "This address points to a technical file, not a notice.",
     unrelated:
       "A fetched source did not appear related to this notice, so it was not compared.",
+    script:
+      "This page shows its content only through scripts, so it could not be read. Try the address of the notice page itself.",
   },
   zh: {
     format: "不支持该来源的格式或文字编码。",
@@ -41,6 +46,7 @@ const warnings: Record<
     timeout: "来源响应超时。",
     technical: "此地址指向技术文件，而非公告。",
     unrelated: "获取的来源似乎与此公告无关，因此未进行比对。",
+    script: "此页面仅通过脚本显示内容，无法读取。请尝试公告正文页面的地址。",
   },
   es: {
     format: "No se admite el formato o la codificación de la fuente.",
@@ -51,6 +57,8 @@ const warnings: Record<
     technical: "Esta dirección apunta a un archivo técnico, no a un aviso.",
     unrelated:
       "Una fuente obtenida no parecía relacionada con este aviso, así que no se comparó.",
+    script:
+      "Esta página muestra su contenido solo mediante scripts y no se pudo leer. Prueba con la dirección de la página del aviso.",
   },
   fr: {
     format: "Le format ou l’encodage de la source n’est pas pris en charge.",
@@ -61,6 +69,8 @@ const warnings: Record<
     technical: "Cette adresse désigne un fichier technique, pas une annonce.",
     unrelated:
       "Une source récupérée ne semblait pas liée à cette annonce ; elle n’a pas été comparée.",
+    script:
+      "Cette page n’affiche son contenu qu’au moyen de scripts ; elle n’a pas pu être lue. Essayez l’adresse de la page de l’annonce elle-même.",
   },
   de: {
     format:
@@ -73,6 +83,8 @@ const warnings: Record<
       "Diese Adresse verweist auf eine technische Datei, nicht auf eine Mitteilung.",
     unrelated:
       "Eine abgerufene Quelle schien nicht zu dieser Mitteilung zu passen und wurde nicht verglichen.",
+    script:
+      "Diese Seite zeigt ihren Inhalt nur über Skripte an und konnte nicht gelesen werden. Versuchen Sie die Adresse der Mitteilungsseite selbst.",
   },
   ja: {
     format: "この資料の形式または文字コードには対応していません。",
@@ -83,6 +95,8 @@ const warnings: Record<
     technical: "このアドレスはお知らせではなく技術ファイルを指しています。",
     unrelated:
       "取得した出典はこのお知らせと関係がないようだったため、比較しませんでした。",
+    script:
+      "このページはスクリプトでのみ内容を表示するため読み取れませんでした。お知らせ本文のページのアドレスをお試しください。",
   },
   pt: {
     format: "O formato ou a codificação da fonte não é compatível.",
@@ -94,6 +108,8 @@ const warnings: Record<
       "Este endereço aponta para um arquivo técnico, não para um aviso.",
     unrelated:
       "Uma fonte obtida não parecia relacionada a este aviso, então não foi comparada.",
+    script:
+      "Esta página mostra o conteúdo apenas por scripts e não pôde ser lida. Tente o endereço da própria página do aviso.",
   },
   ar: {
     format: "تنسيق المصدر أو ترميز النص غير مدعوم.",
@@ -104,6 +120,8 @@ const warnings: Record<
     technical: "يشير هذا العنوان إلى ملف تقني وليس إعلانًا.",
     unrelated:
       "بدا أن أحد المصادر التي جرى جلبها غير مرتبط بهذا الإعلان، لذلك لم تتم مقارنته.",
+    script:
+      "تعرض هذه الصفحة محتواها عبر البرامج النصية فقط، لذلك تعذّرت قراءتها. جرّب عنوان صفحة الإعلان نفسها.",
   },
   ru: {
     format: "Формат или кодировка источника не поддерживается.",
@@ -114,6 +132,8 @@ const warnings: Record<
     technical: "Этот адрес ведёт к техническому файлу, а не к объявлению.",
     unrelated:
       "Полученный источник, похоже, не связан с этим объявлением, поэтому сравнение не выполнялось.",
+    script:
+      "Эта страница показывает содержимое только с помощью скриптов, поэтому её не удалось прочитать. Попробуйте адрес самой страницы объявления.",
   },
 };
 const categories: Record<string, keyof (typeof warnings)["en"]> = {
@@ -125,6 +145,7 @@ const categories: Record<string, keyof (typeof warnings)["en"]> = {
   source_timeout: "timeout",
   source_not_notice: "technical",
   source_unrelated: "unrelated",
+  source_script_only: "script",
 };
 export function sourceWarningText(
   code: string,

@@ -160,7 +160,15 @@ export function parseSourceDocument(
   const parsed =
     type === "text/html" ? htmlText(raw) : { title: url.hostname, text: raw };
   if (parsed.text.length > 22000) throw new AppError("source_too_large", 422);
-  if (parsed.text.length < 40) throw new AppError("source_unavailable", 422);
+  if (parsed.text.length < 40)
+    // Script-only pages (soft redirects, client-rendered apps) have no
+    // readable notice text; say so instead of a generic failure.
+    throw new AppError(
+      type === "text/html" && /<script[\s>]/i.test(raw)
+        ? "source_script_only"
+        : "source_unavailable",
+      422,
+    );
   return parsed;
 }
 

@@ -34,6 +34,7 @@ const sourceWarningCodes = new Set([
   "source_blocked",
   "source_not_found",
   "source_not_notice",
+  "source_script_only",
 ]);
 function fetchWarning(error: unknown): string {
   if (!(error instanceof AppError)) return "fetch";
