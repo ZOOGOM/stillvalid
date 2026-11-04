@@ -77,6 +77,9 @@ export type Source = {
   fetchedAt: string;
   authority: "registered" | "unverified";
   institution?: string;
+  // "pdf" when the text came from a PDF's text layer. Its metadata title is
+  // display-only and never identity evidence.
+  format?: "pdf";
 };
 export type Candidate = { url: string; title: string };
 export type FieldComparison = {

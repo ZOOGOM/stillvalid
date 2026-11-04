@@ -3,7 +3,9 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
-  serverExternalPackages: ["node:sqlite"],
+  // unpdf loads its bundled pdf.js with a dynamic import; keep it a runtime
+  // dependency rather than re-bundling it.
+  serverExternalPackages: ["node:sqlite", "unpdf"],
   async headers() {
     return [
       {

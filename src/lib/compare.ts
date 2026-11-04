@@ -522,7 +522,10 @@ function sameIdentity(
   // Compare the complete supplied title; never infer a shorter event name.
   const title = normalize(notice.title);
   const institution = normalize(notice.institution);
-  const sourceTitle = normalize(source.title);
+  // A PDF's metadata title is not page content; it adds no heading evidence
+  // and no heading veto (as for a generic page label).
+  const heading = source.format === "pdf" ? "" : source.title;
+  const sourceTitle = normalize(heading);
   const registered = source.authority === "registered";
   // A general category, even with an institution, cannot identify one notice.
   const specificTitle = title
@@ -617,7 +620,7 @@ function sameIdentity(
     return "heading_other";
 
   const expected = editionMarkers(`${notice.title} ${notice.edition || ""}`);
-  for (const text of [quote, source.title]) {
+  for (const text of [quote, heading]) {
     for (const [kind, values] of editionMarkers(text)) {
       const wanted = expected.get(kind);
       if (wanted && [...values].some((value) => !wanted.has(value)))

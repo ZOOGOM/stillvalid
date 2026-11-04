@@ -36,6 +36,7 @@ const sourceWarningCodes = new Set([
   "source_not_found",
   "source_not_notice",
   "source_script_only",
+  "source_pdf_no_text",
 ]);
 function fetchWarning(error: unknown): string {
   if (!(error instanceof AppError)) return "fetch";

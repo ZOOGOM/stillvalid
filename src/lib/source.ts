@@ -183,6 +183,60 @@ export function parseSourceDocument(
   return parsed;
 }
 
+// Official notices are often published as PDF attachments. Only the PDF's own
+// text layer is used: it is extracted deterministically here, compared by the
+// model as text, and every quote is still verified against this exact text. A
+// scanned PDF without a text layer is reported, never OCR'd or guessed.
+const pdfByteLimit = 5_000_000;
+const pdfPageLimit = 20;
+
+export async function pdfText(
+  bytes: Uint8Array,
+  url: URL,
+): Promise<{ title: string; text: string }> {
+  if (Buffer.from(bytes.subarray(0, 5)).toString("latin1") !== "%PDF-")
+    throw new AppError("source_format", 422);
+  const { getDocumentProxy, extractText, getMeta } = await import("unpdf");
+  let pages: string[];
+  let title = "";
+  try {
+    const pdf = await getDocumentProxy(bytes, {
+      // The bundled pdf.js (6.4) has no eval/Function code path; also never
+      // load font faces, system fonts or XFA forms for text extraction.
+      disableFontFace: true,
+      enableXfa: false,
+      useSystemFonts: false,
+      stopAtErrors: true,
+    });
+    if (pdf.numPages > pdfPageLimit)
+      throw new AppError("source_too_large", 422);
+    pages = (await extractText(pdf, { mergePages: false })).text;
+    try {
+      const info = (await getMeta(pdf)).info as { Title?: unknown };
+      if (typeof info.Title === "string") title = info.Title.trim();
+    } catch {
+      /* metadata is optional */
+    }
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    // Encrypted, malformed or unsupported PDFs.
+    throw new AppError("source_format", 422);
+  }
+  const text = pages
+    .map((page) =>
+      page
+        .replace(/[ \t]+/g, " ")
+        .replace(/\n\s*\n/g, "\n")
+        .trim(),
+    )
+    .filter(Boolean)
+    .join("\n");
+  if (text.length > 22000) throw new AppError("source_too_large", 422);
+  if (text.length < 40) throw new AppError("source_pdf_no_text", 422);
+  const firstLine = text.split("\n").find((line) => line.trim()) || "";
+  return { title: (title || firstLine || url.hostname).slice(0, 300), text };
+}
+
 export async function fetchSource(
   value: string,
   id: string,
@@ -217,7 +271,7 @@ export async function fetchSource(
         headers: {
           "User-Agent":
             "StillValid/0.1 (+https://github.com/ZOOGOM/stillvalid)",
-          Accept: "text/html,text/plain;q=0.9",
+          Accept: "text/html,text/plain;q=0.9,application/pdf;q=0.8",
         },
       });
       if ([301, 302, 303, 307, 308].includes(response.status)) {
@@ -233,8 +287,10 @@ export async function fetchSource(
         throw sourceHttpError(response.status);
       }
       const type = response.headers.get("content-type") || "";
+      const pdf =
+        type.split(";", 1)[0].trim().toLowerCase() === "application/pdf";
       try {
-        sourceMediaType(type);
+        if (!pdf) sourceMediaType(type);
       } catch (error) {
         await response.body?.cancel();
         throw error;
@@ -247,20 +303,26 @@ export async function fetchSource(
         const { done, value: chunk } = await reader.read();
         if (done) break;
         bytes += chunk.byteLength;
-        if (bytes > 600000) {
+        if (bytes > (pdf ? pdfByteLimit : 600000)) {
           await reader.cancel();
           throw new AppError("source_too_large", 422);
         }
         chunks.push(chunk);
       }
-      const raw = decodeSourceBody(Buffer.concat(chunks), type);
-      const parsed = parseSourceDocument(raw, type, url);
+      const parsed = pdf
+        ? await pdfText(new Uint8Array(Buffer.concat(chunks)), url)
+        : parseSourceDocument(
+            decodeSourceBody(Buffer.concat(chunks), type),
+            type,
+            url,
+          );
       return {
         id,
         url: url.href,
         ...parsed,
         fetchedAt: new Date().toISOString(),
         ...authorityFor(url.hostname),
+        ...(pdf ? { format: "pdf" as const } : {}),
       };
     } catch (error) {
       throw sourceTransportError(error);
