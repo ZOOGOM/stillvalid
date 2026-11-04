@@ -106,6 +106,8 @@ export const esUiCopy: UiCopy = {
   sourceHint:
     "Si añades el enlace de la página oficial, se omite la búsqueda y se compara directamente con esa página, lo que es más rápido. ¿No tienes enlace? Buscaremos posibles fuentes oficiales.",
   sourcePlaceholder: "https://institucion-oficial/aviso",
+  sourcePrefilled:
+    "Hemos puesto el enlace impreso en el aviso. Comprueba que sea el sitio oficial.",
   mismatch: "Tu región de uso no coincide con el país leído en el aviso.",
   useNoticeCountry: "Usar el país del aviso",
   keepCountry: "Mantener mi selección",
@@ -323,6 +325,8 @@ export const frUiCopy: UiCopy = {
   sourceHint:
     "Avec le lien de la page officielle, la recherche est ignorée et la comparaison se fait directement avec cette page, ce qui est plus rapide. Pas de lien ? Nous chercherons des sources officielles possibles.",
   sourcePlaceholder: "https://organisme-officiel/annonce",
+  sourcePrefilled:
+    "Nous avons ajouté le lien imprimé sur l’annonce. Vérifiez qu’il s’agit du site officiel.",
   mismatch: "Votre région d'utilisation diffère du pays lu dans l'annonce.",
   useNoticeCountry: "Utiliser le pays de l'annonce",
   keepCountry: "Garder ma sélection",

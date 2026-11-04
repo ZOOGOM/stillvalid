@@ -108,6 +108,8 @@ export const deUiCopy: UiCopy = {
   sourceHint:
     "Mit dem Link zur offiziellen Seite entfällt die Suche und es wird direkt mit dieser Seite verglichen – das geht schneller. Kein Link? Wir suchen nach möglichen offiziellen Quellen.",
   sourcePlaceholder: "https://offizielle-institution/mitteilung",
+  sourcePrefilled:
+    "Wir haben den Link aus der Mitteilung eingetragen. Prüfen Sie, ob es die offizielle Website ist.",
   mismatch:
     "Ihre Nutzungsregion unterscheidet sich vom Land in der Mitteilung.",
   useNoticeCountry: "Land der Mitteilung verwenden",
@@ -328,6 +330,8 @@ export const ptUiCopy: UiCopy = {
   sourceHint:
     "Com o link da página oficial, a busca é pulada e a comparação é feita diretamente com essa página, o que é mais rápido. Sem link? Vamos buscar possíveis fontes oficiais.",
   sourcePlaceholder: "https://instituicao-oficial/aviso",
+  sourcePrefilled:
+    "Inserimos o link impresso no aviso. Confira se é o site oficial.",
   mismatch: "Sua região de uso é diferente do país identificado no aviso.",
   useNoticeCountry: "Usar o país do aviso",
   keepCountry: "Manter minha seleção",

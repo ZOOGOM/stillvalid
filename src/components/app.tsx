@@ -44,6 +44,7 @@ import {
   X,
   AlertTriangle,
 } from "lucide-react";
+import { printedUrl } from "@/lib/printed-url";
 import { countryCodes } from "@/lib/countries";
 import { copy, errorText, type CopyKey } from "@/lib/i18n";
 import { resultCopy, type ResultCopyKey } from "@/lib/result-i18n";
@@ -658,6 +659,9 @@ export default function StillValidApp() {
     [dragging, setDragging] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null),
     [sourceUrl, setSourceUrl] = useState(""),
+    // True while the link field holds an address read from the notice that
+    // the user has not edited.
+    [sourcePrefilled, setSourcePrefilled] = useState(false),
     [result, setResult] = useState<Result | null>(null);
   // The photo before an automatic notice crop, so it can be restored.
   const [beforeAutoCrop, setBeforeAutoCrop] = useState<string | null>(null);
@@ -857,6 +861,7 @@ export default function StillValidApp() {
     setPreparing(false);
     setError(null);
     setSourceUrl("");
+    setSourcePrefilled(false);
     activeId.current = null;
     inFlightId.current = null;
     try {
@@ -1053,6 +1058,13 @@ export default function StillValidApp() {
       };
       setReadUncertain(data.readability === "uncertain");
       setNotice(data.notice);
+      // Offer an address printed on the notice, without replacing one the
+      // user typed. The check still decides whether that page is official.
+      if (!sourceUrl.trim() || sourcePrefilled) {
+        const printed = printedUrl(data.notice?.originalText || "");
+        setSourceUrl(printed ?? "");
+        setSourcePrefilled(Boolean(printed));
+      }
       setCountryConfirmed(false);
       setStage("review");
     } catch (e) {
@@ -2034,10 +2046,18 @@ export default function StillValidApp() {
                     value={sourceUrl}
                     maxLength={2000}
                     placeholder={t.sourcePlaceholder}
-                    onChange={(e) => setSourceUrl(e.target.value)}
+                    onChange={(e) => {
+                      setSourceUrl(e.target.value);
+                      setSourcePrefilled(false);
+                    }}
                   />
                 </div>
               </label>
+              {sourcePrefilled && sourceUrl && (
+                <p className="field-hint source-prefilled" role="status">
+                  {t.sourcePrefilled}
+                </p>
+              )}
               <p className="field-hint">{t.sourceHint}</p>
               {error && (
                 <div className="inline-error" role="alert">
@@ -2485,6 +2505,7 @@ export default function StillValidApp() {
                           className="text-button"
                           onClick={() => {
                             setSourceUrl(c.url);
+                            setSourcePrefilled(false);
                             void runCheck(c.url);
                           }}
                         >
