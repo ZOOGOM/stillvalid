@@ -15,12 +15,23 @@ function encodeImage(canvas: HTMLCanvasElement): string {
 }
 export async function prepareImage(file: File): Promise<string> {
   if (file.size > 10 * 1024 * 1024) throw new Error("too_large");
-  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type))
+  // iPhone photos can arrive as HEIC/HEIF (for example from Files). Browsers
+  // that can decode them (recent Safari) re-encode to JPEG below; others get
+  // a HEIC-specific message instead of a generic type error.
+  const heic =
+    /^image\/hei[cf](?:-sequence)?$/.test(file.type) ||
+    (!file.type && /\.hei[cf]$/i.test(file.name));
+  if (!heic && !["image/jpeg", "image/png", "image/webp"].includes(file.type))
     throw new Error("image_type");
   const url = URL.createObjectURL(file);
   try {
-    const image = await loadImage(url),
-      scale = Math.min(1, 2400 / Math.max(image.width, image.height));
+    let image: HTMLImageElement;
+    try {
+      image = await loadImage(url);
+    } catch {
+      throw new Error(heic ? "image_heic" : "image_type");
+    }
+    const scale = Math.min(1, 2400 / Math.max(image.width, image.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(image.width * scale);
     canvas.height = Math.round(image.height * scale);

@@ -181,6 +181,8 @@ export const zhUiCopy: UiCopy = {
   autoFindChoose: "找到了多张公告，请选择要核查的那一张。",
   autoFindPick: "选择第 {n} 张公告",
   autoFindClose: "不选择并关闭",
+  error_image_heic:
+    "此浏览器无法读取 HEIC 照片。请以 JPEG 发送照片，或在 iPhone 设置 > 相机 > 格式中选择“兼容性最佳”。",
 };
 
 export const jaUiCopy: UiCopy = {
@@ -390,4 +392,6 @@ export const jaUiCopy: UiCopy = {
     "お知らせが複数見つかりました。確認するものを選んでください。",
   autoFindPick: "{n}番目のお知らせを選ぶ",
   autoFindClose: "選ばずに閉じる",
+  error_image_heic:
+    "このブラウザーは HEIC 写真を読み込めません。JPEG で共有するか、iPhone の設定 > カメラ > フォーマットで「互換性優先」を選んでください。",
 };

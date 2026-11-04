@@ -195,6 +195,44 @@ const preview = (page) =>
   await page.close();
 }
 
+// A HEIC photo on a browser that cannot decode HEIC (Chromium) gets the
+// HEIC guidance rather than a generic type error. Real Safari decoding is not
+// covered here.
+{
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+  page.on("pageerror", (e) => pageErrors.push(e.message));
+  await page.route("**/api/status", (route) =>
+    route.fulfill({ json: { liveAvailable: true, demoAvailable: true } }),
+  );
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem("sv_display_lang", "en");
+    } catch {}
+  });
+  await page.goto(origin, { waitUntil: "networkidle" });
+  await page
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({
+      name: "IMG_0001.HEIC",
+      mimeType: "image/heic",
+      buffer: Buffer.concat([
+        Buffer.from([0, 0, 0, 24]),
+        Buffer.from("ftypheic"),
+        Buffer.alloc(64),
+      ]),
+    });
+  await page
+    .getByText("This browser can't read HEIC photos.", { exact: false })
+    .waitFor();
+  assert.equal(await page.locator(".image-preview > img").count(), 0);
+  results.push("HEIC on Chromium: HEIC guidance, no preview");
+  await context.close();
+}
+
 assert.deepEqual(violations, []);
 assert.deepEqual(pageErrors, []);
 await browser.close();
