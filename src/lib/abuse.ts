@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { isIP } from "node:net";
 import ipaddr from "ipaddr.js";
 
@@ -29,5 +29,24 @@ export function abuseKey(
   // Never persist or log this key outside the short-lived rate-limit counters.
   return createHmac("sha256", config.secret)
     .update(`stillvalid:abuse:v2:${network}`)
+    .digest("hex");
+}
+
+/**
+ * The HMAC key for the network limit. A dedicated IP_RATE_LIMIT_SECRET wins;
+ * otherwise a key is derived one-way from the server-only model credential so
+ * the limit is on by default for hosted deployments. Neither the credential
+ * nor the derived key is logged, stored or sent anywhere. Rotating either
+ * value only resets the hourly counters.
+ */
+export function abuseSecret(
+  env: Record<string, string | undefined> = process.env,
+): string | undefined {
+  const dedicated = env.IP_RATE_LIMIT_SECRET;
+  if (dedicated && dedicated.length >= 32) return dedicated;
+  const credential = env.META_API_KEY || env.MODEL_API_KEY;
+  if (!credential) return undefined;
+  return createHash("sha256")
+    .update("stillvalid:ip-limit-key:v1:" + credential)
     .digest("hex");
 }

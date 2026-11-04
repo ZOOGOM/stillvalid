@@ -16,8 +16,12 @@
   --green-soft: rgba(255, 255, 255, 0.55);
   --line: rgba(255, 255, 255, 0.55);
   --orange: #b84a00;
-  --serif: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", "Malgun Gothic", "Segoe UI", sans-serif;
-  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", Pretendard, "Noto Sans KR", "Malgun Gothic", "Segoe UI", sans-serif;
+  --serif:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo",
+    Pretendard, "Noto Sans KR", "Malgun Gothic", "Segoe UI", sans-serif;
+  --sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo",
+    Pretendard, "Noto Sans KR", "Malgun Gothic", "Segoe UI", sans-serif;
   --glass: rgba(255, 255, 255, 0.5);
   --glass-strong: rgba(255, 255, 255, 0.78);
   --edge: rgba(255, 255, 255, 0.85);

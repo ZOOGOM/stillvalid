@@ -12,7 +12,7 @@ import {
   reserveModelCall,
 } from "@/lib/store";
 import { errorResponse, readJson } from "@/lib/http";
-import { abuseKey } from "@/lib/abuse";
+import { abuseKey, abuseSecret } from "@/lib/abuse";
 export const runtime = "nodejs";
 export const maxDuration = 90;
 const schema = z.object({
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       actor,
       abuseKey(request.headers, {
         vercel: process.env.VERCEL,
-        secret: process.env.IP_RATE_LIMIT_SECRET,
+        secret: abuseSecret(),
       }),
     );
     const started = Date.now();

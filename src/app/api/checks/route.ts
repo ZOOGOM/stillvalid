@@ -21,9 +21,25 @@ import {
 } from "@/lib/store";
 import { assembleResult } from "@/lib/compare";
 import { errorResponse, readJson } from "@/lib/http";
-import { abuseKey } from "@/lib/abuse";
+import { abuseKey, abuseSecret } from "@/lib/abuse";
+import { sourceRelevant } from "@/lib/relevance";
+import { firstInOrder, settle } from "@/lib/priority";
 export const runtime = "nodejs";
 export const maxDuration = 180;
+const sourceWarningCodes = new Set([
+  "source_format",
+  "source_encoding",
+  "source_too_large",
+  "source_timeout",
+  "source_blocked",
+  "source_not_found",
+  "source_not_notice",
+]);
+function fetchWarning(error: unknown): string {
+  if (!(error instanceof AppError)) return "fetch";
+  if (error.code === "source_network") return "network";
+  return sourceWarningCodes.has(error.code) ? error.code : "fetch";
+}
 export async function POST(request: NextRequest) {
   try {
     sameOrigin(request);
@@ -38,7 +54,7 @@ export async function POST(request: NextRequest) {
       requestKey,
       abuseKey(request.headers, {
         vercel: process.env.VERCEL,
-        secret: process.env.IP_RATE_LIMIT_SECRET,
+        secret: abuseSecret(),
       }),
     );
     if (job.existing)
@@ -139,42 +155,50 @@ export async function POST(request: NextRequest) {
           const sources: Source[] = [];
           const analyses: ModelComparison[] = [];
           send("phase", { step: "sources", elapsedMs: Date.now() - started });
-          for (const candidate of candidates.slice(0, 3)) {
-            await ensureActive();
-            try {
-              const source = await measure("fetchMs", () =>
-                fetchSource(candidate.url, "source-" + sources.length, signal),
-              );
-              sources.push(source);
-              if (sources.length >= 2) break;
-            } catch (error) {
-              warnings.push(
-                error instanceof AppError && error.code === "source_network"
-                  ? "network"
-                  : error instanceof AppError &&
-                      [
-                        "source_format",
-                        "source_encoding",
-                        "source_too_large",
-                        "source_timeout",
-                        "source_blocked",
-                        "source_not_found",
-                        "source_not_notice",
-                      ].includes(error.code)
-                    ? error.code
-                    : "fetch",
-              );
-            }
+          await ensureActive();
+          // Fetch candidates concurrently but decide in priority order, exactly
+          // as a sequential loop would: stop at two sources and record only the
+          // failures that came before them. Unneeded requests are aborted.
+          const fetchAbort = new AbortController();
+          const fetchSignal = AbortSignal.any([signal, fetchAbort.signal]);
+          const fetchStarted = Date.now();
+          const attempts = candidates
+            .slice(0, 3)
+            .map((candidate) =>
+              settle(fetchSource(candidate.url, "pending", fetchSignal)),
+            );
+          try {
+            const fetched = await firstInOrder(attempts, 2);
+            for (const source of fetched.values)
+              sources.push({ ...source, id: "source-" + sources.length });
+            for (const error of fetched.errors)
+              warnings.push(fetchWarning(error));
+          } finally {
+            fetchAbort.abort();
+            timing.fetchMs += Date.now() - fetchStarted;
           }
           send("phase", { step: "compare", elapsedMs: Date.now() - started });
-          for (const source of sources) {
-            await ensureActive();
-            analyses.push(
-              await measure("compareMs", () =>
-                meta.compare(notice, source, lang, signal),
+          // A page sharing nothing with the notice cannot yield verified
+          // evidence; skip its model call and say so instead.
+          const related = sources.filter((source) =>
+            sourceRelevant(notice, source),
+          );
+          const unrelated = sources.filter(
+            (source) => !related.includes(source),
+          );
+          if (unrelated.length) warnings.push("source_unrelated");
+          await ensureActive();
+          analyses.push(
+            ...(await measure("compareMs", () =>
+              Promise.all(
+                related.map((source) =>
+                  meta.compare(notice, source, lang, signal),
+                ),
               ),
-            );
-          }
+            )),
+          );
+          // assembleResult pairs analyses with sources by position.
+          sources.splice(0, sources.length, ...related, ...unrelated);
           await ensureActive();
           const result = assembleResult({
             id: job.id,
