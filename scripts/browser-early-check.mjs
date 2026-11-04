@@ -86,7 +86,7 @@ async function open({ text, readability, region }) {
   await page.locator(".review-card").waitFor();
   return { context, page, posts };
 }
-const note = "checking against the official page has already started";
+const note = "the check has already started in the background";
 
 // 1. Link printed on the notice: the check starts at once and is reused.
 {
@@ -116,9 +116,38 @@ const note = "checking against the official page has already started";
   results.push("edited notice: early check dropped, fresh check sent");
   await context.close();
 }
-// 3. No link, uncertain reading, or region mismatch: nothing starts early.
+// 3. No link: the check (with its source search) also starts early and is reused.
+{
+  const { context, page, posts } = await open({
+    text: "Fixture festival. No address here.",
+  });
+  await page.getByText(note, { exact: false }).waitFor();
+  assert.equal(posts.length, 1, "no link: started before the click");
+  assert.equal(posts[0].sourceUrl, "");
+  await page.locator(".review-card button.primary").click();
+  await page.locator(".result-container").waitFor();
+  assert.equal(posts.length, 1, "no link: reused");
+  results.push("no link: early check (with search) reused");
+  await context.close();
+}
+// 4. Typing a link after an early no-link check drops it.
+{
+  const { context, page, posts } = await open({
+    text: "Fixture festival. No address here.",
+  });
+  await page.getByText(note, { exact: false }).waitFor();
+  await page
+    .locator('.url-input input[type="url"]')
+    .fill("https://www.fixture.go.kr/typed");
+  await page.locator(".review-card button.primary").click();
+  await page.locator(".result-container").waitFor();
+  assert.equal(posts.length, 2, "typed link: fresh check");
+  assert.equal(posts[1].sourceUrl, "https://www.fixture.go.kr/typed");
+  results.push("link typed after an early check: dropped, fresh check sent");
+  await context.close();
+}
+// 5. Uncertain reading or region mismatch: nothing starts early.
 for (const [label, opts] of [
-  ["no link", { text: "Fixture festival. No address here." }],
   ["uncertain reading", { text: base.originalText, readability: "uncertain" }],
   ["region mismatch", { text: base.originalText, region: "US" }],
 ]) {
