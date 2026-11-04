@@ -7,10 +7,10 @@ This checklist translates the existing StillValid product plan into inspectable 
 ## Complete user flow
 
 1. In one settings dialog choose a display language for the interface and results, and optionally select a usage region from 249 countries and regions. These choices are independent. Remembering the region is opt-in and reversible; the app does not infer nationality, residence or time zone, or establish the notice country from GPS or IP.
-2. Upload or photograph one JPEG, PNG or WebP, or paste notice text. Crop, rotate and preview the image locally before sending it. Recover from an unsupported file, oversized upload or unreadable image by choosing another input.
+2. Upload or photograph a notice, or paste text. JPEG, PNG and WebP are supported; HEIC/HEIF works only where the browser can decode and re-encode it. Crop, rotate and preview locally, or explicitly use SAM 3.1 to suggest a notice area. Choose a numbered area if several are found, and allow undo. A dense board may still need manual cropping. Small-photo hints and uncertain-reading warnings ask the user to check readability; they do not certify OCR quality.
 3. Review and correct the title, institution, edition, country read from the notice, and original text. The usage region and extracted notice country are separate. Confirm a disagreement between them.
 4. Search official-source candidates using Meta's built-in web search, or supply a public HTTPS source URL. Retrieve actual source text and check notice identity and quoted evidence.
-5. Read the result, individual before/after values, uncertainty, source URLs and retrieval times. Open supporting quotes. An incomplete check stays a review or unavailable result.
+5. Read the result, individual before/after values, uncertainty, per-source outcomes and measured processing stages. Open supporting quotes. Search a displayed place in Google Maps without changing its verification state. An incomplete check stays a review or unavailable result.
 6. If identity remains unclear, inspect the displayed candidates and choose one for a new check. Candidate links are labeled as unverified until the source and notice have been checked. This is a recovery path on the result screen; a separate pre-comparison candidate-selection API is not implemented.
 7. Switch display language without changing the verdict or original dates, amounts, institution names, addresses, before/after values or quotes, and without another model call. Copy a summary, check again, or delete a result. Session-wide deletion is available in the privacy dialog.
 
@@ -22,21 +22,27 @@ An explicit location button may request a one-time HTTPS location permission. Br
 
 ## Feature coverage
 
-| Requirement | Implementation | Acceptance evidence |
-| --- | --- | --- |
-| Anonymous mobile use | Main app and session cookie | Browser flow, session isolation and origin checks |
-| Optional region and independent display language | Usage-region picker and ten display-language dictionaries | Region memory/clear, mismatch confirmation and fact-preservation checks; live language quality remains unverified |
-| Image/text input and local editing | Browser preparation, crop and rotation | Real browser file input and canvas flow; unsupported-file recovery |
-| Extraction review | Editable title, institution, edition and transcript | HTTP-fixture extraction and review checks |
-| Official-source discovery | Meta Responses search and actual returned URL evidence | Provider-contract tests and recorded production search observations; attachment/blocked candidates can prevent confirmation |
-| Bounded source retrieval | Public DNS pinning, HTTPS and redirect/body limits | Security/parser tests and recorded production retrieval from Seoul, GOV.UK and Smithsonian; coverage of other institutions is unmeasured |
-| Identity and evidence comparison | Quote checks, identity/edition/section/archive/country/date guards, partial/conflict handling | Regression tests and controlled production comparisons; no human-labelled accuracy benchmark |
-| Candidate recovery | Candidate URL selection followed by a new check | Browser HTTP-fixture flow; no claim that a candidate alone is official |
-| Progress and cancellation | NDJSON phases, cancellation and stale-operation guards | Browser fixture and cancellation checks |
-| Deletion and expiry | Owner-scoped result/session deletion and 24-hour lifetime | SQLite and Redis behavior tests, browser deletion/error checks |
-| Shared usage controls | Atomic Redis operations or SQLite transactions | Emulator tests and SQLite multi-process concurrency tests |
-| Accessible mobile presentation | Focus handling, keyboard controls, readable inputs and touch targets | Automated browser/accessibility checks and one user-reported iPhone camera/result flow; comprehensive Safari/HEIC and Android checks remain pending |
-| Deployable service | Vercel + Marketplace Upstash Redis settings, or single-server Docker | Vercel production deployment reached READY; real provider/storage and external HTTP verification are separate checks |
+| Requirement                                      | Implementation                                                                                | Acceptance evidence                                                                                                                                       |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Anonymous mobile use                             | Main app and session cookie                                                                   | Browser flow, session isolation and origin checks                                                                                                         |
+| Optional region and independent display language | Usage-region picker and ten display-language dictionaries                                     | Region memory/clear, mismatch confirmation and fact-preservation checks; live language quality remains unverified                                         |
+| Image/text input and local editing               | Browser preparation, crop and rotation                                                        | Real browser file input and canvas flow; unsupported-file recovery                                                                                        |
+| Optional SAM notice location                     | Explicit locate action, document/poster fallback, numbered choices and undo                   | Provider mocks, local browser scenarios and dated production observations; dense-board separation and physical-device operation remain limited/unverified |
+| Photo readability and HEIC recovery              | Small-photo hint, uncertain-reading warning, browser-dependent HEIC decoding                  | Unit/browser fixtures and recorded uncertain production readings; Safari HEIC decode and current physical devices remain unverified                       |
+| Extraction review                                | Editable title, institution, edition and transcript                                           | HTTP-fixture extraction and review checks                                                                                                                 |
+| Official-source discovery                        | Meta Responses search and actual returned URL evidence                                        | Provider-contract tests and recorded production search observations; attachment/blocked candidates can prevent confirmation                               |
+| Bounded source retrieval                         | Public DNS pinning, HTTPS and redirect/body limits                                            | Security/parser tests and recorded production retrieval from Seoul, GOV.UK and Smithsonian; coverage of other institutions is unmeasured                  |
+| PDF text sources                                 | Signature, size and page limits, text-layer extraction; named octet-stream PDF support        | Synthetic PDF tests and recorded official Seoul PDF retrieval; scans have no supported OCR path and differing title wording stayed in review              |
+| Korean government authority                      | Registered go.kr hosts with recognised user-content path exclusions                           | Registry/path tests and recorded Miryang official-source observation; host registration alone does not prove notice identity                              |
+| Identity and evidence comparison                 | Quote checks, identity/edition/section/archive/country/date guards, partial/conflict handling | Regression tests and controlled production comparisons; no human-labelled accuracy benchmark                                                              |
+| Candidate recovery                               | Candidate URL selection followed by a new check                                               | Browser HTTP-fixture flow; no claim that a candidate alone is official                                                                                    |
+| Progress and cancellation                        | NDJSON phases, cancellation and stale-operation guards                                        | Browser fixture and cancellation checks                                                                                                                   |
+| Source outcomes and timing                       | Per-candidate result/reason and expandable stage-duration panel                               | Fixtures and dated production timing; no guaranteed completion time or representative latency benchmark                                                   |
+| Google Maps search                               | Original place query, separate before/after values where different                            | Maps browser fixtures and URL encoding tests; phone app/web hand-off and return navigation remain unverified                                              |
+| Deletion and expiry                              | Owner-scoped result/session deletion and 24-hour lifetime                                     | SQLite and Redis behavior tests, browser deletion/error checks                                                                                            |
+| Shared usage controls                            | Atomic Redis operations or SQLite transactions                                                | Emulator tests and SQLite multi-process concurrency tests                                                                                                 |
+| Accessible mobile presentation                   | Focus handling, keyboard controls, readable inputs and touch targets                          | Automated browser/accessibility checks and one user-reported iPhone camera/result flow; comprehensive Safari/HEIC and Android checks remain pending       |
+| Deployable service                               | Vercel + Marketplace Upstash Redis settings, or single-server Docker                          | Vercel production deployment reached READY; real provider/storage and external HTTP verification are separate checks                                      |
 
 ## Live release gate
 
@@ -55,21 +61,35 @@ Complete these on the deployed HTTPS service before describing it as ready for j
 - [ ] Confirm provider retention, billing/credits, hosting quotas, deployment rollback and service availability through judging.
 - [ ] Align the public code, README, deployment URL and three-minute demonstration with one stable version.
 
+## Current physical-device follow-up
+
+The earlier user-reported iPhone camera-to-result flow is retained in validation. It predates SAM, HEIC and map-search additions and does not complete the following checks. Record device/OS, observed result and date; leave unperformed items unchecked. Android hardware was not available in the earlier session.
+
+| Current-version check                                                          | iPhone Safari | Android Chrome |
+| ------------------------------------------------------------------------------ | ------------- | -------------- |
+| Camera input and preview                                                       | Not run       | Not run        |
+| SAM single crop, multiple choices and undo                                     | Not run       | Not run        |
+| HEIC decode or actionable recovery message                                     | Not run       | Not run        |
+| Small-image hint and uncertain-reading warning                                 | Not run       | Not run        |
+| Official URL comparison, source outcomes and timing                            | Not run       | Not run        |
+| Google Maps app/web hand-off, original query and result preserved after return | Not run       | Not run        |
+| VoiceOver/TalkBack names, keyboard/zoom and network interruption               | Not run       | Not run        |
+
 ## Real-notice evaluation sheet
 
 The following are task slots, not completed evaluations or synthetic test results. For every task, record permitted input material, the official source URL, institution/edition/country/time zone, human reference answer and quote, observed result, errors, elapsed time and provider usage/cost. Keep private notices and personal information out of the public repository.
 
-| Task | Required real example | Expected decision boundary | Run status |
-| --- | --- | --- | --- |
-| 1 | Application deadline changed | Identify the supported new deadline without inventing a time | Not run |
-| 2 | Event date changed | Keep the correct edition and original date wording | Not run |
-| 3 | Venue changed | Link the new venue to the official amendment quote | Not run |
-| 4 | Cost changed | Distinguish the actual price change from unrelated fees | Not run |
-| 5 | Eligibility changed | Report the published change without deciding a person's eligibility | Not run |
-| 6 | All extracted fields agree | Say the retrieved material agrees within the checked scope | Not run |
-| 7 | Explicit cancellation or elapsed deadline | Require cancellation evidence or an unambiguous dated time zone | Not run |
-| 8 | Similar notice, different institution/edition | Request review and allow candidate/source correction | Not run |
-| 9 | Ambiguous numeric date or missing time zone | Preserve ambiguity rather than infer a deadline | Not run |
-| 10 | Missing, inaccessible or unsupported source | Explain unavailability and the next input/retry action | Not run |
+| Task | Required real example                         | Expected decision boundary                                          | Run status |
+| ---- | --------------------------------------------- | ------------------------------------------------------------------- | ---------- |
+| 1    | Application deadline changed                  | Identify the supported new deadline without inventing a time        | Not run    |
+| 2    | Event date changed                            | Keep the correct edition and original date wording                  | Not run    |
+| 3    | Venue changed                                 | Link the new venue to the official amendment quote                  | Not run    |
+| 4    | Cost changed                                  | Distinguish the actual price change from unrelated fees             | Not run    |
+| 5    | Eligibility changed                           | Report the published change without deciding a person's eligibility | Not run    |
+| 6    | All extracted fields agree                    | Say the retrieved material agrees within the checked scope          | Not run    |
+| 7    | Explicit cancellation or elapsed deadline     | Require cancellation evidence or an unambiguous dated time zone     | Not run    |
+| 8    | Similar notice, different institution/edition | Request review and allow candidate/source correction                | Not run    |
+| 9    | Ambiguous numeric date or missing time zone   | Preserve ambiguity rather than infer a deadline                     | Not run    |
+| 10   | Missing, inaccessible or unsupported source   | Explain unavailability and the next input/retry action              | Not run    |
 
 Include country-unset, country-mismatch and cross-language cases across this sheet. Report exact observed results and sample size; do not infer general accuracy or guaranteed harm prevention from ten examples.
