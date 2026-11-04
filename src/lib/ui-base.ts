@@ -206,7 +206,7 @@ const ko = {
   error_provider_limit:
     "분석 서비스의 요청 한도에 도달했어요. 잠시 뒤 다시 시도해 주세요.",
   error_model_unavailable:
-    "분석 서비스에 연결하지 못했어요. 자료를 확인한 것으로 처리하지 않았어요.",
+    "분석 서비스에 연결하지 못했어요. 자료를 확인한 것으로 처리하지 않았어요. 잠시 후 같은 내용으로 다시 시도해 주세요.",
   error_model_output:
     "안내를 충분히 명확하게 읽지 못했어요. 선명한 사진이나 텍스트로 다시 입력해 주세요.",
   error_source_url:
@@ -474,7 +474,7 @@ const en: Copy = {
   error_provider_limit:
     "The analysis service is at its request limit. Please try again later.",
   error_model_unavailable:
-    "We couldn't reach the analysis service. Nothing was treated as verified.",
+    "We couldn't reach the analysis service. Nothing was treated as verified. Please try again in a moment.",
   error_model_output:
     "We couldn't read the notice clearly enough. Try a sharper photo or paste its text.",
   error_source_url:

@@ -628,3 +628,101 @@ test("extraction rejects values and quotes rewritten from the original", () =>
       { key: "status", value: "Open ２０２６", quote: "Status: Open ２０２６" },
     ]);
   }));
+
+test("an extraction stall or provider 5xx is retried once; limits, refusals and cancels are not", () =>
+  withTestKey(async () => {
+    const { originalText: _ignored, ...extracted } = notice;
+    const ok = () =>
+      Response.json({
+        choices: [
+          {
+            finish_reason: "stop",
+            message: { content: JSON.stringify(extracted) },
+          },
+        ],
+      });
+    const stall = (init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        if (init?.signal?.aborted) return reject(init.signal.reason);
+        init?.signal?.addEventListener("abort", () =>
+          reject(init.signal?.reason),
+        );
+      });
+    // AbortSignal.timeout timers do not keep the test's event loop alive.
+    const keepAlive = setInterval(() => {}, 1000);
+    // 5xx then success: exactly two reservations and calls.
+    for (const first of [
+      () => Promise.resolve(new Response("", { status: 503 })),
+      () => Promise.reject(new TypeError("fetch failed")),
+    ]) {
+      let calls = 0;
+      let reserved = 0;
+      const client = new MetaClient(
+        async () => (++calls === 1 ? first() : ok()),
+        () => {
+          reserved++;
+        },
+      );
+      const result = await client.extract("Workshop. Open.", undefined, null);
+      assert.equal(result.title, "Workshop");
+      assert.equal(calls, 2);
+      assert.equal(reserved, 2);
+    }
+    // Two consecutive failures surface model_unavailable after two calls.
+    let calls = 0;
+    await assert.rejects(
+      new MetaClient(
+        async () => {
+          calls++;
+          return new Response("", { status: 502 });
+        },
+        () => {},
+      ).extract("Workshop. Open.", undefined, null),
+      { code: "model_unavailable" },
+    );
+    assert.equal(calls, 2);
+    // Rate limits, client errors and caller cancellation are never retried.
+    for (const [status, code] of [
+      [429, "provider_limit"],
+      [400, "model_unavailable"],
+    ] as const) {
+      calls = 0;
+      await assert.rejects(
+        new MetaClient(
+          async () => {
+            calls++;
+            return new Response("", { status });
+          },
+          () => {},
+        ).extract("Workshop. Open.", undefined, null),
+        { code },
+      );
+      assert.equal(calls, 1, String(status));
+    }
+    calls = 0;
+    const abort = new AbortController();
+    const pending = new MetaClient(
+      async (_input, init) => {
+        calls++;
+        return stall(init);
+      },
+      () => {},
+    ).extract("Workshop. Open.", undefined, null, abort.signal);
+    abort.abort();
+    await assert.rejects(pending, { code: "cancelled" });
+    assert.equal(calls, 1);
+    // A route deadline (timeout signal) reports a stall, not a user cancel.
+    calls = 0;
+    await assert.rejects(
+      new MetaClient(
+        async (_input, init) => {
+          calls++;
+          return stall(init);
+        },
+        () => {},
+      ).extract("Workshop. Open.", undefined, null, AbortSignal.timeout(30)),
+      { code: "model_unavailable" },
+    );
+    assert.equal(calls, 1);
+    clearInterval(keepAlive);
+  }));

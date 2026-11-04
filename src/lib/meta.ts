@@ -76,6 +76,16 @@ export function validateImage(data: string): void {
   if (!valid) throw new AppError("image_type", 415);
 }
 
+// A provider stall or transient 5xx, as opposed to a refusal, limit or cancel.
+class ProviderStall extends AppError {
+  constructor() {
+    super("model_unavailable", 503);
+  }
+}
+// Normal extraction measured 8-21 s. A first attempt that stalls past this is
+// retried once inside the route's 80 s budget instead of failing at 60 s.
+const extractionAttemptMs = 38000;
+
 export class MetaClient {
   constructor(
     private fetcher: Fetcher = fetch,
@@ -85,6 +95,7 @@ export class MetaClient {
     path: string,
     body: Record<string, unknown>,
     signal?: AbortSignal,
+    timeoutMs = 60000,
   ): Promise<Record<string, unknown>> {
     const key = process.env.META_API_KEY || process.env.MODEL_API_KEY;
     if (!key) throw new AppError("not_configured", 503);
@@ -100,23 +111,22 @@ export class MetaClient {
         body: JSON.stringify({ model: modelId(), ...body }),
         cache: "no-store",
         signal: AbortSignal.any([
-          AbortSignal.timeout(60000),
+          AbortSignal.timeout(timeoutMs),
           ...(signal ? [signal] : []),
         ]),
         ...(proxy ? { dispatcher: proxy } : {}),
       } as RequestInit);
     } catch {
-      throw new AppError(
-        signal?.aborted ? "cancelled" : "model_unavailable",
-        503,
-      );
+      // The route's own deadline is a stall too; only a caller abort cancels.
+      if (signal?.aborted && signal.reason?.name !== "TimeoutError")
+        throw new AppError("cancelled", 503);
+      throw new ProviderStall();
     }
     if (!response.ok) {
       await response.body?.cancel();
-      throw new AppError(
-        response.status === 429 ? "provider_limit" : "model_unavailable",
-        response.status === 429 ? 429 : 503,
-      );
+      if (response.status === 429) throw new AppError("provider_limit", 429);
+      if (response.status >= 500) throw new ProviderStall();
+      throw new AppError("model_unavailable", 503);
     }
     let result: unknown;
     try {
@@ -139,6 +149,7 @@ export class MetaClient {
     input: unknown,
     image?: string,
     signal?: AbortSignal,
+    timeoutMs?: number,
   ): Promise<T> {
     const jsonSchema = z.toJSONSchema(schema);
     const response = await this.call(
@@ -170,6 +181,7 @@ export class MetaClient {
         },
       },
       signal,
+      timeoutMs,
     );
     const choices = response.choices as
       | {
@@ -197,6 +209,18 @@ export class MetaClient {
       throw outputFailure("schema_mismatch");
     }
   }
+  /** One retry after a provider stall; the caller's signal bounds the total. */
+  private async retryStall<T>(
+    attempt: (timeoutMs: number) => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    try {
+      return await attempt(extractionAttemptMs);
+    } catch (error) {
+      if (!(error instanceof ProviderStall) || signal?.aborted) throw error;
+      return attempt(60000);
+    }
+  }
   async extract(
     text: string,
     image: string | undefined,
@@ -207,13 +231,18 @@ export class MetaClient {
       "Identify the notice title, issuing institution, explicit edition/year, and country if explicit. Keep a separately printed issuing institution out of the title; preserve the actual printed title when it includes the institution or is itself the institution name. Country is a two-letter ISO code or null. A user country is only a hint and must NOT override the notice. Extract only explicitly written deadline, event date, location, cancellation/status, cost and eligibility. Field values must be EXACT excerpts, not translated, normalized dates or inferred end-of-day times. Each quote must occur verbatim in the original text and include its field value. Keep ambiguous dates exactly as written. If no readable title/text exists, do not invent an event; use readable text as the title. At most one field per key.";
     let result: Notice;
     if (image) {
-      const extracted = await this.structured(
-        "notice",
-        imageExtractionSchema,
-        instructions +
-          " Transcribe all readable image text faithfully into originalText, including tables. Do not describe pictured objects as if that description were text. Set content_kind to not_notice only when the image clearly is not an announcement or notice, such as an ordinary animal or object photograph without a notice. Use uncertain for cropped, blurry or sparse notices; missing dates, locations or fields do not make an image not_notice. If no text is readable, leave originalText and title empty instead of inventing them.",
-        { text, country_hint: country },
-        image,
+      const extracted = await this.retryStall(
+        (timeoutMs) =>
+          this.structured(
+            "notice",
+            imageExtractionSchema,
+            instructions +
+              " Transcribe all readable image text faithfully into originalText, including tables. Do not describe pictured objects as if that description were text. Set content_kind to not_notice only when the image clearly is not an announcement or notice, such as an ordinary animal or object photograph without a notice. Use uncertain for cropped, blurry or sparse notices; missing dates, locations or fields do not make an image not_notice. If no text is readable, leave originalText and title empty instead of inventing them.",
+            { text, country_hint: country },
+            image,
+            signal,
+            timeoutMs,
+          ),
         signal,
       );
       if (
@@ -241,13 +270,18 @@ export class MetaClient {
       if (!parsed.success) throw outputFailure("schema_mismatch");
       result = parsed.data;
     } else {
-      const extracted = await this.structured(
-        "notice",
-        noticeSchema.omit({ originalText: true }),
-        instructions +
-          " The supplied text is the original; do not reproduce it in the output.",
-        { text, country_hint: country },
-        undefined,
+      const extracted = await this.retryStall(
+        (timeoutMs) =>
+          this.structured(
+            "notice",
+            noticeSchema.omit({ originalText: true }),
+            instructions +
+              " The supplied text is the original; do not reproduce it in the output.",
+            { text, country_hint: country },
+            undefined,
+            signal,
+            timeoutMs,
+          ),
         signal,
       );
       result = { ...extracted, originalText: text };

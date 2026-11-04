@@ -122,7 +122,8 @@ export const zhUiCopy: UiCopy = {
   error_session: "核查会话已过期，请重新加载页面。",
   error_rate_limit: "请求次数已达上限，请稍后重试。",
   error_provider_limit: "分析服务的请求次数已达上限，请稍后重试。",
-  error_model_unavailable: "无法连接分析服务，没有内容被视为已核实。",
+  error_model_unavailable:
+    "无法连接分析服务，没有内容被视为已核实。请稍后重试。",
   error_model_output: "无法清楚读取公告。请尝试更清晰的照片或粘贴文本。",
   error_source_url: "请输入不含凭据的公开 HTTPS 公告网址。不支持内部地址。",
   error_too_large: "文件太大，请选择小于 10MB 的照片。",
@@ -309,7 +310,7 @@ export const jaUiCopy: UiCopy = {
   error_provider_limit:
     "分析サービスのリクエスト数が上限に達しました。後でもう一度お試しください。",
   error_model_unavailable:
-    "分析サービスに接続できませんでした。確認済みと判断された内容はありません。",
+    "分析サービスに接続できませんでした。確認済みと判断された内容はありません。しばらくしてからもう一度お試しください。",
   error_model_output:
     "お知らせを十分に読み取れませんでした。より鮮明な写真かテキストをお試しください。",
   error_source_url:

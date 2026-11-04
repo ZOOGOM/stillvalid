@@ -1066,3 +1066,163 @@ test("borrowed institution or edition near the quote is checked for nearby editi
     "review",
   );
 });
+
+// A page listing several editions: the changed value must come from this
+// edition's section, and a page-level archive notice vetoes heading identity.
+const gardenNotice: Notice = {
+  title: "Garden Workshop",
+  institution: "Example Library",
+  edition: "2026",
+  country: "US",
+  originalText:
+    "2026 Garden Workshop. Example Library. Applications Due: 10 November 2026.",
+  fields: [
+    {
+      key: "deadline",
+      value: "10 November 2026",
+      quote: "Applications Due: 10 November 2026.",
+    },
+  ],
+};
+const filler = "Visitors are welcome to the reading room. ".repeat(12);
+function gardenCase(text: string, after: string, afterQuote: string) {
+  return run(
+    gardenNotice,
+    { ...source, title: "Example Library", text },
+    {
+      ...analysis,
+      identity_quote: "2026 Garden Workshop, Example Library.",
+      comparisons: [
+        {
+          key: "deadline",
+          before: "10 November 2026",
+          after,
+          before_quote: "Applications Due: 10 November 2026.",
+          after_quote: afterQuote,
+          relation: "changed",
+        },
+      ],
+    },
+  );
+}
+
+test("a value quoted from another labelled edition's section is never confirmed", () => {
+  const head =
+    "2026 Garden Workshop, Example Library. Applications Due: 10 November 2026.\n";
+  for (const [label, after, afterQuote] of [
+    [
+      "2027 Garden Workshop: ",
+      "3 March 2027",
+      "Applications Due: 3 March 2027.",
+    ],
+    ["Garden Workshop (2025)\n", "2 May 2025", "Applications Due: 2 May 2025."],
+    [
+      "Garden Workshop Round 2. ",
+      "1 December 2026",
+      "Applications Due: 1 December 2026.",
+    ],
+  ]) {
+    const n = label.includes("Round")
+      ? { ...gardenNotice, title: "Garden Workshop Round 1" }
+      : gardenNotice;
+    const result = run(
+      n,
+      {
+        ...source,
+        title: "Example Library",
+        text: `${head}${filler}${label}${afterQuote}`,
+      },
+      {
+        ...analysis,
+        identity_quote: "2026 Garden Workshop, Example Library.",
+        comparisons: [
+          {
+            key: "deadline",
+            before: "10 November 2026",
+            after,
+            before_quote: "Applications Due: 10 November 2026.",
+            after_quote: afterQuote,
+            relation: "changed",
+          },
+        ],
+      },
+    );
+    assert.equal(result.status, "review", label);
+    assert.equal(result.comparisons[0].verified, false, label);
+  }
+});
+
+test("the notice's own edition section still confirms cross-year and Korean values", () => {
+  // A 2026 edition may legitimately close in January 2027.
+  let result = gardenCase(
+    `2025 Garden Workshop was held in May.\n${filler}2026 Garden Workshop, Example Library. Applications Due: 15 January 2027.`,
+    "15 January 2027",
+    "Applications Due: 15 January 2027.",
+  );
+  assert.equal(result.status, "changed");
+  assert.equal(result.comparisons[0].verified, true);
+  // An unlabelled title occurrence adds no conflicting edition.
+  result = gardenCase(
+    `2026 Garden Workshop, Example Library.\n${filler}Garden Workshop: Applications Due: 17 November 2026.`,
+    "17 November 2026",
+    "Applications Due: 17 November 2026.",
+  );
+  assert.equal(result.status, "changed");
+
+  const korean: Notice = {
+    title: "제3회 정원 워크숍",
+    institution: "예시도서관",
+    edition: null,
+    country: "KR",
+    originalText: "제3회 정원 워크숍 예시도서관 신청 마감: 11월 10일",
+    fields: [
+      { key: "deadline", value: "11월 10일", quote: "신청 마감: 11월 10일" },
+    ],
+  };
+  const koreanRun = (text: string, after: string) =>
+    run(
+      korean,
+      { ...source, title: "예시도서관", text },
+      {
+        ...analysis,
+        identity_quote: "제3회 정원 워크숍 예시도서관",
+        country: "KR",
+        comparisons: [
+          {
+            key: "deadline",
+            before: "11월 10일",
+            after,
+            before_quote: "신청 마감: 11월 10일",
+            after_quote: `신청 마감: ${after}`,
+            relation: "changed",
+          },
+        ],
+      },
+    );
+  const page = `제3회 정원 워크숍 예시도서관 신청 마감: 11월 17일\n${filler}`;
+  assert.equal(koreanRun(page, "11월 17일").status, "changed");
+  assert.equal(
+    koreanRun(`${page}제4회 정원 워크숍 신청 마감: 12월 1일`, "12월 1일")
+      .status,
+    "review",
+  );
+});
+
+test("a page-level archive notice anywhere on a dedicated page vetoes borrowed identity", () => {
+  const archived = {
+    ...nasmSource,
+    text: `This page is an archive of past opportunities.\n${filler}${nasmSource.text}`,
+  };
+  const result = run(nasmNotice, archived, nasmAnalysis);
+  assert.equal(result.status, "review");
+  assert.equal(result.comparisons[0].verified, false);
+  // Without the archive notice the same dedicated page still confirms.
+  assert.equal(
+    run(
+      nasmNotice,
+      { ...nasmSource, text: `${filler}${nasmSource.text}` },
+      nasmAnalysis,
+    ).status,
+    "changed",
+  );
+});

@@ -143,7 +143,7 @@ export const deUiCopy: UiCopy = {
   error_provider_limit:
     "Der Analysedienst hat sein Anfragelimit erreicht. Bitte versuchen Sie es später erneut.",
   error_model_unavailable:
-    "Der Analysedienst war nicht erreichbar. Es wurde nichts als geprüft eingestuft.",
+    "Der Analysedienst war nicht erreichbar. Es wurde nichts als geprüft eingestuft. Bitte versuchen Sie es gleich noch einmal.",
   error_model_output:
     "Die Mitteilung war nicht deutlich genug lesbar. Versuchen Sie ein schärferes Foto oder fügen Sie den Text ein.",
   error_source_url:
@@ -337,7 +337,7 @@ export const ptUiCopy: UiCopy = {
   error_provider_limit:
     "O serviço de análise atingiu seu limite de solicitações. Tente novamente mais tarde.",
   error_model_unavailable:
-    "Não foi possível acessar o serviço de análise. Nada foi considerado verificado.",
+    "Não foi possível acessar o serviço de análise. Nada foi considerado verificado. Tente novamente em instantes.",
   error_model_output:
     "Não foi possível ler o aviso com clareza suficiente. Tente uma foto mais nítida ou cole o texto.",
   error_source_url:

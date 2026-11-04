@@ -130,6 +130,60 @@ function contextConflicts(
   return false;
 }
 
+// An edition label written directly next to the notice title, such as
+// "2027 Garden Workshop", "Garden Workshop (Round 2)" or "제3회 정원 워크숍".
+const markerSource =
+  "(?<![\\p{L}\\p{N}])(?:(?:19|20)\\d{2}|(?:session|round|edition|cohort|cycle|season|batch)\\s*[-:#]?\\s*(?:\\d+|[ivx]+)|\\d+(?:st|nd|rd|th)\\s+(?:session|round|edition|cohort|cycle|season|batch)|제?\\s*\\d+\\s*(?:회|차|기))";
+const leadingMarker = new RegExp(`${markerSource}\\s*[-–:·]?\\s*$`, "iu");
+const trailingMarker = new RegExp(
+  `^\\s*[-–:,(\\[]?\\s*${markerSource}(?![\\p{L}\\p{N}])`,
+  "iu",
+);
+
+/**
+ * A page may list several editions of the same programme. The changed value
+ * must not come from a section whose nearest heading names this title with a
+ * different edition, even when the identity quote elsewhere is correct.
+ */
+function otherEditionScope(
+  notice: Notice,
+  sourceText: string,
+  afterQuote: string,
+): boolean {
+  const expected = editionMarkers(`${notice.title} ${notice.edition || ""}`);
+  if (!expected.size) return false;
+  const base = normalize(notice.title)
+    .replace(new RegExp(markerSource, "giu"), " ")
+    .replace(normalize(notice.institution) || "\0", " ")
+    .replace(/[\s:·.,!()|/—–-]+/g, " ")
+    .trim();
+  if (base.length < 4) return false;
+  const text = normalize(sourceText);
+  const at = text.indexOf(normalize(afterQuote));
+  if (at < 0) return false;
+  const end = at + normalize(afterQuote).length;
+  const window = text.slice(Math.max(0, at - 300), end);
+  const offset = Math.max(0, at - 300);
+  let nearest = -1;
+  for (let i = window.indexOf(base); i >= 0; i = window.indexOf(base, i + 1))
+    nearest = i;
+  if (nearest < 0) return false;
+  const start = offset + nearest;
+  const before = text.slice(Math.max(0, start - 24), start);
+  const after = text.slice(start + base.length, start + base.length + 20);
+  const label = [
+    before.match(leadingMarker)?.[0],
+    after.match(trailingMarker)?.[0],
+  ]
+    .filter(Boolean)
+    .join(" ");
+  for (const [kind, values] of editionMarkers(label)) {
+    const wanted = expected.get(kind);
+    if (wanted && [...values].some((value) => !wanted.has(value))) return true;
+  }
+  return false;
+}
+
 function sameIdentity(notice: Notice, source: Source, quote: string): boolean {
   const identity = normalize(quote);
   // Compare the complete supplied title; never infer a shorter event name.
@@ -181,6 +235,10 @@ function sameIdentity(notice: Notice, source: Source, quote: string): boolean {
     borrowed = true;
   }
   if (borrowed && contextConflicts(notice, institution, window)) return false;
+  // A dedicated heading vouches for the whole page, so a page-level archive
+  // notice anywhere on it (typically at the top) also vetoes the borrowing.
+  if (borrowed && dedicatedPage && archiveContext.test(normalize(source.text)))
+    return false;
   // A generic page label can add no identity evidence. A specific, different
   // heading must not be overridden by an unrelated matching paragraph below it.
   const genericTitle = sourceTitle
@@ -304,8 +362,11 @@ export function verifyComparison(
     const ambiguousDate =
       ["deadline", "date"].includes(f.key) &&
       [f.before, f.after].some(ambiguousNumericDate);
+    const otherEdition =
+      !!afterQuote && otherEditionScope(notice, source.text, afterQuote);
     const verified =
       quoteSupported &&
+      !otherEdition &&
       !ambiguousRelation &&
       !unsupportedCancellation &&
       !ambiguousDate;
