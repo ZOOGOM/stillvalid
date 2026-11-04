@@ -2,16 +2,16 @@
 
 Validated in the cloud checkout with Node.js 24.19.0 and Next.js 16.4.4. A single display-language setting controls the complete interface and results in ten languages. The usage region can be selected from 249 countries and regions or estimated on-device after an explicit location request. These implementation checks do not establish global source coverage or live model quality.
 
-| Check | Result |
-| --- | --- |
-| TypeScript | Passed on the final UI revision |
-| Behavioral/security unit tests | 108 passed, including comparison counterexamples, shared extraction/check admission, legacy Redis deletion isolation, Marketplace Redis configuration, local country lookup and complete interface/result dictionaries |
-| Live evaluation harness tests | 7 passed using local HTTP fixtures or pure scoring checks; no live provider or real-notice accuracy results |
-| Production build | Passed on the final UI revision |
-| Chromium production HTTP browser flow groups | 19 passed on localhost with `APP_URL` matching the server origin |
-| Automated accessibility | No detected WCAG A/AA violations on 13 inspected snapshots |
-| Browser runtime errors | None during the inspected flows |
-| Responsive layouts | No horizontal overflow in all ten home languages, settings, and Arabic, German and French results at 320 and 390px; the inspected mobile result at 360px also passed |
+| Check                                        | Result                                                                                                                                                                                                                 |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TypeScript                                   | Passed on the final UI revision                                                                                                                                                                                        |
+| Behavioral/security unit tests               | 108 passed, including comparison counterexamples, shared extraction/check admission, legacy Redis deletion isolation, Marketplace Redis configuration, local country lookup and complete interface/result dictionaries |
+| Live evaluation harness tests                | 7 passed using local HTTP fixtures or pure scoring checks; no live provider or real-notice accuracy results                                                                                                            |
+| Production build                             | Passed on the final UI revision                                                                                                                                                                                        |
+| Chromium production HTTP browser flow groups | 19 passed on localhost with `APP_URL` matching the server origin                                                                                                                                                       |
+| Automated accessibility                      | No detected WCAG A/AA violations on 13 inspected snapshots                                                                                                                                                             |
+| Browser runtime errors                       | None during the inspected flows                                                                                                                                                                                        |
+| Responsive layouts                           | No horizontal overflow in all ten home languages, settings, and Arabic, German and French results at 320 and 390px; the inspected mobile result at 360px also passed                                                   |
 
 The 13 accessibility snapshots cover desktop home, synthetic result and HTTP-fixture review; mobile home and result; and settings plus Arabic, German and French results at each of 320px and 390px. These checks are not a full accessibility certification or physical-device testing.
 
@@ -57,19 +57,19 @@ A bounded production run used synthetic images and text against public sources. 
 
 ## 2026-11-04 identity counterexamples, retry and real-notice photo run
 
-Independent review found two deterministic gaps on `87c13b9`, each reproduced as a verified `changed` result: a changed value quoted from a section labelled with another edition of the same title (for example "2027 Garden Workshop" on a 2026 notice), and a dedicated official page whose archive notice sat more than 400 characters from the quote. Both now yield `review`; regression tests also keep cross-year deadlines of the notice's own edition, unlabelled title repeats and Korean `제N회` labels verified. On a page listing several programmes, whether a quoted value belongs to *this* programme still depends on the model when no edition label distinguishes the sections.
+Independent review found two deterministic gaps on `87c13b9`, each reproduced as a verified `changed` result: a changed value quoted from a section labelled with another edition of the same title (for example "2027 Garden Workshop" on a 2026 notice), and a dedicated official page whose archive notice sat more than 400 characters from the quote. Both now yield `review`; regression tests also keep cross-year deadlines of the notice's own edition, unlabelled title repeats and Korean `제N회` labels verified. On a page listing several programmes, whether a quoted value belongs to _this_ programme still depends on the model when no edition label distinguishes the sections.
 
 Extraction keeps a 60-second first attempt; only a provider stall or 5xx is retried once, inside a 130-second route budget (`maxDuration` 140). Comparisons now have a 12,000-token completion budget and a 100-second call limit after a long official page twice ended in `model_output`. If one of several comparisons fails, the others are kept with a `source_compare_failed` warning. Titles that differ only by whitespace beside a bracket or punctuation mark (a printed line break) are matched; letters and digits must still match.
 
 Live checks on production `445996b` used camera-style JPEG photos (tilted sheet, uneven light, slight blur) of real public notices. These were rendered posters, not physical camera captures:
 
-| Case | Official source | Result | Extraction | Check |
-| --- | --- | --- | ---: | ---: |
-| Seoul internship notice, unchanged | seoul.go.kr notice 454731 | `matched`, verified (earlier deployment, after the institution fix) | 26.1 s | 57.7 s |
-| Same notice, poster with an older deadline (3/31 18:00) | same URL | `changed` 3/31 → 4/3 15:00, verified | 26.0 s | 49.4 s |
-| Engen Conservation Fellowship poster with the general date | airandspace.si.edu fellowships | `review`; the model quoted Engen's own February 15 deadline | 9.2 s | 34.0 s |
-| NASM Fellowships, no URL (search) | found airandspace.si.edu | deadline `same`, verified; overall `review` because two other candidates were blocked or too large | — | 43.9 s |
-| Seoul notice, no URL (search) | candidates were attachments and a script-only page | `unavailable` with reasons | — | 19.9 s |
+| Case                                                       | Official source                                    | Result                                                                                             | Extraction |  Check |
+| ---------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------: | -----: |
+| Seoul internship notice, unchanged                         | seoul.go.kr notice 454731                          | `matched`, verified (earlier deployment, after the institution fix)                                |     26.1 s | 57.7 s |
+| Same notice, poster with an older deadline (3/31 18:00)    | same URL                                           | `changed` 3/31 → 4/3 15:00, verified                                                               |     26.0 s | 49.4 s |
+| Engen Conservation Fellowship poster with the general date | airandspace.si.edu fellowships                     | `review`; the model quoted Engen's own February 15 deadline                                        |      9.2 s | 34.0 s |
+| NASM Fellowships, no URL (search)                          | found airandspace.si.edu                           | deadline `same`, verified; overall `review` because two other candidates were blocked or too large |          — | 43.9 s |
+| Seoul notice, no URL (search)                              | candidates were attachments and a script-only page | `unavailable` with reasons                                                                         |          — | 19.9 s |
 
 Before the comparison budget change the same Seoul page failed with `model_output` in two of three comparisons; after it, one further comparison succeeded and one result was lost to a network reset in the test environment, so stability is not yet measured. Human-reviewed real-notice accuracy evaluations completed remain **0**. All test sessions were deleted with HTTP 204.
 
@@ -102,11 +102,11 @@ The same review found that `- GOV.UK` page titles blocked identity. The site's o
 
 Offline, the real NASM, Seoul and two GOV.UK pages were checked with constructed model outputs: NASM L1/L2 and the Seoul notice still verify, both GOV.UK notices verify, and an Engen notice quoting the page's general date is rejected for scope. Live on `9c9e77d`, with notices sent directly to the check endpoint (three comparison calls, no extraction):
 
-| Case | Result | Check |
-| --- | --- | ---: |
+| Case                                                         | Result                               |  Check |
+| ------------------------------------------------------------ | ------------------------------------ | -----: |
 | GOV.UK Honorary Consul Bremen, artificially earlier deadline | `changed` 15 → 22 November, verified | 22.1 s |
-| GOV.UK Consul General For a Day, same deadline | `matched`, verified | 18.8 s |
-| Seoul internship notice, poster with an earlier end date | `changed` 3/31 → 4/3, verified | 34.7 s |
+| GOV.UK Consul General For a Day, same deadline               | `matched`, verified                  | 18.8 s |
+| Seoul internship notice, poster with an earlier end date     | `changed` 3/31 → 4/3, verified       | 34.7 s |
 
 Each is a single run; the GOV.UK date change was artificial and the inputs were not photographed. Local checks passed TypeScript, 159 tests, seven harness tests, the build and 21 browser-flow groups with no page errors or accessibility violations. A reconnecting client still starts a new check, because the server cancels work when the stream disconnects. The session was deleted with HTTP 204.
 
@@ -116,10 +116,10 @@ At approximately 04:30 UTC, both public production aliases returned HTTP 200 for
 
 A Chromium browser at a 390×844 mobile viewport then used two self-designed notice cards, visibly labelled as examples. These were generated images, not physical camera photographs or official posters. Both complete recorded flows used actual production image upload, crop, extraction, review, a user-supplied official URL and comparison, without fixture responses.
 
-| Reconstructed input | Observed production result | Client extraction | Client comparison |
-| --- | --- | --- | --- |
-| Seoul internship card with deliberately earlier 31 March deadline | `changed`, verified; original period ending `3. 31.(화) 15:00` versus official period ending `4. 3.(금) 15:00` | 24,071 ms | 25,203 ms |
-| GOV.UK Consul General For a Day card | `matched`, verified; `22 November 2026` on both sides | 17,460 ms | 45,289 ms |
+| Reconstructed input                                               | Observed production result                                                                                     | Client extraction | Client comparison |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------- | ----------------- |
+| Seoul internship card with deliberately earlier 31 March deadline | `changed`, verified; original period ending `3. 31.(화) 15:00` versus official period ending `4. 3.(금) 15:00` | 24,071 ms         | 25,203 ms         |
+| GOV.UK Consul General For a Day card                              | `matched`, verified; `22 November 2026` on both sides                                                          | 17,460 ms         | 45,289 ms         |
 
 Each result had no warnings and one verified deadline field. Both comparison timing records had `rejected: []`. Switching the result display to Korean issued no additional extraction/check request. Both completed recording sessions were deleted with HTTP 204. Neither example establishes a real historical deadline change or general notice accuracy.
 
@@ -146,9 +146,9 @@ All work below was verified without model calls: **0 paid model calls**, cost no
 ### Reported iPhone check ("제4회 수산제 농경문화제")
 
 - **Official source, independently checked.** The Miryang City tourism calendar on `www.miryang.go.kr` lists 「제4회 수산제 농경문화제」, 2026. 11. 14(토) ~ 11. 15.(일) 10:00~17:00, 수산제 역사공원 일원, **주최: 밀양시**. The page the user identified (`gyeongnamzine.com/10448`) is a magazine article, not the organiser. Neither host is in the registered-source list; no registry entry was added. Registering `go.kr` hosts is a policy decision: government sites also host public boards, so it needs the user's approval and its own tests.
-- **Not preserved:** the user's photo, extraction, model identity quote and response. Everything below uses constructed fixtures and constructed model outputs. It shows mechanisms that *can* produce the reported review; it does not establish which one did.
+- **Not preserved:** the user's photo, extraction, model identity quote and response. Everything below uses constructed fixtures and constructed model outputs. It shows mechanisms that _can_ produce the reported review; it does not establish which one did.
 - **Observed in this environment:** the article returned HTTP 200, 30,085 bytes, and 2,177 extracted characters (below the 600,000-byte and 22,000-character limits). Its label/value table was flattened into `행사명제4회 수산제농경문화제` and `장소수산제역사공원 일원`. A title glued to its label cannot pass the exact title check (`title_not_in_quote`).
-- **Fixed:** table cells and definition terms now keep a ` | ` boundary (`행사명 | 제4회 수산제농경문화제`); cell text is unchanged. An explicit name row naming another event (`행사명 | …`) now marks another section.
+- **Fixed:** table cells and definition terms now keep a `|` boundary (`행사명 | 제4회 수산제농경문화제`); cell text is unchanged. An explicit name row naming another event (`행사명 | …`) now marks another section.
 - **Intentionally still review:** poster spacing (`수산제 농경문화제` vs `수산제농경문화제`), an attached particle (`…문화제가`), an unregistered host, a specific different page heading (the article headline), another edition, institution or event, fabricated quotes and archived pages. `tests/korean-notice.test.ts` covers these, and its tests fail on the previous source and comparison code.
 - **Real registered pages, rechecked offline** with constructed outputs after the table change: NASM L1/L2 and the Seoul internship notice still verify, both GOV.UK notices still verify, and the Engen sub-programme with the general date is still rejected for section scope.
 
@@ -192,15 +192,15 @@ All work below was verified without model calls: **0 paid model calls**, cost no
 
 The server ran with `liveAvailable: false`.
 
-| Command | Result |
-| --- | --- |
-| `npm run typecheck` | passed |
-| `npm test` | **173/173** |
-| `npm run test:live-harness` | **7/7** |
-| `npm run build` | passed |
-| `npm run test:browser` | **21 groups**, 0 page errors, 0 axe violations |
-| `npm run test:browser-maps` | all checks above passed |
-| `npm audit --omit=dev` | **0 vulnerabilities** |
+| Command                     | Result                                         |
+| --------------------------- | ---------------------------------------------- |
+| `npm run typecheck`         | passed                                         |
+| `npm test`                  | **173/173**                                    |
+| `npm run test:live-harness` | **7/7**                                        |
+| `npm run build`             | passed                                         |
+| `npm run test:browser`      | **21 groups**, 0 page errors, 0 axe violations |
+| `npm run test:browser-maps` | all checks above passed                        |
+| `npm audit --omit=dev`      | **0 vulnerabilities**                          |
 
 ## 2026-11-04 production after merging PR #5 (`11836c7`, then `a9411e6`)
 
@@ -210,12 +210,12 @@ The first live PDF check showed that the Seoul notice's official PDF attachment 
 
 Live checks on `a9411e6` used **five model calls** (approved limit six). The session was deleted with HTTP 204; tokens and cost were not measured. Notices were sent directly to the check endpoint (no extraction); the Seoul notice's earlier end date is artificial, and the Miryang notice was reconstructed from the user's report, not from the original photo.
 
-| Check | Result | Time |
-| --- | --- | ---: |
-| SAM 3.1 crop, Seoul notice photo (camera-style rendering) | HTTP 200, **no box returned** | 2.6 s |
-| SAM 3.1 crop, NASM poster photo (camera-style rendering) | HTTP 200, **no box returned** | 1.3 s |
-| Seoul internship notice, official HTML page | `changed` 3/31 → 4/3 15:00, verified; source registered, identity `ok`, 1/1 quotes | 30.6 s (fetch 1.7 s, compare 28.3 s) |
-| Same notice, official PDF attachment (`seoulboard.seoul.go.kr`) | PDF read and compared; `review`. The PDF's title wording (`여름·가을학기`, `참여기업 (사업장, 단체)`) differs from the photographed title, so the identity category is `title` | 28.1 s (fetch 3.5 s, compare 24.1 s) |
+| Check                                                                                              | Result                                                                                                                                                                                                                                                |                                 Time |
+| -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -----------------------------------: |
+| SAM 3.1 crop, Seoul notice photo (camera-style rendering)                                          | HTTP 200, **no box returned**                                                                                                                                                                                                                         |                                2.6 s |
+| SAM 3.1 crop, NASM poster photo (camera-style rendering)                                           | HTTP 200, **no box returned**                                                                                                                                                                                                                         |                                1.3 s |
+| Seoul internship notice, official HTML page                                                        | `changed` 3/31 → 4/3 15:00, verified; source registered, identity `ok`, 1/1 quotes                                                                                                                                                                    | 30.6 s (fetch 1.7 s, compare 28.3 s) |
+| Same notice, official PDF attachment (`seoulboard.seoul.go.kr`)                                    | PDF read and compared; `review`. The PDF's title wording (`여름·가을학기`, `참여기업 (사업장, 단체)`) differs from the photographed title, so the identity category is `title`                                                                        | 28.1 s (fetch 3.5 s, compare 24.1 s) |
 | 제4회 수산제 농경문화제, official Miryang City schedule page (`www.miryang.go.kr`, now registered) | Source registered and identity `ok`. Date and place were not verified because their wording differs from the poster (`2026. 11. 14 ~ 15` vs `2026. 11. 14(토) ~ 11. 15.(일) …`; `수산제역사공원 일원` vs `수산제 역사공원 일원(…)`); overall `review` | 58.8 s (fetch 9.3 s, compare 49.1 s) |
 
 SAM 3.1 returned no qualifying box with the default `poster` prompt for either image. The API's raw output is not returned or logged, so it is unknown whether the cause is the prompt, the photos or the response shape. The opt-in button therefore currently says no notice was found and leaves the photo unchanged. This is not a working crop feature yet. Real devices, HEIC and the map app hand-off remain unverified.
@@ -226,17 +226,18 @@ SAM 3.1 returned no qualifying box with the default `poster` prompt for either i
 
 **Five model calls** were made in production; the session was deleted with HTTP 204.
 
-| Image | Prompt | Response | Box | Confidence |
-| --- | --- | --- | --- | ---: |
-| Seoul notice, camera-style rendering | poster | `completed`, one `message`/`output_text` part, text length 0 (zero matches) | none | — |
-| same | paper | text length 565, one box | 161,166–984,870 of 1080×1440 (37% of frame) | 0.906 |
-| same | document | text length 577, one box | 161,166–984,871 (37%) | 0.902 |
-| NASM poster, camera-style rendering | paper | text length 550, one box | 162,153–966,650 (26%) | 0.824 |
-| same | document | text length 546, one box | 162,153–966,650 (26%) | 0.926 |
+| Image                                | Prompt   | Response                                                                    | Box                                         | Confidence |
+| ------------------------------------ | -------- | --------------------------------------------------------------------------- | ------------------------------------------- | ---------: |
+| Seoul notice, camera-style rendering | poster   | `completed`, one `message`/`output_text` part, text length 0 (zero matches) | none                                        |          — |
+| same                                 | paper    | text length 565, one box                                                    | 161,166–984,870 of 1080×1440 (37% of frame) |      0.906 |
+| same                                 | document | text length 577, one box                                                    | 161,166–984,871 (37%)                       |      0.902 |
+| NASM poster, camera-style rendering  | paper    | text length 550, one box                                                    | 162,153–966,650 (26%)                       |      0.824 |
+| same                                 | document | text length 546, one box                                                    | 162,153–966,650 (26%)                       |      0.926 |
 
 **Cause:** the concept prompt. "poster" matched nothing on these printed sheets. The response shape and parser worked as documented.
 
 **Result:**
+
 - Drawn on the images, both boxes enclose the tilted sheet.
 - The default prompt is now `document`; the change is covered by unit tests.
 - After this change, the default path itself was not called again live.
@@ -245,6 +246,7 @@ SAM 3.1 returned no qualifying box with the default `poster` prompt for either i
 ## 2026-11-04 real photographs, limits for testing, HEIC and partial readings (`22cdec4`)
 
 **Usage limits.** At the user's request, while the app is being tested, the request ceilings now live in `src/lib/limits.ts`:
+
 - network starts per hour: 40 → 200 (this limit had blocked live testing);
 - per-session extractions per hour: 20 → 60;
 - per-session checks per hour: 12 → 40;
@@ -254,19 +256,21 @@ Concurrency (3) and the 10-starts-per-minute burst are unchanged. The Meta Billi
 
 **Real photographs.** Openly licensed (Creative Commons) Flickr photographs, found through Openverse, were used for testing only and are not stored in the repository: a poster on a wall, a framed notice board with four notices, and a dense school notice board. A darkened, noisier copy of the poster was also tested. All calls went to production through the default locate path.
 
-| Photo | Phrases tried | Boxes offered | Notes |
-| --- | --- | --- | --- |
-| Colourful poster on a wall | document (none) → poster | 2: the poster (77% of frame, 0.94) and a partly visible poster above it (8%, 0.82) | "document" alone found nothing; the fallback was needed |
-| Same, darkened and noisy | document | 1: the poster (77%, 0.50) | Lower confidence |
-| Framed board, four notices | document | 4 after lowering the minimum to 3%; drawn on the photo, each box encloses one notice (confidence 0.72–0.83) | With the earlier 8% minimum only 2 of 4 were offered |
-| Dense school board | document (none) → poster | 1: the whole board (92%, 0.74) | Individual sheets were not separated |
-| Seoul notice rendering (default path recheck) | document | 1 (0.90) | Confirms the default prompt |
+| Photo                                         | Phrases tried            | Boxes offered                                                                                               | Notes                                                   |
+| --------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Colourful poster on a wall                    | document (none) → poster | 2: the poster (77% of frame, 0.94) and a partly visible poster above it (8%, 0.82)                          | "document" alone found nothing; the fallback was needed |
+| Same, darkened and noisy                      | document                 | 1: the poster (77%, 0.50)                                                                                   | Lower confidence                                        |
+| Framed board, four notices                    | document                 | 4 after lowering the minimum to 3%; drawn on the photo, each box encloses one notice (confidence 0.72–0.83) | With the earlier 8% minimum only 2 of 4 were offered    |
+| Dense school board                            | document (none) → poster | 1: the whole board (92%, 0.74)                                                                              | Individual sheets were not separated                    |
+| Seoul notice rendering (default path recheck) | document                 | 1 (0.90)                                                                                                    | Confirms the default prompt                             |
 
 **Reading from cropped real photographs**, at the app's crop with a 2% margin:
+
 - **The board's main poster** (crop ~350×505 px): the title, institution and full text were transcribed correctly in 15.1 s. No fields were invented for a poster without dates.
 - **A small typed notice** (crop 261×185 px): only partly read, in 26.7 s and later 27.7 s. The title also changed between runs ("monthly" vs "evening" lectures).
 
 **Changes from these results:**
+
 - Photos with a short side under 500 px or under 0.3 MP now show a "take a closer photo" hint.
 - `/api/extract` reports `readability: "uncertain"` when the reader classes a photo as cropped, blurry or sparse. Production returned `uncertain` for the small typed notice, and the review screen asks the user to compare and correct.
 - Several detected notices are numbered in reading order. The minimum box size for offering a notice is 3%.
@@ -276,8 +280,36 @@ Concurrency (3) and the 10-starts-per-minute burst are unchanged. The Meta Billi
 **Cost.** This round used **13 model calls**, including two calls before the limits were raised; cost was not measured. Sessions were deleted with HTTP 204.
 
 **Still unverified:**
+
 - physical iPhone and Android devices;
 - map app vs web map;
 - HEIC decoding on Safari;
 - photographs taken with the app's own camera input;
 - human-labelled accuracy.
+
+## 2026-11-04 submission refresh and bounded rehearsal on `ae54a88`
+
+Remote `main` and both public aliases reported `ae54a88e62ac17f8e13c97a09dbbb511c3d027e8` with `liveAvailable: true` and model `muse-spark-1.3`. PR #5 was confirmed merged. A new documentation branch was created from that main; no application rules, source registrations, limits or environment variables were changed. The user confirmed that the current iPhone SAM, HEIC and map hand-off checks are **not yet performed**. The earlier physical iPhone camera/result observation remains valid only for its earlier version.
+
+### New production observations
+
+Before running requests, the user was told to expect at most six model calls. This bounded run used **three reserved model calls**, established by returned stage timings and corresponding runtime logs: one SAM call, one extraction and one comparison. A fourth HTTP operation failed before comparison and reserved zero calls. No paid retry followed the failure. The UTC-day total, remaining allowance, tokens and monetary cost were not measured. The existing code default of 300 calls/day and raised hourly test ceilings were left unchanged pending the user's decision about returning to 100.
+
+| Operation                      | Input and observed result                                                                                                                                    | Server timing                                             | Reserved calls |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | -------------: |
+| Optional SAM locator           | Self-designed synthetic four-notice board; four boxes offered, numbered selection, crop and undo observed                                                    | 1,324 ms                                                  |              1 |
+| Seoul photo reading            | Clearly labelled reconstructed card, artificially earlier 31 March deadline; review screen reached                                                           | 15,907 ms                                                 |              1 |
+| Seoul official HTML comparison | `changed`, deadline verified, 31 March → 3 April; `rejected: []`                                                                                             | fetch 1,700 ms; compare 17,932 ms; server total 19,732 ms |              1 |
+| Miryang official HTML check    | Reconstructed text sent directly to checks API, no new image extraction. `unavailable`; one source attempt `fetch_failed:fetch`, no comparisons or map links | fetch 12,009 ms; compare 0 ms                             |              0 |
+
+The Miryang source was `www.miryang.go.kr/tur/sim/EgovSchdulDetail.do` with schedule id `SCHDUL_0000000007990`. A separate read-only request in the workspace retrieved the event date, venue and organiser, but it does not reproduce the hosted DNS-pinned fetch path or establish why that production request failed. Earlier successful Miryang observations are separate measurements. Do not present this new operation as another successful review comparison or a verified source timeout diagnosis.
+
+Client wall times were 17,555 ms for extraction and 21,100 ms for the Seoul check. These observations come from Chromium automation, excluding a physical camera and normal user review time; they do not establish an improvement over the earlier user's approximately three-minute flow. Switching the completed Seoul result to Korean generated zero additional model requests. Both sessions returned HTTP 204 on deletion. No physical iPhone or Android was used in this run.
+
+The capture utility attempted to scroll to a map link after the Miryang retrieval had failed and timed out because no location card existed. That was an automation error, not a page runtime error. It did not cause an additional model call. The response and failure screen were retained; the video uses explicitly labelled local map fixtures for the map UI portion.
+
+### Local checks and demo provenance
+
+On unchanged application code, TypeScript, **179 behavioral/security tests**, **seven evaluation harness tests**, production build and `npm audit --omit=dev` (zero reported vulnerabilities) passed. A production server with both Meta key variables unset ran the browser checks: **21 primary flow groups**, the map suite and **seven locator scenarios** passed, with no recorded page errors or automatic accessibility violations. The map suite used fixed HTTP responses, aborted Google requests, and observed two expected URL requests after click/keyboard activation. It is not real-phone app switching or a new live notice comparison.
+
+The refreshed three-minute silent cut uses production screen captures and explanatory captions, with waiting omitted. Its synthetic board, reconstructed notice, direct-API input and local map fixture are labelled separately. Prior Creative Commons public-photo and PDF observations remain attributed to the earlier dated records. Those photos were not reused in the refreshed cut. The final video link and authenticated submission-form limits remain for the entrant to verify; no upload or submission was performed.
