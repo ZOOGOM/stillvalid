@@ -76,7 +76,7 @@ CHROMIUM_PATH=/usr/bin/chromium SCREENSHOT_DIR=./test-results/screenshots \
   npm run test:browser
 ```
 
-HTTP fixtures do not constitute live provider testing. Automated viewport/accessibility checks do not establish real-device coverage or full WCAG conformance. No model accuracy or production latency claims have been established.
+HTTP fixtures do not constitute live provider testing. Automated viewport/accessibility checks do not establish real-device coverage or full WCAG conformance. Individual synthetic production observations are recorded in [evaluation](docs/evaluation.md#2026-11-04-synthetic-release-run); they do not establish real-notice accuracy or representative production latency.
 
 The [opt-in live evaluation harness](docs/evaluation.md) runs extraction, checking, anonymous-session isolation and individual deletion against a permitted deployment. It defaults to a dry run and keeps fixture checks separate from human-reviewed real-notice accuracy.
 
