@@ -98,6 +98,21 @@ export type CallRecord = {
   outputTokens?: number;
 };
 
+// Optional reasoning effort per step, for measured speed experiments. Unset
+// (the default) sends nothing, so the model's own default applies. Accepted
+// values follow the Meta API: minimal, low, medium, high, xhigh, max.
+const efforts = new Set(["minimal", "low", "medium", "high", "xhigh", "max"]);
+export function reasoningEffort(
+  step: "extraction" | "comparison" | "search",
+): string | undefined {
+  const value = (
+    process.env["META_REASONING_EFFORT_" + step.toUpperCase()] || ""
+  )
+    .trim()
+    .toLowerCase();
+  return efforts.has(value) ? value : undefined;
+}
+
 export class MetaClient {
   /** Per-call durations, outcomes and token usage for server logs. */
   readonly calls: CallRecord[] = [];
@@ -210,6 +225,9 @@ export class MetaClient {
     timeoutMs?: number,
   ): Promise<T> {
     const jsonSchema = z.toJSONSchema(schema);
+    const effort = reasoningEffort(
+      name === "comparison" ? "comparison" : "extraction",
+    );
     const response = await this.call(
       "/chat/completions",
       {
@@ -219,6 +237,7 @@ export class MetaClient {
         // tokens actually generated are billed. Truncation is never retried.
         max_completion_tokens:
           name === "comparison" ? 12000 : image ? 6000 : 4500,
+        ...(effort ? { reasoning_effort: effort } : {}),
         messages: [
           {
             role: "developer",
@@ -428,6 +447,7 @@ export class MetaClient {
     country: string | null,
     signal?: AbortSignal,
   ): Promise<Candidate[]> {
+    const searchEffort = reasoningEffort("search");
     const result = await this.call(
       "/responses",
       {
@@ -450,6 +470,7 @@ export class MetaClient {
         tools: [{ type: "web_search", search_context_size: "low" }],
         include: ["web_search_call.results"],
         max_output_tokens: 1500,
+        ...(searchEffort ? { reasoning: { effort: searchEffort } } : {}),
       },
       signal,
     );
