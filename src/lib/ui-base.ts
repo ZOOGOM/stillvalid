@@ -103,6 +103,8 @@ const ko = {
   sourceHint:
     "공식 페이지 주소를 넣으면 검색 단계를 건너뛰고 그 페이지와 바로 비교해서 더 빨라요. 주소가 없으면 공식 자료 후보를 찾아볼게요.",
   sourcePlaceholder: "https://기관의-공식-사이트/공지",
+  sourcePrefilled:
+    "안내문에 적힌 주소를 넣었어요. 공식 사이트가 맞는지 확인해 주세요.",
   mismatch: "사용 지역과 안내에서 읽은 국가가 달라요.",
   useNoticeCountry: "안내의 국가로 변경",
   keepCountry: "선택한 국가 유지",
@@ -423,6 +425,8 @@ const en: Copy = {
   sourceHint:
     "Adding the official page link skips the search step and compares with that page directly, which is faster. No link? We'll look for official-source candidates.",
   sourcePlaceholder: "https://official-institution/notice",
+  sourcePrefilled:
+    "We filled in the link printed on the notice. Check that it is the official site.",
   mismatch: "Your region of use differs from the country read in this notice.",
   useNoticeCountry: "Use the notice country",
   keepCountry: "Keep my selection",
