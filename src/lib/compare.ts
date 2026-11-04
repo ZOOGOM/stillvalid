@@ -264,6 +264,9 @@ function headingRest(sourceTitle: string, title: string): string[] | null {
   return null;
 }
 
+const nameField =
+  /^(?:행사명|행사 이름|공고명|사업명|프로그램명|강좌명|축제명|대회명|교육명|과정명|event name|programme name|program name|course name)\s*[|:：]\s*(.+)$/u;
+
 // Words that describe a section or an action, never a programme's name.
 const sectionWords = new Set([
   "the",
@@ -461,6 +464,10 @@ function otherSectionScope(
   if (!wanted.size) return false;
   const verdict = (label: string): "same" | "other" | "neutral" => {
     if (identifierIn(normalize(label), title)) return "same";
+    // An explicit name field ("행사명 | …", "Event name: …") that names
+    // something else starts another event's rows, even with no shared word.
+    const named = nameField.exec(normalize(label).trim());
+    if (named && named[1].trim()) return "other";
     const found = nameTokens(label, notice.institution);
     const shared = [...found].some((token) => wanted.has(token));
     if (!shared) return "neutral";
