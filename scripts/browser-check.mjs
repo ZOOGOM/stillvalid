@@ -550,6 +550,46 @@ try {
   results.push(
     "photo review shows source image, omission warning and extracted text with correction flow",
   );
+  const uploadErrors = await context.newPage();
+  await uploadErrors.route("**/api/status", (route) =>
+    route.fulfill({ json: { liveAvailable: true, demoAvailable: true } }),
+  );
+  await uploadErrors.route("**/api/extract", (route) =>
+    route.fulfill({
+      status: 413,
+      contentType: "text/plain",
+      body: "Request Entity Too Large",
+    }),
+  );
+  await uploadErrors.goto(origin, { waitUntil: "networkidle" });
+  await uploadErrors
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({
+      name: "synthetic-notice.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(png, "base64"),
+    });
+  await uploadErrors
+    .getByRole("button", { name: "Read this notice", exact: true })
+    .click();
+  await uploadErrors
+    .getByRole("alert")
+    .getByText("The upload is too large. Choose a smaller photo.")
+    .waitFor();
+  await uploadErrors.unroute("**/api/extract");
+  await uploadErrors.route("**/api/extract", (route) =>
+    route.fulfill({ status: 422, json: { error: "not_a_notice" } }),
+  );
+  await uploadErrors
+    .getByRole("button", { name: "Read this notice", exact: true })
+    .click();
+  await uploadErrors
+    .getByRole("alert")
+    .getByText("No notice could be read. Try another photo or text.")
+    .waitFor();
+  await uploadErrors.close();
+  results.push("non-JSON 413 and non-notice errors offer recovery");
   await page.route("**/api/status", (route) =>
     route.fulfill({ json: { liveAvailable: true, demoAvailable: true } }),
   );

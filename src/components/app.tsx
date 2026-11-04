@@ -45,6 +45,7 @@ import {
 import { countryCodes } from "@/lib/countries";
 import { copy, errorText, type CopyKey } from "@/lib/i18n";
 import { resultCopy, type ResultCopyKey } from "@/lib/result-i18n";
+import { sourceWarningText } from "@/lib/source-warnings";
 import {
   isResultLang,
   resultDirection,
@@ -60,6 +61,23 @@ type Stage = "input" | "review" | "processing" | "result";
 type Dialog = "how" | "about" | "privacy" | "delete" | null;
 type ProgressStep = "extract" | "search" | "sources" | "compare" | "resume";
 const GitHub = "https://github.com/ZOOGOM/stillvalid";
+async function responseError(response: Response, tooLarge: string) {
+  // Hosting platforms can reject a request before the app returns JSON.
+  if (response.status === 413) return tooLarge;
+  try {
+    const body: unknown = await response.json();
+    if (
+      body &&
+      typeof body === "object" &&
+      "error" in body &&
+      typeof body.error === "string"
+    )
+      return body.error;
+  } catch {
+    // A non-JSON error response is still an HTTP failure, not a network error.
+  }
+  return "default";
+}
 function countryName(code: string | null, lang: ResultLang) {
   return code
     ? new Intl.DisplayNames([resultLocale(lang)], { type: "region" }).of(
@@ -728,8 +746,9 @@ export default function StillValidApp() {
         }),
         signal: abort.signal,
       });
+      if (!response.ok)
+        throw new Error(await responseError(response, "upload_too_large"));
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "default");
       if (abort.signal.aborted || operation.current !== generation) return;
       setNotice(data.notice);
       setCountryConfirmed(false);
@@ -777,8 +796,7 @@ export default function StillValidApp() {
         signal: abort.signal,
       });
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "default");
+        throw new Error(await responseError(response, "too_large"));
       }
       if (response.headers.get("content-type")?.includes("application/json")) {
         const saved = await response.json();
@@ -915,7 +933,10 @@ export default function StillValidApp() {
           `${rt[("key_" + f.key) as ResultCopyKey]}: ${f.before ?? "—"} → ${f.after ?? "—"} (${f.verified ? rt[f.relation === "same" ? "same" : "changed"] : rt.uncertain})`,
       ),
       ...result.warnings.map(
-        (w) => rt[("warning_" + w) as ResultCopyKey] || rt.warning_evidence,
+        (w) =>
+          sourceWarningText(w, lang) ||
+          rt[("warning_" + w) as ResultCopyKey] ||
+          rt.warning_evidence,
       ),
       rt.nextTitle +
         ": " +
@@ -1745,7 +1766,8 @@ export default function StillValidApp() {
                       <p key={w}>
                         <Info size={15} />
                         <span>
-                          {rt[("warning_" + w) as ResultCopyKey] ||
+                          {sourceWarningText(w, lang) ||
+                            rt[("warning_" + w) as ResultCopyKey] ||
                             rt.warning_evidence}
                         </span>
                       </p>
@@ -2000,6 +2022,7 @@ export default function StillValidApp() {
           {dialog === "privacy" && (
             <div className="prose">
               <p>{t.privacyBody}</p>
+              <p>{t.privacyAbuse}</p>
               <p>{t.privacyMore}</p>
               <a
                 href="https://dev.meta.ai/docs/models"

@@ -17,9 +17,11 @@ import {
   owner,
   sameOrigin,
   releaseWork,
+  reserveModelCall,
 } from "@/lib/store";
 import { assembleResult } from "@/lib/compare";
 import { errorResponse, readJson } from "@/lib/http";
+import { abuseKey } from "@/lib/abuse";
 export const runtime = "nodejs";
 export const maxDuration = 180;
 export async function POST(request: NextRequest) {
@@ -31,7 +33,14 @@ export async function POST(request: NextRequest) {
     if (!input.success) throw new AppError("input");
     const { notice, country, lang, sourceUrl, requestKey } = input.data;
     if (sourceUrl) publicUrl(sourceUrl);
-    const job = await createCheck(actor, requestKey);
+    const job = await createCheck(
+      actor,
+      requestKey,
+      abuseKey(request.headers, {
+        vercel: process.env.VERCEL,
+        secret: process.env.IP_RATE_LIMIT_SECRET,
+      }),
+    );
     if (job.existing)
       return NextResponse.json(
         { id: job.id, ...(await getCheck(job.id, actor)) },
@@ -44,6 +53,18 @@ export async function POST(request: NextRequest) {
       AbortSignal.timeout(170000),
     ]);
     const started = Date.now();
+    const timing = { discoverMs: 0, fetchMs: 0, compareMs: 0, modelCalls: 0 };
+    const measure = async <T>(
+      key: "discoverMs" | "fetchMs" | "compareMs",
+      operation: () => Promise<T>,
+    ): Promise<T> => {
+      const start = Date.now();
+      try {
+        return await operation();
+      } finally {
+        timing[key] += Date.now() - start;
+      }
+    };
     const stream = new ReadableStream({
       async start(controller) {
         const send = (type: string, data: unknown) => {
@@ -70,15 +91,20 @@ export async function POST(request: NextRequest) {
         send("created", { id: job.id });
         try {
           await ensureActive();
-          const meta = new MetaClient();
+          const meta = new MetaClient(undefined, async () => {
+            await reserveModelCall();
+            timing.modelCalls++;
+          });
           let candidates: Candidate[] = [];
           const warnings: string[] = [];
-          send("phase", { step: "search" });
+          send("phase", { step: "search", elapsedMs: Date.now() - started });
           if (sourceUrl)
             candidates = [{ url: publicUrl(sourceUrl).href, title: sourceUrl }];
           else {
             try {
-              candidates = await meta.discover(notice, country, signal);
+              candidates = await measure("discoverMs", () =>
+                meta.discover(notice, country, signal),
+              );
             } catch (error) {
               if (signal.aborted) throw error;
               warnings.push(
@@ -112,14 +138,12 @@ export async function POST(request: NextRequest) {
           );
           const sources: Source[] = [];
           const analyses: ModelComparison[] = [];
-          send("phase", { step: "sources" });
+          send("phase", { step: "sources", elapsedMs: Date.now() - started });
           for (const candidate of candidates.slice(0, 3)) {
             await ensureActive();
             try {
-              const source = await fetchSource(
-                candidate.url,
-                "source-" + sources.length,
-                signal,
+              const source = await measure("fetchMs", () =>
+                fetchSource(candidate.url, "source-" + sources.length, signal),
               );
               sources.push(source);
               if (sources.length >= 2) break;
@@ -127,14 +151,29 @@ export async function POST(request: NextRequest) {
               warnings.push(
                 error instanceof AppError && error.code === "source_network"
                   ? "network"
-                  : "fetch",
+                  : error instanceof AppError &&
+                      [
+                        "source_format",
+                        "source_encoding",
+                        "source_too_large",
+                        "source_timeout",
+                        "source_blocked",
+                        "source_not_found",
+                        "source_not_notice",
+                      ].includes(error.code)
+                    ? error.code
+                    : "fetch",
               );
             }
           }
-          send("phase", { step: "compare" });
+          send("phase", { step: "compare", elapsedMs: Date.now() - started });
           for (const source of sources) {
             await ensureActive();
-            analyses.push(await meta.compare(notice, source, lang, signal));
+            analyses.push(
+              await measure("compareMs", () =>
+                meta.compare(notice, source, lang, signal),
+              ),
+            );
           }
           await ensureActive();
           const result = assembleResult({
@@ -167,6 +206,14 @@ export async function POST(request: NextRequest) {
           );
           send("error", { code });
         } finally {
+          // Aggregate durations and reserved calls only: no notices, sources or IPs.
+          console.info(
+            JSON.stringify({
+              event: "check_timing",
+              ...timing,
+              elapsedMs: Date.now() - started,
+            }),
+          );
           try {
             await releaseWork(job.id, actor);
           } catch {

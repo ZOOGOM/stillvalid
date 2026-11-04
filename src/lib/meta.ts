@@ -3,6 +3,7 @@ import { EnvHttpProxyAgent } from "undici";
 import {
   AppError,
   noticeSchema,
+  imageExtractionSchema,
   comparisonSchema,
   type Candidate,
   type Notice,
@@ -27,6 +28,24 @@ function outputFailure(reason: OutputFailureReason): AppError {
   // Only fixed categories: never log provider content, errors or schema issues.
   console.error(JSON.stringify({ event: "model_output_rejected", reason }));
   return new AppError("model_output", 422);
+}
+function extractedTitle(notice: Notice): string {
+  const { title, institution, originalText } = notice;
+  // Preserve real titles (including institution-only titles). Never case-fold,
+  // normalize Unicode or cut an institution substring out of another word.
+  if (!institution || title === institution || originalText.includes(title))
+    return title;
+  const lines = new Set(originalText.split(/\r?\n/).map((line) => line.trim()));
+  if (!lines.has(institution)) return title;
+  let candidate: string | undefined;
+  if (title.startsWith(institution)) {
+    const rest = title.slice(institution.length);
+    if (/^[\s:|–—-]/u.test(rest)) candidate = rest.replace(/^[\s:|–—-]+/u, "");
+  } else if (title.endsWith(institution)) {
+    const rest = title.slice(0, -institution.length);
+    if (/[\s:|–—-]$/u.test(rest)) candidate = rest.replace(/[\s:|–—-]+$/u, "");
+  }
+  return candidate && lines.has(candidate) ? candidate : title;
 }
 const proxy =
   process.env.HTTPS_PROXY || process.env.HTTP_PROXY
@@ -185,18 +204,43 @@ export class MetaClient {
     signal?: AbortSignal,
   ): Promise<Notice> {
     const instructions =
-      "Identify the notice title, issuing institution, explicit edition/year, and country if explicit. Country is a two-letter ISO code or null. A user country is only a hint and must NOT override the notice. Extract only explicitly written deadline, event date, location, cancellation/status, cost and eligibility. Field values must be EXACT excerpts, not translated, normalized dates or inferred end-of-day times. Each quote must occur verbatim in the original text and include its field value. Keep ambiguous dates exactly as written. If no readable title/text exists, do not invent an event; use readable text as the title. At most one field per key.";
+      "Identify the notice title, issuing institution, explicit edition/year, and country if explicit. Keep a separately printed issuing institution out of the title; preserve the actual printed title when it includes the institution or is itself the institution name. Country is a two-letter ISO code or null. A user country is only a hint and must NOT override the notice. Extract only explicitly written deadline, event date, location, cancellation/status, cost and eligibility. Field values must be EXACT excerpts, not translated, normalized dates or inferred end-of-day times. Each quote must occur verbatim in the original text and include its field value. Keep ambiguous dates exactly as written. If no readable title/text exists, do not invent an event; use readable text as the title. At most one field per key.";
     let result: Notice;
-    if (image)
-      result = await this.structured(
+    if (image) {
+      const extracted = await this.structured(
         "notice",
-        noticeSchema,
-        instructions + " Transcribe the image faithfully into originalText.",
+        imageExtractionSchema,
+        instructions +
+          " Transcribe all readable image text faithfully into originalText, including tables. Do not describe pictured objects as if that description were text. Set content_kind to not_notice only when the image clearly is not an announcement or notice, such as an ordinary animal or object photograph without a notice. Use uncertain for cropped, blurry or sparse notices; missing dates, locations or fields do not make an image not_notice. If no text is readable, leave originalText and title empty instead of inventing them.",
         { text, country_hint: country },
         image,
         signal,
       );
-    else {
+      if (
+        extracted.content_kind === "not_notice" &&
+        !text.trim() &&
+        !extracted.originalText.trim()
+      )
+        throw new AppError("not_a_notice", 422);
+      // An image classification must not discard supplied text or veto a
+      // readable notice. Preserve both inputs without silently truncating them.
+      const originalText =
+        text.trim() && !extracted.originalText.includes(text)
+          ? [extracted.originalText, text].filter(Boolean).join("\n\n")
+          : extracted.originalText;
+      const title = extracted.title.trim()
+        ? extracted.title
+        : text.split(/\r?\n/).find((line) => line.trim()) || extracted.title;
+      if (!originalText.trim() || !title.trim())
+        throw outputFailure("schema_mismatch");
+      const parsed = noticeSchema.safeParse({
+        ...extracted,
+        originalText,
+        title,
+      });
+      if (!parsed.success) throw outputFailure("schema_mismatch");
+      result = parsed.data;
+    } else {
       const extracted = await this.structured(
         "notice",
         noticeSchema.omit({ originalText: true }),
@@ -211,6 +255,7 @@ export class MetaClient {
     result.fields = result.fields.filter(
       (f) => result.originalText.includes(f.quote) && f.quote.includes(f.value),
     );
+    result.title = extractedTitle(result);
     return result;
   }
   async discover(

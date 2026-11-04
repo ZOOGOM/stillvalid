@@ -87,6 +87,7 @@ The [opt-in live evaluation harness](docs/evaluation.md) runs extraction, checki
 - Writes require the same origin and an HTTP-only anonymous-session cookie.
 - Source requests reject unsafe addresses and pin public DNS results. Retrieval fails closed under a generic forward proxy.
 - Extraction and checks share three execution slots and ten starts per rolling minute; deleting a result does not release running work. Per-session and daily model limits also apply. Anonymous quota exhaustion remains possible; request ceilings are not dollar billing caps.
+- When `IP_RATE_LIMIT_SECRET` is configured on Vercel, an additional keyed IP-derived limit covers extraction and checks together (40 starts per fixed hour). Shared networks share a limit; it is not an identity or result ownership mechanism. The short-lived counter expires at the hourly window and is independent of result deletion.
 - Provider handling follows [Meta's terms and documentation](https://dev.meta.ai/docs/models).
 
 Use permitted public notices or clearly labeled synthetic material. Do not commit keys, student records, private school notices or personal contact details. The app does not determine individual eligibility, give medical/legal judgments or issue emergency instructions.

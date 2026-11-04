@@ -23,6 +23,10 @@ test("text extraction preserves the complete supplied text without asking the mo
           false,
         );
         assert.equal(body.max_completion_tokens, 4500);
+        assert.equal(
+          "content_kind" in body.response_format.json_schema.schema.properties,
+          false,
+        );
         return Response.json({
           choices: [
             {
@@ -43,7 +47,11 @@ test("text extraction preserves the complete supplied text without asking the mo
 test("image extraction has bounded transcription headroom and rejects truncation without retry", () =>
   withTestKey(async () => {
     const fullText = "Full transcribed notice. ".repeat(500);
-    const imageNotice = { ...notice, originalText: fullText };
+    const imageNotice = {
+      ...notice,
+      originalText: fullText,
+      content_kind: "notice",
+    };
     for (const finish of ["stop", "length"]) {
       let calls = 0;
       const client = new MetaClient(
@@ -53,6 +61,16 @@ test("image extraction has bounded transcription headroom and rejects truncation
           assert.equal(body.max_completion_tokens, 6000);
           assert.ok(
             body.response_format.json_schema.schema.properties.originalText,
+          );
+          assert.deepEqual(
+            body.response_format.json_schema.schema.properties.content_kind
+              .enum,
+            ["notice", "not_notice", "uncertain"],
+          );
+          assert.ok(
+            body.response_format.json_schema.schema.required.includes(
+              "content_kind",
+            ),
           );
           assert.equal(body.messages[1].content[1].type, "image_url");
           return Response.json({
@@ -91,6 +109,130 @@ async function withTestKey(fn: () => Promise<void>) {
     else process.env.META_API_KEY = previous;
   }
 }
+test("title cleanup requires separate exact source headings and preserves real titles", () =>
+  withTestKey(async () => {
+    for (const [title, institution, originalText, expected] of [
+      ["Museum Fellowships", "Museum", "Museum\nFellowships", "Fellowships"],
+      ["Fellowships | Museum", "Museum", "Museum\nFellowships", "Fellowships"],
+      [
+        "Museum Fellowships",
+        "Museum",
+        "Museum Fellowships",
+        "Museum Fellowships",
+      ],
+      ["Museum", "Museum", "Museum", "Museum"],
+      [
+        "Museum Fellowships",
+        "Museum",
+        "Museum\nOther programme",
+        "Museum Fellowships",
+      ],
+      [
+        "Museum Fellowships",
+        "Museum",
+        "Some Museum details\nFellowships",
+        "Museum Fellowships",
+      ],
+      ["Museumship", "Museum", "Museum\nship", "Museumship"],
+      ["도서관 독서 모임", "도서관", "도서관\n독서 모임", "독서 모임"],
+      ["Ａ館 募集", "A館", "A館\n募集", "Ａ館 募集"],
+      ["İnstitute Event", "institute", "institute\nEvent", "İnstitute Event"],
+      ["Café Event", "Cafe\u0301", "Cafe\u0301\nEvent", "Café Event"],
+    ]) {
+      const client = new MetaClient(
+        async () =>
+          Response.json({
+            choices: [
+              {
+                finish_reason: "stop",
+                message: {
+                  content: JSON.stringify({
+                    ...notice,
+                    title,
+                    institution,
+                  }),
+                },
+              },
+            ],
+          }),
+        () => {},
+      );
+      const result = await client.extract(originalText, undefined, null);
+      assert.equal(result.title, expected);
+      assert.equal(result.originalText, originalText);
+    }
+  }));
+test("only an explicitly non-notice image without readable or supplied text is rejected", () =>
+  withTestKey(async () => {
+    const image = "data:image/png;base64,fixture";
+    const makeClient = (output: unknown) =>
+      new MetaClient(
+        async () =>
+          Response.json({
+            choices: [
+              {
+                finish_reason: "stop",
+                message: { content: JSON.stringify(output) },
+              },
+            ],
+          }),
+        () => {},
+      );
+    const noText = {
+      ...notice,
+      title: "",
+      institution: "",
+      edition: null,
+      country: null,
+      originalText: "",
+      fields: [],
+      content_kind: "not_notice",
+    };
+    await assert.rejects(() => makeClient(noText).extract("", image, null), {
+      code: "not_a_notice",
+      status: 422,
+    });
+    for (const content_kind of ["notice", "uncertain", "not_notice"]) {
+      const result = await makeClient({ ...notice, content_kind }).extract(
+        "",
+        image,
+        null,
+      );
+      assert.deepEqual(result, notice);
+      assert.equal("content_kind" in result, false);
+    }
+    const supplied = "Community announcement\nMore details to follow.";
+    const result = await makeClient(noText).extract(supplied, image, null);
+    assert.equal(result.originalText, supplied);
+    assert.equal(result.title, "Community announcement");
+    assert.deepEqual(result.fields, []);
+    const combined = await makeClient({
+      ...notice,
+      content_kind: "notice",
+    }).extract(supplied, image, null);
+    assert.equal(
+      combined.originalText,
+      notice.originalText + "\n\n" + supplied,
+    );
+    await assert.rejects(
+      () =>
+        makeClient({ ...noText, content_kind: "uncertain" }).extract(
+          "",
+          image,
+          null,
+        ),
+      { code: "model_output" },
+    );
+    await assert.rejects(
+      () =>
+        makeClient({ ...notice, content_kind: "notice" }).extract(
+          "x".repeat(18000),
+          image,
+          null,
+        ),
+      { code: "model_output" },
+    );
+  }));
 test("Meta structured requests use the documented endpoint, model and JSON schema", () =>
   withTestKey(async () => {
     let reserved = 0;

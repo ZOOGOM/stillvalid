@@ -167,3 +167,21 @@ for (const all of [false, true]) {
     assert.notEqual(retry.id, first.id);
   });
 }
+test("network counter has bounded TTL and rejected admissions do not create leases", async () => {
+  const ip = "test-network";
+  const id = await store.acquireExtraction("a", ip);
+  const keys = await client.keys(store.key("ip-work:*"));
+  assert.equal(keys.length, 1);
+  const ttl = await client.pttl(keys[0]);
+  assert.ok(ttl > 0 && ttl <= 3600000);
+  await store.releaseWork(id, "a");
+  await client.set(keys[0], "39", "PX", ttl);
+  const results = await Promise.allSettled(
+    Array.from({ length: 8 }, (_, i) =>
+      store.acquireExtraction(`network-concurrent-${i}`, ip),
+    ),
+  );
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  assert.equal(await client.get(keys[0]), "40");
+  assert.equal(await client.zcard(store.key("active:v2")), 1);
+});

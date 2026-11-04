@@ -119,7 +119,19 @@ test("a missing comparison leaves the overall result in review", () => {
   assert.ok(result.warnings.includes("partial"));
 });
 test("failed searches and source retrieval do not yield a confirmed result", () => {
-  for (const warning of ["search", "budget", "network", "fetch"]) {
+  for (const warning of [
+    "search",
+    "budget",
+    "network",
+    "fetch",
+    "source_format",
+    "source_encoding",
+    "source_too_large",
+    "source_timeout",
+    "source_blocked",
+    "source_not_found",
+    "source_not_notice",
+  ]) {
     const result = assembleResult({
       id: "test",
       notice,
@@ -647,5 +659,272 @@ test("generic multilingual site headings do not contradict an exact notice ident
     "2026 Music workshop",
   ]) {
     assert.equal(run(notice, { ...source, title }).status, "review", title);
+  }
+});
+
+test("identity matching never drops distinctive words or uses title token substrings", () => {
+  for (const [title, institution, heading, identity] of [
+    [
+      "Fellowships",
+      "Example Library",
+      "Fellowships | Example Library",
+      "Fellowships. Example Library.",
+    ],
+    [
+      "Research Fellowships",
+      "Example Library",
+      "Fellowships | Example Library",
+      "Fellowships. Example Library.",
+    ],
+    [
+      "Example Library Fellowships",
+      "Example Library",
+      "Fellowships | Example Library",
+      "Fellowships. Example Library.",
+    ],
+    [
+      "Art",
+      "Example Library",
+      "Cartography | Example Library",
+      "Cartography. Example Library.",
+    ],
+    [
+      "2026 Garden workshop",
+      "Library",
+      "2026 Garden workshop | Another Library",
+      "2026 Garden workshop. Another Library.",
+    ],
+    [
+      "2026 Garden workshop",
+      "Example Library",
+      "2026 Music workshop | Example Library",
+      "2026 Garden workshop. Example Library.",
+    ],
+    [
+      "2026 Garden workshop",
+      "Example Library",
+      "2027 Garden workshop | Example Library",
+      "2026 Garden workshop. Example Library.",
+    ],
+    [
+      "2026 Garden workshop 2nd session",
+      "Example Library",
+      "2026 Garden workshop 3rd session | Example Library",
+      "2026 Garden workshop 2nd session. Example Library.",
+    ],
+    [
+      "2026 정원 교실",
+      "시립도서관",
+      "2026 Music workshop | Example Library",
+      "2026 Music workshop. Example Library.",
+    ],
+  ]) {
+    const n = { ...notice, title, institution, edition: null };
+    const s = {
+      ...source,
+      title: heading,
+      text: `${identity} Apply by 10 November 2026.`,
+    };
+    const result = run(n, s, { ...analysis, identity_quote: identity });
+    assert.equal(result.status, "review", `${title} / ${heading}`);
+    assert.equal(result.comparisons[0].verified, false);
+  }
+});
+
+test("institution affixes cannot be removed to manufacture title agreement", () => {
+  for (const title of [
+    "Example Library 2026 Garden workshop",
+    "2026 Garden workshop | Example Library",
+  ]) {
+    const n = { ...notice, title };
+    const s = { ...source, title: "2026 Garden workshop | Example Library" };
+    assert.equal(run(n, s).status, "review", title);
+  }
+});
+
+test("a title-only quote cannot borrow institution evidence from a heading", () => {
+  for (const [title, institution] of [
+    ["2026 Garden workshop", "Example Library"],
+    ["2026 정원 교실", "시립도서관"],
+    ["2026 園芸講座", "市立図書館"],
+  ]) {
+    const n = { ...notice, title, institution };
+    const s = {
+      ...source,
+      title: `${title} | ${institution}`,
+      text: `${title}. Apply by 10 November 2026.`,
+    };
+    const a = { ...analysis, identity_quote: `${title}.` };
+    assert.equal(run(n, s, a).status, "review", title);
+    for (const heading of [
+      `${title} | Another Library`,
+      `${title} | ${institution} Foundation`,
+      `News | ${institution}`,
+    ])
+      assert.equal(
+        run(n, { ...s, title: heading }, a).status,
+        "review",
+        heading,
+      );
+    assert.equal(run(n, s, { ...a, same_notice: false }).status, "review");
+    assert.equal(run(n, s, { ...a, country: "GB" }).status, "review");
+    assert.equal(
+      run(n, s, { ...a, identity_quote: `${title}!` }).status,
+      "review",
+    );
+  }
+});
+
+for (const context of [
+  "Issued by Another Library.",
+  "This page is for the 2027 edition only.",
+  "This is an archive link. Current event: 2026 Music workshop.",
+]) {
+  test(`title-only quote rejects conflicting context: ${context}`, () => {
+    const s = {
+      ...source,
+      title: "2026 Garden workshop | Example Library",
+      text: `2026 Garden workshop. ${context} Apply by 10 November 2026.`,
+    };
+    const result = run(notice, s, {
+      ...analysis,
+      identity_quote: "2026 Garden workshop.",
+    });
+    assert.equal(result.status, "review", context);
+    assert.equal(result.comparisons[0].verified, false, context);
+  });
+}
+
+for (const [title, sourceTitle] of [
+  ["Example Library History", "Local History"],
+  ["History | Example Library", "Local History"],
+  ["Example Library Art", "Modern Art"],
+  ["Example Library Science", "Applied Science"],
+]) {
+  test(`a printed institution-bearing title cannot shrink into another title: ${title}`, () => {
+    const n = {
+      ...notice,
+      title,
+      edition: null,
+      originalText: `${title}\nExample Library\nApply by 4 November 2026.`,
+    };
+    const identity = `${sourceTitle}. Example Library.`;
+    const s = {
+      ...source,
+      title: `${sourceTitle} | Example Library`,
+      text: `${identity} Apply by 10 November 2026.`,
+    };
+    const result = run(n, s, { ...analysis, identity_quote: identity });
+    assert.equal(result.status, "review");
+    assert.equal(result.comparisons[0].verified, false);
+  });
+}
+
+test("separate institution and title lines do not justify shortening the comparison title", () => {
+  const n = {
+    ...notice,
+    title: "Example Library History",
+    edition: null,
+    originalText: "Example Library\nHistory\nApply by 4 November 2026.",
+  };
+  const s = {
+    ...source,
+    title: "Local History | Example Library",
+    text: "Local History. Example Library. Apply by 10 November 2026.",
+  };
+  const result = run(n, s, {
+    ...analysis,
+    identity_quote: "Local History. Example Library.",
+  });
+  assert.equal(result.status, "review");
+  assert.equal(result.comparisons[0].verified, false);
+});
+
+test("a shorter title is not the title segment of a different specific page", () => {
+  for (const [title, otherTitle] of [
+    ["History", "Local History"],
+    ["Art", "Modern Art"],
+    ["Science", "Applied Science"],
+  ]) {
+    const n = {
+      ...notice,
+      title,
+      edition: null,
+      originalText: `${title}\nExample Library\nApply by 4 November 2026.`,
+    };
+    const identity = `${otherTitle}. Example Library.`;
+    const s = {
+      ...source,
+      title: `${otherTitle} | Example Library`,
+      text: `${identity} Apply by 10 November 2026.`,
+    };
+    const result = run(n, s, { ...analysis, identity_quote: identity });
+    assert.equal(result.status, "review", title);
+    assert.equal(result.comparisons[0].verified, false);
+  }
+});
+
+test("a single specific page heading cannot expand a shorter notice title", () => {
+  for (const [title, otherTitle] of [
+    ["History", "Local History"],
+    ["Art", "Modern Art"],
+    ["Science", "Applied Science"],
+  ]) {
+    const n = {
+      ...notice,
+      title,
+      edition: null,
+      originalText: `${title}\nExample Library\nApply by 4 November 2026.`,
+    };
+    const identity = `${otherTitle}. Example Library.`;
+    const s = {
+      ...source,
+      title: otherTitle,
+      text: `${identity} Apply by 10 November 2026.`,
+    };
+    const result = run(n, s, { ...analysis, identity_quote: identity });
+    assert.equal(result.status, "review", title);
+    assert.equal(result.comparisons[0].verified, false);
+  }
+});
+
+test("middle-dot institution headings obey the same conflict rules as pipe headings", () => {
+  for (const delimiter of ["·", "|", "—", "–"]) {
+    const wrong = run(notice, {
+      ...source,
+      title: `${notice.title} ${delimiter} Another Library`,
+    });
+    assert.equal(wrong.status, "review", delimiter);
+    assert.equal(wrong.comparisons[0].verified, false, delimiter);
+    assert.equal(
+      run(notice, {
+        ...source,
+        title: `${notice.title} ${delimiter} Example Library`,
+      }).status,
+      "changed",
+      delimiter,
+    );
+  }
+});
+
+test("unrecognized heading separators cannot disguise an institution conflict", () => {
+  for (const separator of [" - ", ": ", " : ", "/", "; "]) {
+    const result = run(notice, {
+      ...source,
+      title: `${notice.title}${separator}Another Library`,
+    });
+    assert.equal(result.status, "review", separator);
+    assert.equal(result.comparisons[0].verified, false);
+  }
+});
+
+test("a matching institution segment does not excuse another conflicting heading segment", () => {
+  for (const title of [
+    "2026 Garden workshop · Example Library · Another Library",
+    "2026 Garden workshop | Example Library | Local History",
+  ]) {
+    const result = run(notice, { ...source, title });
+    assert.equal(result.status, "review");
+    assert.equal(result.comparisons[0].verified, false);
   }
 });

@@ -11,6 +11,8 @@ import {
   resultLocale,
 } from "../src/lib/languages";
 import { checkRequestSchema } from "../src/lib/schema";
+import { sourceWarningText } from "../src/lib/source-warnings";
+import { errorText } from "../src/lib/i18n";
 
 const input = {
   notice: {
@@ -25,6 +27,25 @@ const input = {
   sourceUrl: "",
   requestKey: "d54ff930-40b8-4876-b06c-3544ea2a711c",
 };
+
+test("source failures and input errors have useful text in every display language", () => {
+  for (const lang of resultLanguages) {
+    for (const code of [
+      "source_format",
+      "source_encoding",
+      "source_too_large",
+      "source_timeout",
+      "source_blocked",
+      "source_not_found",
+      "source_not_notice",
+    ]) {
+      assert.ok(sourceWarningText(code, lang), `${lang}: ${code}`);
+    }
+    for (const code of ["not_a_notice", "upload_too_large"]) {
+      assert.notEqual(errorText(code, lang), errorText("unrecognized", lang));
+    }
+  }
+});
 
 test("all ten result languages are valid independently of the country", () => {
   assert.deepEqual(

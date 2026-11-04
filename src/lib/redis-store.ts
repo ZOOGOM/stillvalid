@@ -1,3 +1,4 @@
+import { IP_WORK_LIMIT } from "./abuse";
 import { randomUUID } from "node:crypto";
 import { EnvHttpProxyAgent } from "undici";
 import { AppError, type Result } from "./schema";
@@ -78,6 +79,7 @@ export class RedisStore {
   async createCheck(
     actor: string,
     requestKey: string,
+    abuse?: string,
   ): Promise<{ id: string; existing: boolean }> {
     const now = Date.now(),
       slot = Math.floor(now / 3600000),
@@ -97,6 +99,8 @@ export class RedisStore {
       local count=tonumber(redis.call('GET',KEYS[3]) or '0'); if count>=12 then return {'rate_limit','error'} end;
       redis.call('ZREMRANGEBYSCORE',KEYS[6],'-inf',tonumber(ARGV[1])-60000);
       if redis.call('ZCARD',KEYS[6])>=10 then return {'rate_limit','error'} end;
+      if ARGV[8]=='1' and tonumber(redis.call('GET',KEYS[10]) or '0')>=tonumber(ARGV[9]) then return {'rate_limit','error'} end;
+      if ARGV[8]=='1' then redis.call('INCR',KEYS[10]);redis.call('PEXPIREAT',KEYS[10],ARGV[5]) end;
       redis.call('ZADD',KEYS[6],ARGV[1],ARGV[2]);redis.call('PEXPIRE',KEYS[6],60000);
       redis.call('SET',KEYS[7],ARGV[3],'PX',210000);
       redis.call('SET',KEYS[8],ARGV[2],'PX',210000);
@@ -108,7 +112,7 @@ export class RedisStore {
       redis.call('SADD',KEYS[5],ARGV[2]);redis.call('EXPIRE',KEYS[5],86400);
       return {ARGV[2],'0'};
     `,
-      9,
+      10,
       this.key("idem:" + actor + ":" + requestKey),
       this.key("active:v2"),
       this.key("check-limit:" + actor + ":" + slot),
@@ -118,6 +122,7 @@ export class RedisStore {
       this.key("lease-owner:v2:" + id),
       this.key("inflight:v2:" + actor + ":" + requestKey),
       this.key("lease-request:v2:" + id),
+      this.key("ip-work:" + (abuse || "disabled") + ":" + slot),
       now,
       id,
       actor,
@@ -125,6 +130,8 @@ export class RedisStore {
       (slot + 1) * 3600000,
       this.key("check:"),
       requestKey,
+      abuse ? "1" : "0",
+      IP_WORK_LIMIT,
     )) as string[];
     if (row[1] === "error") throw new AppError(row[0], 429);
     return { id: row[0], existing: row[1] === "1" };
@@ -212,7 +219,7 @@ export class RedisStore {
       this.key("idem:" + actor + ":"),
     );
   }
-  async acquireExtraction(actor: string): Promise<string> {
+  async acquireExtraction(actor: string, abuse?: string): Promise<string> {
     const now = Date.now(),
       id = randomUUID(),
       slot = Math.floor(now / 3600000);
@@ -224,21 +231,26 @@ export class RedisStore {
       redis.call('ZREMRANGEBYSCORE',KEYS[2],'-inf',tonumber(ARGV[1])-60000);
       if redis.call('ZCARD',KEYS[2])>=10 then return 'rate_limit' end;
       if tonumber(redis.call('GET',KEYS[3]) or '0')>=20 then return 'rate_limit' end;
+      if ARGV[6]=='1' and tonumber(redis.call('GET',KEYS[5]) or '0')>=tonumber(ARGV[7]) then return 'rate_limit' end;
+      if ARGV[6]=='1' then redis.call('INCR',KEYS[5]);redis.call('PEXPIREAT',KEYS[5],ARGV[5]) end;
       redis.call('INCR',KEYS[3]);redis.call('PEXPIREAT',KEYS[3],ARGV[5]);
       redis.call('ZADD',KEYS[1],tonumber(ARGV[1])+210000,ARGV[2]);redis.call('EXPIRE',KEYS[1],86400);
       redis.call('ZADD',KEYS[2],ARGV[1],ARGV[2]);redis.call('PEXPIRE',KEYS[2],60000);
       redis.call('SET',KEYS[4],ARGV[3],'PX',210000);
       return 'ok';`,
-      4,
+      5,
       this.key("active:v2"),
       this.key("admissions"),
       this.key("limit:extract:" + actor + ":" + slot),
       this.key("lease-owner:v2:" + id),
+      this.key("ip-work:" + (abuse || "disabled") + ":" + slot),
       now,
       id,
       actor,
       210000,
       (slot + 1) * 3600000,
+      abuse ? "1" : "0",
+      IP_WORK_LIMIT,
     );
     if (outcome !== "ok") throw new AppError(String(outcome), 429);
     return id;

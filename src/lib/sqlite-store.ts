@@ -1,3 +1,4 @@
+import { IP_WORK_LIMIT, IP_WORK_WINDOW_MS } from "./abuse";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -76,6 +77,7 @@ export function reserveModelCall(): void {
 export function createCheck(
   actor: string,
   key: string,
+  abuse?: string,
 ): { id: string; existing: boolean } {
   const database = db();
   database.exec("BEGIN IMMEDIATE");
@@ -97,6 +99,7 @@ export function createCheck(
     }
     const id = randomUUID(),
       now = Date.now();
+    if (abuse) reserve("ip-work:" + abuse, IP_WORK_LIMIT, IP_WORK_WINDOW_MS);
     admitWork(id, actor, key);
     reserve("check:" + actor, 12, 3600000);
     database
@@ -163,12 +166,13 @@ function admitWork(id: string, actor: string, requestKey: string | null) {
     .run(id, actor, requestKey, now + 210000);
   db().prepare("INSERT INTO work_admissions VALUES (?, ?)").run(id, now);
 }
-export function acquireExtraction(actor: string): string {
+export function acquireExtraction(actor: string, abuse?: string): string {
   const database = db();
   database.exec("BEGIN IMMEDIATE");
   try {
     cleanup();
     const id = randomUUID();
+    if (abuse) reserve("ip-work:" + abuse, IP_WORK_LIMIT, IP_WORK_WINDOW_MS);
     admitWork(id, actor, null);
     reserve("extract:" + actor, 20, 3600000);
     database.exec("COMMIT");

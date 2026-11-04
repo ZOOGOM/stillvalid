@@ -87,7 +87,7 @@ export function htmlText(html: string): { title: string; text: string } {
     .replace(/[ \t]+/g, " ")
     .replace(/\n\s*\n/g, "\n")
     .trim();
-  if (text.length > 22000) throw new AppError("source_format", 422);
+  if (text.length > 22000) throw new AppError("source_too_large", 422);
   return { title: title.slice(0, 300), text };
 }
 
@@ -103,8 +103,65 @@ export function decodeSourceBody(
   try {
     return new TextDecoder(declared, { fatal: true }).decode(bytes);
   } catch {
-    throw new AppError("source_format", 422);
+    throw new AppError("source_encoding", 422);
   }
+}
+
+// Public error codes contain no upstream bodies, addresses or TLS details.
+export function sourceHttpError(status: number): AppError {
+  if (status === 404 || status === 410)
+    return new AppError("source_not_found", 422);
+  if ([401, 403, 429].includes(status))
+    return new AppError("source_blocked", 422);
+  return new AppError("source_unavailable", 422);
+}
+
+export function sourceTransportError(error: unknown): AppError {
+  if (error instanceof AppError) return error;
+  // Undici wraps transport failures in a TypeError with a cause.
+  const outer = error as { name?: string; cause?: { code?: string } } | null;
+  const code = outer?.cause?.code;
+  if (
+    outer?.name === "TimeoutError" ||
+    (typeof code === "string" &&
+      [
+        "UND_ERR_CONNECT_TIMEOUT",
+        "UND_ERR_HEADERS_TIMEOUT",
+        "UND_ERR_BODY_TIMEOUT",
+      ].includes(code))
+  )
+    return new AppError("source_timeout", 422);
+  return new AppError("source_unavailable", 422);
+}
+
+export function sourceMediaType(
+  contentType: string,
+): "text/html" | "text/plain" {
+  const type = contentType.split(";", 1)[0].trim().toLowerCase();
+  if (type !== "text/html" && type !== "text/plain")
+    throw new AppError("source_format", 422);
+  return type;
+}
+
+export function parseSourceDocument(
+  raw: string,
+  contentType: string,
+  url: URL,
+): { title: string; text: string } {
+  const type = sourceMediaType(contentType);
+  // Keep actual plain-text notices supported, but never spend inference on
+  // standard machine-control documents. This check does not establish relevance.
+  if (
+    /\/(?:robots\.txt|ads\.txt|app-ads\.txt|security\.txt|sitemap(?:[-_][^/]*)?\.xml)$/i.test(
+      url.pathname,
+    )
+  )
+    throw new AppError("source_not_notice", 422);
+  const parsed =
+    type === "text/html" ? htmlText(raw) : { title: url.hostname, text: raw };
+  if (parsed.text.length > 22000) throw new AppError("source_too_large", 422);
+  if (parsed.text.length < 40) throw new AppError("source_unavailable", 422);
+  return parsed;
 }
 
 export async function fetchSource(
@@ -154,12 +211,14 @@ export async function fetchSource(
       }
       if (!response.ok) {
         await response.body?.cancel();
-        throw new AppError("source_unavailable", 422);
+        throw sourceHttpError(response.status);
       }
       const type = response.headers.get("content-type") || "";
-      if (!/text\/(html|plain)/i.test(type)) {
+      try {
+        sourceMediaType(type);
+      } catch (error) {
         await response.body?.cancel();
-        throw new AppError("source_format", 422);
+        throw error;
       }
       const reader = response.body?.getReader();
       if (!reader) throw new AppError("source_unavailable", 422);
@@ -171,17 +230,12 @@ export async function fetchSource(
         bytes += chunk.byteLength;
         if (bytes > 600000) {
           await reader.cancel();
-          throw new AppError("source_format", 422);
+          throw new AppError("source_too_large", 422);
         }
         chunks.push(chunk);
       }
       const raw = decodeSourceBody(Buffer.concat(chunks), type);
-      const parsed = /html/i.test(type)
-        ? htmlText(raw)
-        : { title: url.hostname, text: raw };
-      if (parsed.text.length > 22000) throw new AppError("source_format", 422);
-      if (parsed.text.length < 40)
-        throw new AppError("source_unavailable", 422);
+      const parsed = parseSourceDocument(raw, type, url);
       return {
         id,
         url: url.href,
@@ -190,8 +244,7 @@ export async function fetchSource(
         ...authorityFor(url.hostname),
       };
     } catch (error) {
-      if (error instanceof AppError) throw error;
-      throw new AppError("source_unavailable", 422);
+      throw sourceTransportError(error);
     } finally {
       await dispatcher.close();
     }

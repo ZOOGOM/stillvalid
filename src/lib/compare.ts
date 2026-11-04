@@ -86,18 +86,40 @@ function editionMarkers(text: string): Map<string, Set<string>> {
   return markers;
 }
 
+function identifierIn(text: string, identifier: string): boolean {
+  if (!identifier) return false;
+  const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(
+    `(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`,
+    "u",
+  ).test(text);
+}
+
 function sameIdentity(notice: Notice, source: Source, quote: string): boolean {
   const identity = normalize(quote);
-  // Exact source excerpts remain mandatory separately; normalization here only
-  // compares identifiers, never turns rewritten quotations into evidence.
-  if (
-    !identity.includes(normalize(notice.title)) ||
-    (notice.institution && !identity.includes(normalize(notice.institution)))
-  )
-    return false;
-  if (notice.edition && !identity.includes(normalize(notice.edition)))
-    return false;
+  // Compare the complete supplied title; never infer a shorter event name.
+  const title = normalize(notice.title);
+  const institution = normalize(notice.institution);
   const sourceTitle = normalize(source.title);
+  // A general category, even with an institution, cannot identify one notice.
+  const specificTitle = title
+    .replace(institution || "\0", "")
+    .replace(/\b(?:19|20)\d{2}\b/g, "")
+    .replace(
+      /(?<![\p{L}\p{N}])(?:research|fellowships?|programmes?|programs?|notices?|announcements?|events?|workshops?|updates?)(?![\p{L}\p{N}])/gu,
+      "",
+    )
+    .replace(/공지사항|공지|お知らせ|通知|公告/gu, "")
+    .replace(/[\s:·.,!()|/—–-]/g, "");
+  if (!specificTitle || !identifierIn(identity, title)) return false;
+  const headingParts = sourceTitle.split(/\s*[|—–·]\s*/u);
+  // Keep institution evidence in the same exact source excerpt as the title.
+  // A matching page heading alone cannot tie a quoted title to its issuer.
+  if (institution && !identifierIn(identity, institution)) return false;
+  if (/^(?:library|museum|university|도서관|図書館)$/u.test(institution))
+    return false;
+  if (notice.edition && !identifierIn(identity, normalize(notice.edition)))
+    return false;
   // A generic page label can add no identity evidence. A specific, different
   // heading must not be overridden by an unrelated matching paragraph below it.
   const genericTitle = sourceTitle
@@ -112,8 +134,24 @@ function sameIdentity(notice: Notice, source: Source, quote: string): boolean {
       "",
     )
     .replace(/[\s:·.,!()|/—–-]/g, "");
-  if (genericTitle && !sourceTitle.includes(normalize(notice.title)))
+  if (genericTitle && !identifierIn(sourceTitle, title)) return false;
+  // A specific heading segment names the event, not just a bag of keywords.
+  // "History" must not match "Local History | Library". Generic site labels
+  // above remain neutral and cannot provide this identity evidence themselves.
+  if (genericTitle && !headingParts.includes(title)) return false;
+  if (
+    genericTitle &&
+    headingParts.some(
+      (part) =>
+        part !== title &&
+        part !== institution &&
+        !/^(?:(?:19|20)\d{2}\s+)?(?:updates?|amendments?|notices?|수정 안내|synthetic example|합성 예시)$/u.test(
+          part,
+        ),
+    )
+  )
     return false;
+
   const expected = editionMarkers(`${notice.title} ${notice.edition || ""}`);
   for (const text of [quote, source.title]) {
     for (const [kind, values] of editionMarkers(text)) {
@@ -283,8 +321,10 @@ export function assembleResult(args: {
       ),
   );
   if (partial) warnings.push("partial");
-  const incompleteSources = warnings.some((warning) =>
-    ["search", "budget", "network", "fetch"].includes(warning),
+  const incompleteSources = warnings.some(
+    (warning) =>
+      ["search", "budget", "network", "fetch"].includes(warning) ||
+      warning.startsWith("source_"),
   );
   const cancelled = analyses.some((_a, i) =>
     comparisons.some(
