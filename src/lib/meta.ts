@@ -474,8 +474,8 @@ function responseText(response: Record<string, unknown>): string {
 
 /**
  * Reads SAM box tokens (<|box;x1=..;y1=..;x2=..;y2=..;w=..;h=..[;c=..]|>) and
- * keeps the most confident box covering at least 8% of the frame, so a small
- * label or a sticker is not offered as "the notice".
+ * keeps boxes covering at least 3% of the frame, so a small label or a
+ * sticker is not offered as "the notice".
  */
 export function noticeBoxes(text: string): NoticeBox[] {
   const boxes: NoticeBox[] = [];
@@ -499,7 +499,9 @@ export function noticeBoxes(text: string): NoticeBox[] {
       y2 > h
     )
       continue;
-    if (((x2 - x1) * (y2 - y1)) / (w * h) < 0.08) continue;
+    // Live on a notice-board photo, real notices covered 4-5% of the frame,
+    // so anything from 3% is offered; tiny labels and stickers are not.
+    if (((x2 - x1) * (y2 - y1)) / (w * h) < 0.03) continue;
     boxes.push({ x1, y1, x2, y2, w, h, c: Number.isFinite(c) ? c : null });
   }
   boxes.sort(
