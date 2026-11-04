@@ -34,6 +34,8 @@ import {
   RefreshCw,
   RotateCw,
   ScanLine,
+  ScanSearch,
+  Undo2,
   Search,
   ShieldCheck,
   Sparkles,
@@ -567,6 +569,8 @@ export default function StillValidApp() {
   const [notice, setNotice] = useState<Notice | null>(null),
     [sourceUrl, setSourceUrl] = useState(""),
     [result, setResult] = useState<Result | null>(null);
+  // The photo before an automatic notice crop, so it can be restored.
+  const [beforeAutoCrop, setBeforeAutoCrop] = useState<string | null>(null);
   // Client-observed stage durations for the current flow (not stored).
   const timings = useRef<ClientTiming>({});
   const [clientTiming, setClientTiming] = useState<ClientTiming>({});
@@ -727,6 +731,7 @@ export default function StillValidApp() {
     setResult(null);
     setNotice(null);
     setImage(null);
+    setBeforeAutoCrop(null);
     setImageName("");
     setText("");
     setMode("photo");
@@ -750,6 +755,7 @@ export default function StillValidApp() {
       timings.current = { prepareMs: performance.now() - prepareStart };
       if (generation === uploadGeneration.current) {
         setImage(prepared);
+        setBeforeAutoCrop(null);
         setImageName(file.name);
         setMode("photo");
       }
@@ -760,6 +766,63 @@ export default function StillValidApp() {
       if (generation === uploadGeneration.current) setPreparing(false);
       if (fileRef.current) fileRef.current.value = "";
       if (cameraRef.current) cameraRef.current.value = "";
+    }
+  };
+  // Opt-in: one SAM 3.1 call finds the printed notice and crops to it, with a
+  // small margin. The user can undo, crop by hand or rotate as before.
+  const autoFind = async () => {
+    if (!image || preparing || !live) return;
+    const generation = ++uploadGeneration.current;
+    setPreparing(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/locate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image }),
+      });
+      if (!response.ok)
+        throw new Error(await responseError(response, "upload_too_large"));
+      const data = (await response.json()) as {
+        box: {
+          x1: number;
+          y1: number;
+          x2: number;
+          y2: number;
+          w: number;
+          h: number;
+        } | null;
+      };
+      if (generation !== uploadGeneration.current) return;
+      if (!data.box) {
+        setToast({ text: t.autoFindNone, lang });
+        return;
+      }
+      const loaded = await loadImage(image);
+      const sx = loaded.naturalWidth / data.box.w,
+        sy = loaded.naturalHeight / data.box.h;
+      const marginX = loaded.naturalWidth * 0.02,
+        marginY = loaded.naturalHeight * 0.02;
+      const x = Math.max(0, data.box.x1 * sx - marginX),
+        y = Math.max(0, data.box.y1 * sy - marginY);
+      const area = {
+        x,
+        y,
+        width:
+          Math.min(loaded.naturalWidth, (data.box.x2 + 1) * sx + marginX) - x,
+        height:
+          Math.min(loaded.naturalHeight, (data.box.y2 + 1) * sy + marginY) - y,
+      };
+      const cropped = await transformImage(image, 0, area);
+      if (generation !== uploadGeneration.current) return;
+      setBeforeAutoCrop(image);
+      setImage(cropped);
+      setToast({ text: t.autoFindDone, lang });
+    } catch (e) {
+      if (generation === uploadGeneration.current)
+        setError(e instanceof Error ? e.message : "network");
+    } finally {
+      if (generation === uploadGeneration.current) setPreparing(false);
     }
   };
   const extract = async () => {
@@ -1204,6 +1267,30 @@ export default function StillValidApp() {
                           <span title={imageName} dir="auto">
                             {imageName}
                           </span>
+                          {live === true &&
+                            (beforeAutoCrop ? (
+                              <button
+                                aria-label={t.autoFindUndo}
+                                title={t.autoFindUndo}
+                                disabled={preparing}
+                                onClick={() => {
+                                  uploadGeneration.current++;
+                                  setImage(beforeAutoCrop);
+                                  setBeforeAutoCrop(null);
+                                }}
+                              >
+                                <Undo2 size={17} />
+                              </button>
+                            ) : (
+                              <button
+                                aria-label={t.autoFind}
+                                title={t.autoFind}
+                                disabled={preparing}
+                                onClick={() => void autoFind()}
+                              >
+                                <ScanSearch size={17} />
+                              </button>
+                            ))}
                           <button
                             aria-label={t.crop}
                             title={t.crop}
@@ -1221,8 +1308,10 @@ export default function StillValidApp() {
                               setPreparing(true);
                               try {
                                 const rotated = await transformImage(image, 90);
-                                if (generation === uploadGeneration.current)
+                                if (generation === uploadGeneration.current) {
                                   setImage(rotated);
+                                  setBeforeAutoCrop(null);
+                                }
                               } catch (e) {
                                 if (generation === uploadGeneration.current)
                                   setError(
@@ -1244,6 +1333,7 @@ export default function StillValidApp() {
                             onClick={() => {
                               uploadGeneration.current++;
                               setImage(null);
+                              setBeforeAutoCrop(null);
                               setPreparing(false);
                             }}
                           >
@@ -2189,6 +2279,7 @@ export default function StillValidApp() {
           close={closeCrop}
           done={(updated) => {
             setImage(updated);
+            setBeforeAutoCrop(null);
             setCropping(false);
           }}
         />

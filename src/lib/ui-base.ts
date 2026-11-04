@@ -121,6 +121,11 @@ const ko = {
   progressElapsed: "경과 시간 {s}",
   progressTypical:
     "지금까지 측정에서는 공식 주소를 넣은 확인이 약 45초~1분 30초 걸렸고, 검색을 거치면 더 오래 걸렸어요. 완료 시간을 보장하지는 않아요.",
+  autoFind: "공고 영역 자동 찾기",
+  autoFindDone:
+    "공고로 보이는 영역에 맞춰 잘랐어요. 원래대로 되돌릴 수 있어요.",
+  autoFindNone: "공고 영역을 찾지 못했어요. 직접 잘라 주세요.",
+  autoFindUndo: "자동 자르기 되돌리기",
   resultEyebrow: "안내 확인 결과",
   status_changed: "달라진 내용을 찾았어요",
   status_matched: "확인한 자료와 일치해요",
@@ -418,6 +423,11 @@ const en: Copy = {
   progressElapsed: "Elapsed {s}",
   progressTypical:
     "In our measurements, checks with an official link took about 45–90 seconds, and longer with search. Completion time is not guaranteed.",
+  autoFind: "Find the notice automatically",
+  autoFindDone:
+    "Cropped to the area that looks like the notice. You can undo this.",
+  autoFindNone: "No notice area was found. Please crop it yourself.",
+  autoFindUndo: "Undo automatic crop",
   resultEyebrow: "Your notice check",
   status_changed: "We found a few changes",
   status_matched: "The checked details match",
