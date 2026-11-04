@@ -196,6 +196,9 @@ const ko = {
   warning_budget: "오늘 확인 가능한 요청 한도에 도달했어요.",
   error_default: "확인을 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요.",
   error_input: "안내문 내용을 확인해 주세요.",
+  error_not_a_notice:
+    "공고로 읽을 수 없어요. 다른 사진이나 텍스트를 시도해 주세요.",
+  error_upload_too_large: "업로드가 너무 커요. 더 작은 사진을 선택해 주세요.",
   error_not_configured:
     "지금은 실시간 확인을 이용할 수 없어요. 예제로 먼저 둘러보세요.",
   error_session: "확인 세션이 만료되었어요. 페이지를 새로고침해 주세요.",
@@ -241,6 +244,8 @@ const ko = {
   aboutMeta:
     "실시간 확인은 서버에서 Meta Model API의 이미지 이해·웹 검색·구조화 출력을 이용하도록 구현했어요. 현재 연결 상태는 확인 화면에 표시해요. Meta의 공식 서비스는 아니에요.",
   privacyTitle: "필요한 내용만, 필요한 동안만.",
+  privacyAbuse:
+    "남용을 제한할 때 접속 IP에서 만든 보호 식별자를 사용할 수 있어요. 한도 기록은 1시간 창이 끝나면 만료되고 저장소 정리 시 삭제돼요. 같은 네트워크의 사용자는 한도를 공유할 수 있어요.",
   privacyBody:
     "실시간 확인을 시작하면 입력 내용을 Meta Model API로 보내요. 사진은 브라우저에서 다시 인코딩해 메타데이터를 줄이며 StillValid 서버에는 원본 이미지를 저장하지 않아요. 결과와 필요한 인용문은 익명 세션에 연결되어 24시간 동안 조회할 수 있고 직접 삭제할 수 있어요. 만료 자료는 주기적 정리 또는 다음 서버 기동·요청 시 제거돼요. 외부 제공자의 데이터 처리 조건은 별도로 적용돼요.",
   privacyMore:
@@ -459,6 +464,8 @@ const en: Copy = {
   error_default:
     "We couldn't finish this check. Please try again in a little while.",
   error_input: "Please check the notice content.",
+  error_not_a_notice: "No notice could be read. Try another photo or text.",
+  error_upload_too_large: "The upload is too large. Choose a smaller photo.",
   error_not_configured:
     "Live checks aren't available here yet. Try an example below.",
   error_session: "Your check session expired. Please reload the page.",
@@ -507,6 +514,8 @@ const en: Copy = {
   aboutMeta:
     "The live path is implemented with Meta Model API image understanding, web search and structured output on the server. Availability is shown on the check screen. This is not an official Meta service.",
   privacyTitle: "Only what's needed, only as long as needed.",
+  privacyAbuse:
+    "To limit abuse, the service may use a protected identifier derived from your IP address. Rate-limit records expire at the end of the hourly window and are removed by storage cleanup. People on the same network may share a limit.",
   privacyBody:
     "Starting a live check sends your input to Meta Model API. Photos are re-encoded in your browser to reduce metadata; StillValid doesn't save original image files. Results and necessary quotes are tied to an anonymous session, available for 24 hours, and can be deleted by you. Expired records are removed by periodic cleanup or the next server start/request. External providers' data handling terms apply separately.",
   privacyMore:

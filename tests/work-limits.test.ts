@@ -35,6 +35,60 @@ for (const [name, store] of [
   ["SQLite", sqlite],
   ["Redis Lua emulator", redis],
 ] as const) {
+  test(`${name}: network quota survives cookie rotation and deletion, without charging duplicates`, async (t) => {
+    let now = Math.floor(Date.now() / 3600000) * 3600000 + 1000;
+    t.mock.method(Date, "now", () => now);
+    for (let i = 0; i < 40; i++) {
+      const actor = `ip-actor-${i}`;
+      if (i % 2) {
+        const requestKey = randomUUID();
+        const job = await store.createCheck(actor, requestKey, "network-a");
+        assert.equal(
+          (await store.createCheck(actor, requestKey, "network-a")).existing,
+          true,
+        );
+        await store.deleteAllChecks(actor);
+        await store.releaseWork(job.id, actor);
+      } else {
+        const id = await store.acquireExtraction(actor, "network-a");
+        await store.releaseWork(id, actor);
+      }
+      now += 61000;
+    }
+    await assert.rejects(
+      async () => store.acquireExtraction("fresh", "network-a"),
+      { code: "rate_limit" },
+    );
+    await assert.rejects(
+      async () => store.createCheck("fresh", randomUUID(), "network-a"),
+      { code: "rate_limit" },
+    );
+    const independent = await store.acquireExtraction(
+      "independent",
+      "network-b",
+    );
+    await store.releaseWork(independent, "independent");
+    now = Math.ceil(now / 3600000) * 3600000 + 1000;
+    await store.acquireExtraction("new-window", "network-a");
+  });
+  test(`${name}: denied global admission does not consume network allowance`, async () => {
+    await store.acquireExtraction("a");
+    await store.acquireExtraction("b");
+    await store.acquireExtraction("c");
+    await assert.rejects(
+      async () => store.acquireExtraction("d", "network-denied"),
+      { code: "busy" },
+    );
+    if (name === "SQLite") {
+      const rows = sqlite
+        .db()
+        .prepare("SELECT count(*) AS n FROM limits WHERE key LIKE 'ip-work:%'")
+        .get() as { n: number };
+      assert.equal(rows.n, 0);
+    } else {
+      assert.deepEqual(await client.keys(redis.key("ip-work:*")), []);
+    }
+  });
   for (const all of [false, true]) {
     test(`${name}: ${all ? "session" : "single"} deletion retains all running slots and prevents late resurrection`, async () => {
       const jobs: { id: string; existing: boolean }[] = [];

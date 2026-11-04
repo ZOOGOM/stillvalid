@@ -116,6 +116,8 @@ export const zhUiCopy: UiCopy = {
   close: "关闭",
   error_default: "无法完成此次核查，请稍后重试。",
   error_input: "请检查公告内容。",
+  error_not_a_notice: "无法读取公告，请尝试其他照片或文字。",
+  error_upload_too_large: "上传内容过大，请选择较小的照片。",
   error_not_configured: "目前无法进行实时核查，请先查看下方示例。",
   error_session: "核查会话已过期，请重新加载页面。",
   error_rate_limit: "请求次数已达上限，请稍后重试。",
@@ -153,6 +155,8 @@ export const zhUiCopy: UiCopy = {
   aboutMeta:
     "实时核查在服务器上使用 Meta Model API 的图像理解、网络搜索和结构化输出功能。核查页面会显示当前可用状态。本服务并非 Meta 官方服务。",
   privacyTitle: "只保留必要内容，只保留必要时间。",
+  privacyAbuse:
+    "为限制滥用，服务可能使用根据 IP 地址生成的受保护标识。限额记录在每小时窗口结束时过期，并由存储清理删除。同一网络上的用户可能共用限额。",
   privacyBody:
     "开始实时核查时，输入内容会发送至 Meta Model API。照片会在浏览器中重新编码以减少元数据；StillValid 不保存原始图片文件。结果和必要的引文与匿名会话关联，可在 24 小时内查看并由您删除。过期记录会通过定期清理或在下次服务器启动、请求时删除。外部提供商的数据处理条款另行适用。",
   privacyMore:
@@ -292,6 +296,10 @@ export const jaUiCopy: UiCopy = {
   error_default:
     "確認を完了できませんでした。しばらくしてから再試行してください。",
   error_input: "お知らせの内容を確認してください。",
+  error_not_a_notice:
+    "お知らせを読み取れませんでした。別の写真かテキストをお試しください。",
+  error_upload_too_large:
+    "アップロードが大きすぎます。小さい写真を選んでください。",
   error_not_configured:
     "現在、実際の確認は利用できません。下の例をお試しください。",
   error_session:
@@ -340,6 +348,8 @@ export const jaUiCopy: UiCopy = {
   aboutMeta:
     "実際の確認は、サーバー上で Meta Model API の画像理解、ウェブ検索、構造化出力を使うよう実装されています。利用可能な状態は確認画面に表示されます。Meta の公式サービスではありません。",
   privacyTitle: "必要なものを、必要な間だけ。",
+  privacyAbuse:
+    "不正利用を抑えるため、IPアドレスから作成した保護された識別子を使用する場合があります。制限記録は1時間の枠の終了時に期限切れとなり、保存先の整理で削除されます。同じネットワークでは上限を共有する場合があります。",
   privacyBody:
     "実際の確認を始めると、入力内容は Meta Model API に送信されます。写真はメタデータを減らすためブラウザで再エンコードされ、StillValid は元の画像ファイルを保存しません。結果と必要な引用は匿名セッションにひも付き、24時間閲覧でき、ご自身で削除できます。期限切れの記録は定期的な削除、または次回のサーバー起動・リクエスト時に削除されます。外部提供者のデータ取扱条件は別途適用されます。",
   privacyMore:
