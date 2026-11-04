@@ -245,3 +245,62 @@ test("a value from another event's table rows is not confirmed for this event", 
   );
   assert.equal(own.result.comparisons[0].verified, true);
 });
+
+test("per-candidate outcomes say what happened to each source", () => {
+  const result = assembleResult({
+    id: "test",
+    notice: exactTitle,
+    sources: [{ ...source(registered), id: "source-0" }],
+    analyses: [analysis("행사명 | 제4회 수산제농경문화제")],
+    lang: "ko",
+    checkedAt: "2026-11-04T00:00:00Z",
+    warnings: ["source_too_large"],
+    attempts: [
+      {
+        url: "https://large.example/notice",
+        outcome: "fetch_failed",
+        code: "source_too_large",
+      },
+      { url: registered, outcome: "compared", sourceId: "source-0" },
+    ],
+  });
+  assert.deepEqual(result.attempts, [
+    {
+      url: "https://large.example/notice",
+      outcome: "fetch_failed",
+      code: "source_too_large",
+    },
+    {
+      url: registered,
+      outcome: "compared",
+      sourceId: "source-0",
+      authority: "registered",
+      identity: "ok",
+      section: false,
+      verified: 1,
+      fields: 1,
+    },
+  ]);
+  // Identity failures are named by category, without notice or source text.
+  const spaced = assembleResult({
+    id: "test",
+    notice: poster,
+    sources: [{ ...source(registered), id: "source-0" }],
+    analyses: [analysis("행사명 | 제4회 수산제농경문화제")],
+    lang: "ko",
+    attempts: [{ url: registered, outcome: "compared", sourceId: "source-0" }],
+  });
+  assert.equal(spaced.attempts?.[0].identity, "title");
+  assert.equal(spaced.attempts?.[0].verified, 0);
+  // Without attempts (demo or older results) the field stays absent.
+  assert.equal(
+    assembleResult({
+      id: "test",
+      notice: exactTitle,
+      sources: [],
+      analyses: [],
+      lang: "ko",
+    }).attempts,
+    undefined,
+  );
+});

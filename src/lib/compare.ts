@@ -1,5 +1,7 @@
 import {
   normalize,
+  type IdentityCategory,
+  type SourceAttempt,
   type FieldComparison,
   type ModelComparison,
   type Notice,
@@ -775,17 +777,27 @@ export function assembleResult(args: {
   elapsedMs?: number;
   /** Receives fixed reason codes only, for server logs. */
   diagnostics?: string[];
+  /** Per-candidate outcomes from retrieval; comparison details are added. */
+  attempts?: SourceAttempt[];
 }): Result {
   const { notice, sources, analyses } = args;
   const comparisons: FieldComparison[] = [];
   const warnings = [...(args.warnings || [])];
   let identityFailed = false;
+  const perSource = new Map<string, Partial<SourceAttempt>>();
   analyses.forEach((m, i) => {
     if (!sources[i]) return;
     const verified = verifyComparison(notice, sources[i], m);
     if (verified.identityReason)
       args.diagnostics?.push(verified.identityReason);
     if (verified.scopeRejected) args.diagnostics?.push("field_scope");
+    perSource.set(sources[i].id, {
+      authority: sources[i].authority,
+      identity: identityCategory(verified.identityReason),
+      section: verified.scopeRejected,
+      verified: verified.fields.filter((field) => field.verified).length,
+      fields: verified.fields.length,
+    });
     comparisons.push(...verified.fields);
     warnings.push(...verified.warnings);
     if (!verified.identity) identityFailed = true;
@@ -867,7 +879,48 @@ export function assembleResult(args: {
     warnings: [...new Set(warnings)],
     lang: args.lang,
     elapsedMs: args.elapsedMs || 0,
+    ...(args.attempts
+      ? {
+          attempts: args.attempts.map((attempt) => ({
+            ...attempt,
+            ...((attempt.sourceId && perSource.get(attempt.sourceId)) || {}),
+            ...(attempt.sourceId && !perSource.has(attempt.sourceId)
+              ? {
+                  authority: sources.find((s) => s.id === attempt.sourceId)
+                    ?.authority,
+                }
+              : {}),
+          })),
+        }
+      : {}),
   };
+}
+
+function identityCategory(reason: IdentityReason | null): IdentityCategory {
+  switch (reason) {
+    case null:
+      return "ok";
+    case "title_generic":
+    case "title_not_in_quote":
+      return "title";
+    case "institution_generic":
+    case "institution_missing":
+    case "context_conflict":
+      return "institution";
+    case "edition_missing":
+    case "edition_marker":
+      return "edition";
+    case "heading_other":
+      return "heading";
+    case "page_archived":
+      return "archived";
+    case "model_different":
+      return "different";
+    case "quote_not_exact":
+      return "quote";
+    case "country":
+      return "country";
+  }
 }
 
 export function validExplicitTimestamp(value: string): boolean {

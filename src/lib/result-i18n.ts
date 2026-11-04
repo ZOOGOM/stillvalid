@@ -64,6 +64,29 @@ const resultKeys = [
   "warning_fetch",
   "warning_network",
   "warning_budget",
+  "attemptsTitle",
+  "attempt_compared",
+  "attempt_fetch_failed",
+  "attempt_unrelated",
+  "attempt_compare_failed",
+  "identity_ok",
+  "identity_title",
+  "identity_institution",
+  "identity_edition",
+  "identity_heading",
+  "identity_archived",
+  "identity_different",
+  "identity_quote",
+  "identity_country",
+  "identity_section",
+  "evidenceCount",
+  "timingTitle",
+  "timing_search",
+  "timing_fetch",
+  "timing_compare",
+  "timing_calls",
+  "timing_total",
+  "attemptsNote",
 ] as const;
 
 export type ResultCopyKey = (typeof resultKeys)[number];
@@ -149,6 +172,29 @@ const translations: Record<ResultLang, ResultCopy> = {
     warning_fetch: "部分资料无法获取，因此核查范围有限。",
     warning_network: "当前网络无法访问来源网页。",
     warning_budget: "已达到今日可用的请求额度。",
+    attemptsTitle: "各来源的核查情况",
+    attempt_compared: "已比较",
+    attempt_fetch_failed: "无法读取",
+    attempt_unrelated: "与此公告无关，未比较",
+    attempt_compare_failed: "分析未完成",
+    identity_ok: "已确认为同一公告",
+    identity_title: "来源文本中没有逐字出现公告标题（空格和附加字也算差异）",
+    identity_institution: "发布机构未确认或不一致",
+    identity_edition: "届次或年份未确认或不一致",
+    identity_heading: "页面标题指向其他公告或文章",
+    identity_archived: "页面注明已归档、结束或撤回",
+    identity_different: "被判断为另一则公告",
+    identity_quote: "用于确认身份的引文与来源原文不完全一致",
+    identity_country: "国家不同",
+    identity_section: "部分数值来自其他活动或届次的部分，已排除",
+    evidenceCount: "已确认引文：{n}/{m}",
+    timingTitle: "处理时间",
+    timing_search: "搜索",
+    timing_fetch: "获取资料",
+    timing_compare: "比较",
+    timing_calls: "模型调用 {n} 次",
+    timing_total: "服务器合计",
+    attemptsNote: "各来源的具体问题已在“各来源的核查情况”中分别列出。",
   },
   es: {
     resultEyebrow: "Resultado de la comprobación",
@@ -231,6 +277,35 @@ const translations: Record<ResultLang, ResultCopy> = {
     warning_network:
       "La red actual no permite acceder a las páginas de las fuentes.",
     warning_budget: "Se ha alcanzado el límite de solicitudes de hoy.",
+    attemptsTitle: "Qué pasó con cada fuente",
+    attempt_compared: "Comparada",
+    attempt_fetch_failed: "No se pudo leer",
+    attempt_unrelated: "No relacionada con este aviso; no se comparó",
+    attempt_compare_failed: "El análisis no terminó",
+    identity_ok: "Se confirmó que es el mismo aviso",
+    identity_title:
+      "El título del aviso no aparece letra por letra en el texto de la fuente (los espacios y las palabras añadidas cuentan)",
+    identity_institution: "La institución emisora no se confirmó o es distinta",
+    identity_edition: "La edición o el año no se confirmaron o son distintos",
+    identity_heading:
+      "El título de la página se refiere a otro aviso o artículo",
+    identity_archived:
+      "La página indica que está archivada, finalizada o retirada",
+    identity_different: "Se consideró un aviso distinto",
+    identity_quote:
+      "La cita de identificación no coincide exactamente con el texto de la fuente",
+    identity_country: "El país es distinto",
+    identity_section:
+      "Algunos valores procedían de la sección de otro evento o edición y se excluyeron",
+    evidenceCount: "Citas confirmadas: {n} de {m}",
+    timingTitle: "Tiempo de procesamiento",
+    timing_search: "Búsqueda",
+    timing_fetch: "Obtención",
+    timing_compare: "Comparación",
+    timing_calls: "{n} llamadas al modelo",
+    timing_total: "Total del servidor",
+    attemptsNote:
+      "Los problemas de cada fuente se muestran por separado en «Qué pasó con cada fuente».",
   },
   fr: {
     resultEyebrow: "Résultat de la vérification",
@@ -316,6 +391,34 @@ const translations: Record<ResultLang, ResultCopy> = {
     warning_network:
       "Le réseau actuel ne permet pas d’accéder aux pages des sources.",
     warning_budget: "Le quota de demandes du jour est atteint.",
+    attemptsTitle: "Ce qui s'est passé pour chaque source",
+    attempt_compared: "Comparée",
+    attempt_fetch_failed: "Lecture impossible",
+    attempt_unrelated: "Sans rapport avec cet avis ; non comparée",
+    attempt_compare_failed: "L'analyse n'a pas abouti",
+    identity_ok: "Même avis confirmé",
+    identity_title:
+      "Le titre de l'avis n'apparaît pas à l'identique dans le texte de la source (espaces et mots accolés compris)",
+    identity_institution: "L'organisme émetteur n'est pas confirmé ou diffère",
+    identity_edition: "L'édition ou l'année n'est pas confirmée ou diffère",
+    identity_heading: "Le titre de la page désigne un autre avis ou article",
+    identity_archived:
+      "La page indique qu'elle est archivée, terminée ou retirée",
+    identity_different: "Jugé comme un autre avis",
+    identity_quote:
+      "La citation d'identification ne correspond pas exactement au texte de la source",
+    identity_country: "Le pays diffère",
+    identity_section:
+      "Certaines valeurs provenaient de la section d'un autre événement ou d'une autre édition et ont été écartées",
+    evidenceCount: "Citations confirmées : {n} sur {m}",
+    timingTitle: "Temps de traitement",
+    timing_search: "Recherche",
+    timing_fetch: "Récupération",
+    timing_compare: "Comparaison",
+    timing_calls: "{n} appels au modèle",
+    timing_total: "Total serveur",
+    attemptsNote:
+      "Les problèmes propres à chaque source sont indiqués séparément dans « Ce qui s'est passé pour chaque source ».",
   },
   de: {
     resultEyebrow: "Ergebnis der Prüfung",
@@ -402,6 +505,37 @@ const translations: Record<ResultLang, ResultCopy> = {
     warning_network:
       "Das aktuelle Netzwerk kann nicht auf die Quellseiten zugreifen.",
     warning_budget: "Das heutige Anfragekontingent ist erreicht.",
+    attemptsTitle: "Was mit jeder Quelle geschah",
+    attempt_compared: "Verglichen",
+    attempt_fetch_failed: "Konnte nicht gelesen werden",
+    attempt_unrelated:
+      "Nicht zu dieser Bekanntmachung gehörig; nicht verglichen",
+    attempt_compare_failed: "Analyse nicht abgeschlossen",
+    identity_ok: "Gleiche Bekanntmachung bestätigt",
+    identity_title:
+      "Der Titel steht nicht buchstabengetreu im Quelltext (Leerzeichen und angehängte Wörter zählen)",
+    identity_institution:
+      "Die herausgebende Stelle wurde nicht bestätigt oder weicht ab",
+    identity_edition: "Ausgabe oder Jahr wurde nicht bestätigt oder weicht ab",
+    identity_heading:
+      "Die Seitenüberschrift nennt eine andere Bekanntmachung oder einen anderen Artikel",
+    identity_archived:
+      "Die Seite gibt an, archiviert, beendet oder zurückgezogen zu sein",
+    identity_different: "Als andere Bekanntmachung eingestuft",
+    identity_quote:
+      "Das Identitätszitat stimmt nicht exakt mit dem Quelltext überein",
+    identity_country: "Das Land weicht ab",
+    identity_section:
+      "Einige Werte stammten aus dem Abschnitt einer anderen Veranstaltung oder Ausgabe und wurden ausgelassen",
+    evidenceCount: "Bestätigte Zitate: {n} von {m}",
+    timingTitle: "Bearbeitungszeit",
+    timing_search: "Suche",
+    timing_fetch: "Abruf",
+    timing_compare: "Vergleich",
+    timing_calls: "{n} Modellaufrufe",
+    timing_total: "Server gesamt",
+    attemptsNote:
+      "Probleme einzelner Quellen stehen separat unter „Was mit jeder Quelle geschah“.",
   },
   ja: {
     resultEyebrow: "お知らせの確認結果",
@@ -480,6 +614,32 @@ const translations: Record<ResultLang, ResultCopy> = {
     warning_network:
       "現在のネットワークでは情報源のページにアクセスできません。",
     warning_budget: "本日のリクエスト上限に達しました。",
+    attemptsTitle: "出典ごとの確認結果",
+    attempt_compared: "比較済み",
+    attempt_fetch_failed: "読み込めませんでした",
+    attempt_unrelated: "このお知らせと無関係のため比較していません",
+    attempt_compare_failed: "分析が完了しませんでした",
+    identity_ok: "同じお知らせと確認",
+    identity_title:
+      "お知らせのタイトルが出典の本文に一字一句そのままでは見つかりません（空白や付いた語も差異になります）",
+    identity_institution: "発行機関が確認できないか、異なります",
+    identity_edition: "回次または年が確認できないか、異なります",
+    identity_heading: "ページの見出しが別のお知らせや記事を指しています",
+    identity_archived: "アーカイブ・終了・撤回されたページと記載されています",
+    identity_different: "別のお知らせと判断されました",
+    identity_quote: "同一性の根拠となる引用が出典の本文と完全には一致しません",
+    identity_country: "国が異なります",
+    identity_section:
+      "一部の値は別の行事や回次の項目からのもので、除外しました",
+    evidenceCount: "確認済みの引用：{m}件中{n}件",
+    timingTitle: "処理時間",
+    timing_search: "検索",
+    timing_fetch: "資料の取得",
+    timing_compare: "比較",
+    timing_calls: "モデル呼び出し {n} 回",
+    timing_total: "サーバー合計",
+    attemptsNote:
+      "出典ごとの問題は「出典ごとの確認結果」に分けて表示しています。",
   },
   pt: {
     resultEyebrow: "Resultado da verificação",
@@ -564,6 +724,35 @@ const translations: Record<ResultLang, ResultCopy> = {
       "Alguns materiais não puderam ser obtidos, por isso a cobertura é limitada.",
     warning_network: "A rede atual não consegue acessar as páginas das fontes.",
     warning_budget: "O limite de solicitações de hoje foi atingido.",
+    attemptsTitle: "O que aconteceu com cada fonte",
+    attempt_compared: "Comparada",
+    attempt_fetch_failed: "Não foi possível ler",
+    attempt_unrelated: "Sem relação com este aviso; não comparada",
+    attempt_compare_failed: "A análise não terminou",
+    identity_ok: "Mesmo aviso confirmado",
+    identity_title:
+      "O título do aviso não aparece letra por letra no texto da fonte (espaços e palavras anexadas contam)",
+    identity_institution:
+      "A instituição emissora não foi confirmada ou é diferente",
+    identity_edition: "A edição ou o ano não foi confirmado ou é diferente",
+    identity_heading: "O título da página se refere a outro aviso ou artigo",
+    identity_archived:
+      "A página informa que está arquivada, encerrada ou retirada",
+    identity_different: "Considerado um aviso diferente",
+    identity_quote:
+      "A citação de identificação não corresponde exatamente ao texto da fonte",
+    identity_country: "O país é diferente",
+    identity_section:
+      "Alguns valores vieram da seção de outro evento ou edição e foram excluídos",
+    evidenceCount: "Citações confirmadas: {n} de {m}",
+    timingTitle: "Tempo de processamento",
+    timing_search: "Busca",
+    timing_fetch: "Obtenção",
+    timing_compare: "Comparação",
+    timing_calls: "{n} chamadas ao modelo",
+    timing_total: "Total do servidor",
+    attemptsNote:
+      "Os problemas de cada fonte aparecem separadamente em “O que aconteceu com cada fonte”.",
   },
   ar: {
     resultEyebrow: "نتيجة التحقق من الإعلان",
@@ -640,6 +829,30 @@ const translations: Record<ResultLang, ResultCopy> = {
     warning_fetch: "تعذر جلب بعض المواد، لذا فإن نطاق التحقق محدود.",
     warning_network: "لا تستطيع الشبكة الحالية الوصول إلى صفحات المصادر.",
     warning_budget: "تم بلوغ الحد المتاح لطلبات اليوم.",
+    attemptsTitle: "ما حدث لكل مصدر",
+    attempt_compared: "تمت المقارنة",
+    attempt_fetch_failed: "تعذرت القراءة",
+    attempt_unrelated: "غير مرتبط بهذا الإعلان؛ لم تتم المقارنة",
+    attempt_compare_failed: "لم يكتمل التحليل",
+    identity_ok: "تم التأكد من أنه الإعلان نفسه",
+    identity_title:
+      "لا يظهر عنوان الإعلان حرفيًا في نص المصدر (المسافات والكلمات الملتصقة تُحتسب)",
+    identity_institution: "لم يتم التأكد من الجهة المصدرة أو أنها مختلفة",
+    identity_edition: "لم يتم التأكد من الدورة أو السنة أو أنها مختلفة",
+    identity_heading: "عنوان الصفحة يشير إلى إعلان أو مقال آخر",
+    identity_archived: "تذكر الصفحة أنها مؤرشفة أو منتهية أو مسحوبة",
+    identity_different: "اعتُبر إعلانًا مختلفًا",
+    identity_quote: "اقتباس التعريف لا يطابق نص المصدر تمامًا",
+    identity_country: "البلد مختلف",
+    identity_section: "بعض القيم جاءت من قسم فعالية أو دورة أخرى فاستُبعدت",
+    evidenceCount: "الاقتباسات المؤكدة: {n} من {m}",
+    timingTitle: "وقت المعالجة",
+    timing_search: "البحث",
+    timing_fetch: "جلب المصادر",
+    timing_compare: "المقارنة",
+    timing_calls: "{n} استدعاءات للنموذج",
+    timing_total: "إجمالي الخادم",
+    attemptsNote: "تظهر مشكلات كل مصدر بشكل منفصل في «ما حدث لكل مصدر».",
   },
   ru: {
     resultEyebrow: "Результат проверки объявления",
@@ -722,6 +935,35 @@ const translations: Record<ResultLang, ResultCopy> = {
     warning_network:
       "Текущая сеть не позволяет получить доступ к страницам источников.",
     warning_budget: "Достигнут сегодняшний лимит запросов.",
+    attemptsTitle: "Что произошло с каждым источником",
+    attempt_compared: "Сравнено",
+    attempt_fetch_failed: "Не удалось прочитать",
+    attempt_unrelated: "Не относится к этому объявлению; не сравнивалось",
+    attempt_compare_failed: "Анализ не завершён",
+    identity_ok: "Подтверждено, что это то же объявление",
+    identity_title:
+      "Название объявления не встречается в тексте источника буква в букву (пробелы и присоединённые слова учитываются)",
+    identity_institution: "Организация-издатель не подтверждена или отличается",
+    identity_edition: "Выпуск или год не подтверждены или отличаются",
+    identity_heading:
+      "Заголовок страницы относится к другому объявлению или статье",
+    identity_archived:
+      "На странице указано, что она в архиве, завершена или отозвана",
+    identity_different: "Признано другим объявлением",
+    identity_quote:
+      "Цитата для подтверждения не совпадает с текстом источника точно",
+    identity_country: "Страна отличается",
+    identity_section:
+      "Некоторые значения взяты из раздела другого мероприятия или выпуска и исключены",
+    evidenceCount: "Подтверждено цитат: {n} из {m}",
+    timingTitle: "Время обработки",
+    timing_search: "Поиск",
+    timing_fetch: "Получение",
+    timing_compare: "Сравнение",
+    timing_calls: "Вызовов модели: {n}",
+    timing_total: "Итого на сервере",
+    attemptsNote:
+      "Проблемы отдельных источников показаны в разделе «Что произошло с каждым источником».",
   },
 };
 
