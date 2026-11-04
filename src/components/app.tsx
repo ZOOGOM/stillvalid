@@ -55,9 +55,10 @@ import {
   resultLocale,
   type ResultLang,
 } from "@/lib/languages";
-import type { Lang, Notice, Result } from "@/lib/schema";
+import type { FieldComparison, Lang, Notice, Result } from "@/lib/schema";
 import type { DemoId } from "@/lib/demo";
 import { loadImage, prepareImage, transformImage } from "./image";
+import { googleMapsSearchUrl } from "@/lib/maps";
 
 type Stage = "input" | "review" | "processing" | "result";
 type Dialog = "how" | "about" | "privacy" | "delete" | null;
@@ -86,6 +87,38 @@ function countryName(code: string | null, lang: ResultLang) {
         code,
       ) || code
     : copy(lang).unset;
+}
+// A plain link to a Google Maps search for the displayed place text. It does
+// not confirm the place; it only opens a search in a new tab when activated.
+function MapSearchLink({
+  href,
+  place,
+  side,
+  rt,
+}: {
+  href: string;
+  place: string;
+  side: string;
+  rt: Record<ResultCopyKey, string>;
+}) {
+  return (
+    <a
+      className="map-search-link"
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <MapPin size={15} aria-hidden="true" />
+      <span>
+        <span className="sr-only">{side}: </span>
+        {rt.mapSearch}
+        {": "}
+        <bdi dir="auto">{place}</bdi>
+        <span className="sr-only"> ({rt.mapNewTab})</span>
+      </span>
+      <ExternalLink size={13} aria-hidden="true" />
+    </a>
+  );
 }
 type ClientTiming = {
   prepareMs?: number;
@@ -1093,6 +1126,22 @@ export default function StillValidApp() {
     }
   };
 
+  // Map search links for location cards only, built from the values shown on
+  // the card. Identical before/after values share one link. No links in
+  // synthetic examples (fictional places).
+  const mapLinks = (f: FieldComparison) => {
+    if (f.key !== "location" || !result || result.mode === "demo")
+      return { any: false } as const;
+    const before = googleMapsSearchUrl(f.before);
+    const after = googleMapsSearchUrl(f.after);
+    const same = !!before && !!after && f.before!.trim() === f.after!.trim();
+    return {
+      before: same ? null : before,
+      after: same ? null : after,
+      both: same ? before : null,
+      any: !!(before || after),
+    };
+  };
   // Per-candidate outcomes replace source-specific warnings in the summary
   // list, so one unreadable or oversized candidate does not read as a failure
   // of every source.
@@ -1896,6 +1945,14 @@ export default function StillValidApp() {
                       <div>
                         <small>{rt.originalValue}</small>
                         <p dir="auto">{f.before || "—"}</p>
+                        {mapLinks(f).before && (
+                          <MapSearchLink
+                            href={mapLinks(f).before!}
+                            place={f.before!.trim()}
+                            side={rt.originalValue}
+                            rt={rt}
+                          />
+                        )}
                       </div>
                       <span className="compare-arrow">
                         <ArrowRight size={17} />
@@ -1903,8 +1960,32 @@ export default function StillValidApp() {
                       <div>
                         <small>{rt.currentValue}</small>
                         <p dir="auto">{f.after || "—"}</p>
+                        {mapLinks(f).after && (
+                          <MapSearchLink
+                            href={mapLinks(f).after!}
+                            place={f.after!.trim()}
+                            side={rt.currentValue}
+                            rt={rt}
+                          />
+                        )}
                       </div>
                     </div>
+                    {mapLinks(f).both && (
+                      <div className="map-search-both">
+                        <MapSearchLink
+                          href={mapLinks(f).both!}
+                          place={f.before!.trim()}
+                          side={rt.mapBothSides}
+                          rt={rt}
+                        />
+                      </div>
+                    )}
+                    {mapLinks(f).any && (
+                      <p className="map-search-note">
+                        <MapPin size={14} aria-hidden="true" />
+                        <span>{rt.mapSearchNote}</span>
+                      </p>
+                    )}
                     <details className="evidence-details">
                       <summary>
                         <FileCheck2 size={15} />
@@ -2333,6 +2414,7 @@ export default function StillValidApp() {
               <p>{t.privacyBody}</p>
               <p>{t.privacyAbuse}</p>
               <p>{t.privacyMore}</p>
+              <p>{t.privacyMaps}</p>
               <a
                 href="https://dev.meta.ai/docs/models"
                 target="_blank"

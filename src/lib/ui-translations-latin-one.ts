@@ -200,6 +200,8 @@ export const esUiCopy: UiCopy = {
   autoFindDone: "Se recortó al área que parece el aviso. Puedes deshacerlo.",
   autoFindNone: "No se encontró el área del aviso. Recórtala tú.",
   autoFindUndo: "Deshacer recorte automático",
+  privacyMaps:
+    "Solo cuando tocas una búsqueda en el mapa se envía el texto del lugar elegido a Google Maps, y se aplican las políticas de Google. Antes de tocarla no se hace ninguna solicitud al mapa.",
 };
 
 export const frUiCopy: UiCopy = {
@@ -406,4 +408,6 @@ export const frUiCopy: UiCopy = {
     "Recadré sur la zone qui ressemble à l'avis. Vous pouvez annuler.",
   autoFindNone: "Aucune zone d'avis trouvée. Recadrez vous-même.",
   autoFindUndo: "Annuler le recadrage automatique",
+  privacyMaps:
+    "Ce n'est que lorsque vous touchez une recherche sur la carte que le texte du lieu choisi est envoyé à Google Maps, sous les règles de Google. Aucune requête cartographique n'est faite avant.",
 };

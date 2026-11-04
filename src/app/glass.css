@@ -1126,3 +1126,56 @@ h2 {
 .source-entry.attempt-unrelated .attempt-outcome {
   color: var(--muted);
 }
+
+/* Google Maps search links on location cards: same link style as the
+   evidence links; they only open a search and confirm nothing. */
+.map-search-link {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--link);
+  font-size: 0.92rem;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  /* Break between words (keep Korean words and Arabic letters joined); only
+     an overlong single word wraps inside itself. */
+  overflow-wrap: break-word;
+  word-break: keep-all;
+  max-width: 100%;
+  min-width: 0;
+}
+.map-search-link svg {
+  flex: none;
+  margin-top: 3px;
+}
+.map-search-link > span {
+  min-width: 0;
+}
+.map-search-both {
+  margin-top: 4px;
+}
+.map-search-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+.map-search-note svg {
+  flex: none;
+  margin-top: 3px;
+}
+@media (max-width: 640px) {
+  .map-search-link {
+    min-height: 44px;
+    align-items: center;
+    padding: 6px 0;
+  }
+  .map-search-link svg {
+    margin-top: 0;
+  }
+}

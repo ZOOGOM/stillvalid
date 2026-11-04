@@ -93,6 +93,10 @@ const resultKeys = [
   "timing_review",
   "timing_check",
   "openLink",
+  "mapSearch",
+  "mapNewTab",
+  "mapBothSides",
+  "mapSearchNote",
 ] as const;
 
 export type ResultCopyKey = (typeof resultKeys)[number];
@@ -207,6 +211,11 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_review: "您的核对",
     timing_check: "核查请求（整体）",
     openLink: "打开链接",
+    mapSearch: "在 Google 地图中搜索",
+    mapNewTab: "在新窗口中打开",
+    mapBothSides: "您保存的公告与查到资料中的同一地点",
+    mapSearchNote:
+      "地图搜索会把这段地点文字发送到 Google 地图供您查找，并不表示地点或来源已得到确认。",
   },
   es: {
     resultEyebrow: "Resultado de la comprobación",
@@ -324,6 +333,11 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_review: "Tu revisión",
     timing_check: "Solicitud de comprobación (completa)",
     openLink: "Abrir enlace",
+    mapSearch: "Buscar en Google Maps",
+    mapNewTab: "se abre en una pestaña nueva",
+    mapBothSides: "El mismo lugar en tu aviso y en el material consultado",
+    mapSearchNote:
+      "La búsqueda en el mapa envía este texto del lugar a Google Maps para que lo busques. No significa que el lugar ni la fuente estén confirmados.",
   },
   fr: {
     resultEyebrow: "Résultat de la vérification",
@@ -443,6 +457,11 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_review: "Votre relecture",
     timing_check: "Requête de vérification (complète)",
     openLink: "Ouvrir le lien",
+    mapSearch: "Rechercher sur Google Maps",
+    mapNewTab: "s'ouvre dans un nouvel onglet",
+    mapBothSides: "Même lieu dans votre avis et dans la source consultée",
+    mapSearchNote:
+      "La recherche sur la carte envoie ce texte de lieu à Google Maps pour que vous le cherchiez. Cela ne signifie pas que le lieu ou la source soit confirmé.",
   },
   de: {
     resultEyebrow: "Ergebnis der Prüfung",
@@ -566,6 +585,12 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_review: "Ihre Prüfung",
     timing_check: "Prüfanfrage (gesamt)",
     openLink: "Link öffnen",
+    mapSearch: "In Google Maps suchen",
+    mapNewTab: "öffnet in neuem Tab",
+    mapBothSides:
+      "Gleicher Ort in Ihrer Bekanntmachung und im abgerufenen Material",
+    mapSearchNote:
+      "Die Kartensuche sendet diesen Ortstext an Google Maps, damit Sie ihn nachschlagen können. Sie bedeutet nicht, dass Ort oder Quelle bestätigt sind.",
   },
   ja: {
     resultEyebrow: "お知らせの確認結果",
@@ -676,6 +701,11 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_review: "内容の確認（ユーザー）",
     timing_check: "確認リクエスト全体",
     openLink: "リンクを開く",
+    mapSearch: "Google マップで検索",
+    mapNewTab: "新しいタブで開きます",
+    mapBothSides: "手元のお知らせと取得した資料で同じ場所",
+    mapSearchNote:
+      "地図検索はこの場所の文言を Google マップに送って探す機能で、場所や出典が確認されたという意味ではありません。",
   },
   pt: {
     resultEyebrow: "Resultado da verificação",
@@ -795,6 +825,11 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_review: "Sua revisão",
     timing_check: "Solicitação de verificação (inteira)",
     openLink: "Abrir link",
+    mapSearch: "Pesquisar no Google Maps",
+    mapNewTab: "abre em uma nova aba",
+    mapBothSides: "O mesmo local no seu aviso e no material consultado",
+    mapSearchNote:
+      "A busca no mapa envia este texto do local ao Google Maps para você procurá-lo. Não significa que o local ou a fonte foram confirmados.",
   },
   ar: {
     resultEyebrow: "نتيجة التحقق من الإعلان",
@@ -901,6 +936,11 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_review: "مراجعتك",
     timing_check: "طلب التحقق (كاملًا)",
     openLink: "فتح الرابط",
+    mapSearch: "البحث في خرائط Google",
+    mapNewTab: "يفتح في علامة تبويب جديدة",
+    mapBothSides: "المكان نفسه في إعلانك وفي المادة المسترجعة",
+    mapSearchNote:
+      "يرسل البحث في الخريطة نص هذا المكان إلى خرائط Google لتبحث عنه، ولا يعني ذلك أن المكان أو المصدر قد تم تأكيده.",
   },
   ru: {
     resultEyebrow: "Результат проверки объявления",
@@ -1018,6 +1058,12 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_review: "Ваша проверка",
     timing_check: "Запрос проверки (целиком)",
     openLink: "Открыть ссылку",
+    mapSearch: "Искать в Google Картах",
+    mapNewTab: "открывается в новой вкладке",
+    mapBothSides:
+      "Одно и то же место в вашем объявлении и в найденном материале",
+    mapSearchNote:
+      "Поиск на карте отправляет этот текст места в Google Карты, чтобы вы могли его найти. Это не означает, что место или источник подтверждены.",
   },
 };
 

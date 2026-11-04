@@ -233,6 +233,11 @@ const ko = {
   timing_review: "내용 확인(사용자)",
   timing_check: "확인 요청 전체",
   openLink: "링크 열기",
+  mapSearch: "Google 지도에서 검색",
+  mapNewTab: "새 창에서 열림",
+  mapBothSides: "가지고 있던 안내와 조회한 자료의 같은 장소",
+  mapSearchNote:
+    "지도 검색은 이 장소 문구를 Google 지도로 보내 찾아보는 기능이며, 장소나 출처가 확인됐다는 뜻은 아니에요.",
   error_default: "확인을 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요.",
   error_input: "안내문 내용을 확인해 주세요.",
   error_not_a_notice:
@@ -290,6 +295,8 @@ const ko = {
   privacyMore:
     "위치 권한은 현재 위치로 지역 찾기를 누를 때만 요청해요. 좌표는 기기에서 국가 추정에만 사용하고 StillValid 서버로 전송하거나 저장하지 않아요. 감지한 지역은 직접 바꿀 수 있고, 지역 기억은 선택이에요. 학생 기록·민감정보가 담긴 자료는 사용하지 말고 필요한 부분만 잘라 주세요.",
   privacyMeta: "Meta 데이터 처리 안내",
+  privacyMaps:
+    "지도 검색을 누를 때만, 선택한 장소 문구가 Google 지도로 전달되며 Google의 정책이 적용됩니다. 누르기 전에는 지도 요청을 보내지 않습니다.",
   howTitle: "한 장의 안내를 세 단계로.",
   safety:
     "의료·법률·긴급 재난 행동 지시나 개인별 신청 자격을 판단하는 용도로 사용하지 마세요.",
@@ -542,6 +549,11 @@ const en: Copy = {
   timing_review: "Your review",
   timing_check: "Check request (whole)",
   openLink: "Open link",
+  mapSearch: "Search on Google Maps",
+  mapNewTab: "opens in a new tab",
+  mapBothSides: "Same place in your notice and the retrieved material",
+  mapSearchNote:
+    "Map search sends this place text to Google Maps so you can look it up. It does not mean the place or the source has been confirmed.",
   error_default:
     "We couldn't finish this check. Please try again in a little while.",
   error_input: "Please check the notice content.",
@@ -602,6 +614,8 @@ const en: Copy = {
   privacyMore:
     "Location permission is requested only when you choose to find your region. Coordinates remain on your device for an approximate country lookup and are not sent to or saved by StillValid. You can correct the region; remembering it is optional. Avoid student records or sensitive content and crop to the relevant public notice.",
   privacyMeta: "Meta data handling",
+  privacyMaps:
+    "Only when you tap a map search link is the selected place text sent to Google Maps, under Google's policies. No map request is made before you tap it.",
   howTitle: "One notice. Three considered steps.",
   safety:
     "Don't use this for medical or legal judgments, emergency instructions, or individual eligibility decisions.",

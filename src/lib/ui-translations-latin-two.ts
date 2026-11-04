@@ -206,6 +206,8 @@ export const deUiCopy: UiCopy = {
     "Auf den Bereich zugeschnitten, der wie die Bekanntmachung aussieht. Sie können das rückgängig machen.",
   autoFindNone: "Kein Bereich gefunden. Bitte selbst zuschneiden.",
   autoFindUndo: "Automatischen Zuschnitt rückgängig machen",
+  privacyMaps:
+    "Nur wenn Sie auf eine Kartensuche tippen, wird der gewählte Ortstext an Google Maps übermittelt; dann gelten Googles Richtlinien. Vorher wird keine Kartenanfrage gesendet.",
 };
 
 export const ptUiCopy: UiCopy = {
@@ -409,4 +411,6 @@ export const ptUiCopy: UiCopy = {
   autoFindDone: "Recortado na área que parece ser o aviso. Você pode desfazer.",
   autoFindNone: "Nenhuma área de aviso encontrada. Recorte você mesmo.",
   autoFindUndo: "Desfazer recorte automático",
+  privacyMaps:
+    "Somente quando você toca em uma busca no mapa o texto do local escolhido é enviado ao Google Maps, sob as políticas do Google. Nenhuma solicitação ao mapa é feita antes disso.",
 };
