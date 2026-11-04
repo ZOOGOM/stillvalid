@@ -7,6 +7,7 @@ import {
   type Candidate,
   type ModelComparison,
   type Source,
+  type SourceAttempt,
 } from "@/lib/schema";
 import { authorityFor, fetchSource, publicUrl } from "@/lib/source";
 import {
@@ -73,6 +74,8 @@ export async function POST(request: NextRequest) {
     const timing = { discoverMs: 0, fetchMs: 0, compareMs: 0, modelCalls: 0 };
     // Fixed identity/scope reason codes; never notice or source text.
     const diagnostics: string[] = [];
+    // Per-candidate outcome codes (no URLs) for the same log line.
+    const attemptCodes: string[] = [];
     const measure = async <T>(
       key: "discoverMs" | "fetchMs" | "compareMs",
       operation: () => Promise<T>,
@@ -157,6 +160,7 @@ export async function POST(request: NextRequest) {
           );
           const sources: Source[] = [];
           const analyses: ModelComparison[] = [];
+          const attempts: SourceAttempt[] = [];
           send("phase", { step: "sources", elapsedMs: Date.now() - started });
           await ensureActive();
           // Fetch candidates concurrently but decide in priority order, exactly
@@ -167,25 +171,35 @@ export async function POST(request: NextRequest) {
           const fetchAbort = new AbortController();
           const fetchSignal = AbortSignal.any([signal, fetchAbort.signal]);
           const fetchStarted = Date.now();
-          const attempts = candidates
+          const fetches = candidates
             .slice(0, 3)
             .map((candidate) =>
               settle(fetchSource(candidate.url, "pending", fetchSignal)),
             );
           try {
             let relatedFound = 0;
-            for (const attempt of attempts) {
+            for (const [index, fetch] of fetches.entries()) {
               if (relatedFound >= 2) break;
-              const outcome = await attempt;
+              const outcome = await fetch;
               if (!outcome.ok) {
-                warnings.push(fetchWarning(outcome.error));
+                const code = fetchWarning(outcome.error);
+                warnings.push(code);
+                attempts.push({
+                  url: candidates[index].url,
+                  outcome: "fetch_failed",
+                  code,
+                });
                 continue;
               }
-              sources.push({
-                ...outcome.value,
-                id: "source-" + sources.length,
+              const id = "source-" + sources.length;
+              sources.push({ ...outcome.value, id });
+              const relevant = sourceRelevant(notice, outcome.value);
+              attempts.push({
+                url: outcome.value.url,
+                outcome: relevant ? "compared" : "unrelated",
+                sourceId: id,
               });
-              if (sourceRelevant(notice, outcome.value)) relatedFound++;
+              if (relevant) relatedFound++;
             }
           } finally {
             fetchAbort.abort();
@@ -217,6 +231,15 @@ export async function POST(request: NextRequest) {
           if (firstFailure && !firstFailure.ok && !compared.length)
             throw firstFailure.error;
           if (failed.length) warnings.push("source_compare_failed");
+          for (const attempt of attempts)
+            if (failed.some((source) => source.id === attempt.sourceId))
+              attempt.outcome = "compare_failed";
+          attemptCodes.push(
+            ...attempts.map(
+              (attempt) =>
+                attempt.outcome + (attempt.code ? ":" + attempt.code : ""),
+            ),
+          );
           for (const outcome of settled)
             if (outcome.ok) analyses.push(outcome.value);
           // assembleResult pairs analyses with sources by position.
@@ -237,8 +260,15 @@ export async function POST(request: NextRequest) {
             warnings,
             elapsedMs: Date.now() - started,
             diagnostics,
+            attempts,
           });
           result.candidates = candidates.slice(0, 3);
+          result.timing = {
+            searchMs: timing.discoverMs,
+            fetchMs: timing.fetchMs,
+            compareMs: timing.compareMs,
+            modelCalls: timing.modelCalls,
+          };
           await finishCheck(job.id, actor, result);
           send("result", result);
         } catch (error) {
@@ -263,8 +293,10 @@ export async function POST(request: NextRequest) {
           console.info(
             JSON.stringify({
               event: "check_timing",
+              id: job.id,
               ...timing,
               rejected: diagnostics,
+              attempts: attemptCodes,
               elapsedMs: Date.now() - started,
             }),
           );

@@ -89,6 +89,29 @@ export type FieldComparison = {
   relation: "changed" | "same" | "unclear";
   verified: boolean;
 };
+// What happened to each source candidate, in priority order. Codes only; the
+// URL is the public candidate address already shown to the user.
+export type IdentityCategory =
+  | "ok"
+  | "title"
+  | "institution"
+  | "edition"
+  | "heading"
+  | "archived"
+  | "different"
+  | "quote"
+  | "country";
+export type SourceAttempt = {
+  url: string;
+  outcome: "compared" | "fetch_failed" | "unrelated" | "compare_failed";
+  code?: string;
+  sourceId?: string;
+  authority?: Source["authority"];
+  identity?: IdentityCategory;
+  section?: boolean;
+  verified?: number;
+  fields?: number;
+};
 export type Result = {
   id: string;
   mode: "live" | "demo";
@@ -104,6 +127,15 @@ export type Result = {
   warnings: string[];
   lang: ResultLang;
   elapsedMs: number;
+  attempts?: SourceAttempt[];
+  timing?: CheckTiming;
+};
+// Server-side stage durations for one check, in milliseconds.
+export type CheckTiming = {
+  searchMs: number;
+  fetchMs: number;
+  compareMs: number;
+  modelCalls: number;
 };
 
 export function normalize(s: string): string {

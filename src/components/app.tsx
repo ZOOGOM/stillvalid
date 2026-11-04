@@ -85,6 +85,13 @@ function countryName(code: string | null, lang: ResultLang) {
       ) || code
     : copy(lang).unset;
 }
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
 function timeLabel(value: string, lang: ResultLang) {
   return new Intl.DateTimeFormat(resultLocale(lang), {
     dateStyle: "medium",
@@ -956,6 +963,20 @@ export default function StillValidApp() {
     }
   };
 
+  // Per-candidate outcomes replace source-specific warnings in the summary
+  // list, so one unreadable or oversized candidate does not read as a failure
+  // of every source.
+  const perSourceView = !!result?.attempts?.length && result.mode !== "demo";
+  const perCandidateWarning = (w: string) =>
+    w.startsWith("source_") || w === "fetch" || w === "network";
+  const shownWarnings = !result
+    ? []
+    : perSourceView
+      ? [
+          ...result.warnings.filter((w) => !perCandidateWarning(w)),
+          ...(result.warnings.some(perCandidateWarning) ? ["attempts"] : []),
+        ]
+      : result.warnings;
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main">
@@ -1760,15 +1781,17 @@ export default function StillValidApp() {
                     </details>
                   </article>
                 ))}
-                {!!result.warnings.length && (
+                {!!shownWarnings.length && (
                   <div className="result-warnings">
-                    {result.warnings.map((w) => (
+                    {shownWarnings.map((w) => (
                       <p key={w}>
                         <Info size={15} />
                         <span>
-                          {sourceWarningText(w, lang) ||
-                            rt[("warning_" + w) as ResultCopyKey] ||
-                            rt.warning_evidence}
+                          {w === "attempts"
+                            ? rt.attemptsNote
+                            : sourceWarningText(w, lang) ||
+                              rt[("warning_" + w) as ResultCopyKey] ||
+                              rt.warning_evidence}
                         </span>
                       </p>
                     ))}
@@ -1817,43 +1840,114 @@ export default function StillValidApp() {
                 <section className="sources-card">
                   <h2>
                     <ShieldCheck size={17} />
-                    {rt.sourcesTitle}
+                    {perSourceView ? rt.attemptsTitle : rt.sourcesTitle}
                   </h2>
-                  {result.sources.map((s) => (
-                    <div className="source-entry" key={s.id}>
-                      <div className="source-index">
-                        <FileText size={16} />
-                        <span>
-                          {result.mode === "demo" ? (
-                            rt.syntheticSource
-                          ) : (
-                            <bdi>{new URL(s.url).hostname}</bdi>
-                          )}
-                        </span>
-                      </div>
-                      <p dir="auto">{s.title}</p>
-                      {result.mode !== "demo" && (
-                        <>
-                          <small>
-                            {s.authority === "registered"
-                              ? rt.sourceRegistered
-                              : rt.sourceUnverified}
-                          </small>
-                          <small>
-                            {rt.fetched}: {timeLabel(s.fetchedAt, lang)}
-                          </small>
-                          <a
-                            href={s.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                  {perSourceView
+                    ? result.attempts!.map((a, i) => {
+                        const s = result.sources.find(
+                          (source) => source.id === a.sourceId,
+                        );
+                        return (
+                          <div
+                            className={"source-entry attempt-" + a.outcome}
+                            key={a.url + i}
                           >
-                            {rt.openSource}
-                            <ArrowUpRight size={13} />
-                          </a>
-                        </>
-                      )}
-                    </div>
-                  ))}
+                            <div className="source-index">
+                              <FileText size={16} />
+                              <span>
+                                <bdi>{hostOf(a.url)}</bdi>
+                              </span>
+                            </div>
+                            {s && <p dir="auto">{s.title}</p>}
+                            <p className="attempt-outcome">
+                              {rt[("attempt_" + a.outcome) as ResultCopyKey]}
+                            </p>
+                            {a.outcome === "fetch_failed" && (
+                              <small>
+                                {sourceWarningText(a.code || "", lang) ||
+                                  rt[
+                                    ("warning_" +
+                                      (a.code === "network"
+                                        ? "network"
+                                        : "fetch")) as ResultCopyKey
+                                  ]}
+                              </small>
+                            )}
+                            {a.authority && (
+                              <small>
+                                {a.authority === "registered"
+                                  ? rt.sourceRegistered
+                                  : rt.sourceUnverified}
+                              </small>
+                            )}
+                            {a.outcome === "compared" && a.identity && (
+                              <small>
+                                {
+                                  rt[
+                                    ("identity_" + a.identity) as ResultCopyKey
+                                  ]
+                                }
+                              </small>
+                            )}
+                            {a.section && <small>{rt.identity_section}</small>}
+                            {a.outcome === "compared" && !!a.fields && (
+                              <small>
+                                {rt.evidenceCount
+                                  .replace("{n}", String(a.verified || 0))
+                                  .replace("{m}", String(a.fields))}
+                              </small>
+                            )}
+                            {s && (
+                              <small>
+                                {rt.fetched}: {timeLabel(s.fetchedAt, lang)}
+                              </small>
+                            )}
+                            <a
+                              href={a.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {rt.openSource}
+                              <ArrowUpRight size={13} />
+                            </a>
+                          </div>
+                        );
+                      })
+                    : result.sources.map((s) => (
+                        <div className="source-entry" key={s.id}>
+                          <div className="source-index">
+                            <FileText size={16} />
+                            <span>
+                              {result.mode === "demo" ? (
+                                rt.syntheticSource
+                              ) : (
+                                <bdi>{new URL(s.url).hostname}</bdi>
+                              )}
+                            </span>
+                          </div>
+                          <p dir="auto">{s.title}</p>
+                          {result.mode !== "demo" && (
+                            <>
+                              <small>
+                                {s.authority === "registered"
+                                  ? rt.sourceRegistered
+                                  : rt.sourceUnverified}
+                              </small>
+                              <small>
+                                {rt.fetched}: {timeLabel(s.fetchedAt, lang)}
+                              </small>
+                              <a
+                                href={s.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {rt.openSource}
+                                <ArrowUpRight size={13} />
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      ))}
                   {!result.sources.length && (
                     <p className="muted">{rt.noComparison}</p>
                   )}
