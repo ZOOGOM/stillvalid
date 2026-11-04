@@ -333,3 +333,7 @@ Reading only, two photos (a Seoul notice and a Smithsonian fellowship, reconstru
 | `muse-spark-1.1` | 2.4–7.9 s | 1 of 2 | correct |
 
 The faster models were far quicker but misread one character of the Seoul title in most runs; the identity check compares the notice title with the official page, so such a misreading can send a correct comparison to review. Four runs per model is a small sample, and this does not measure comparison or search with these models. The default stays `muse-spark-1.3`; `META_EXTRACTION_MODEL` can select another reading model without a code change. Eight model calls.
+
+## 2026-11-04 production with `muse-spark-1.3-contributor` (`f671f3b`)
+
+Reading, search and comparison default to `muse-spark-1.3-contributor` (the owner's cost decision; see the privacy notice). Same two photos with their official links, twice each, reading then check, one call each: Seoul notice `changed` with a verified deadline 2 of 2, title read correctly ("서울영커리언스") 2 of 2, 32.3 and 35.7 s end to end (reading 16.4–19.8 s, comparison 12.6–13.6 s); Smithsonian fellowship `review` 2 of 2 (identity not confirmed, as with the earlier models), 12.0 and 16.4 s (reading 3.6–4.0 s, comparison 7.6–10.2 s). Median 24.3 s over these four runs versus 26.8 s with `muse-spark-1.3` at minimal effort. Four runs are a small sample: no accuracy claim beyond these outcomes, and the original P50 15 s / P90 30 s target is not shown to be met. Eight model calls.
