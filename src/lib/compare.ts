@@ -207,7 +207,7 @@ const pageArchive =
 const generalLabel =
   /(?<![\p{L}\p{N}])(?:official|notices?|updates?|amendments?|cancellations?|workshops?|events?|announcements?|pages?|home|news|calendar|list|category|categories|programmes?|programs?|actualités|événements|agenda|accueil|avis|noticias|eventos|inicio|aviso|veranstaltungen|nachrichten|startseite|termine|novidades|início|мероприятия|новости|главная)(?![\p{L}\p{N}])/gu;
 const generalLabelCjk =
-  /공지사항|공지|서울소식|새소식|소식|고시·공고|고시공고|행사안내|행사|프로그램|홈|목록|お知らせ|イベント|ニュース|一覧|ホーム|通知|公告|活动|首頁|首页|الأخبار|الفعاليات|الرئيسية/gu;
+  /공지사항|공지|서울소식|새소식|소식|고시·공고|고시공고|축제행사일정|축제일정|행사일정|일정|행사안내|행사|프로그램|홈|목록|お知らせ|イベント|ニュース|一覧|ホーム|通知|公告|活动|首頁|首页|الأخبار|الفعاليات|الرئيسية/gu;
 const updateLabel =
   /^(?:(?:19|20)\d{2}\s+)?(?:updates?|amendments?|notices?|recruitment|vacanc(?:y|ies)|수정 안내|모집|채용|synthetic example|합성 예시)$/u;
 

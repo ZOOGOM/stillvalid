@@ -304,3 +304,94 @@ test("per-candidate outcomes say what happened to each source", () => {
     undefined,
   );
 });
+
+test("Korean government hosts are registered, but resident-written pages are not", async () => {
+  const { authorityFor } = await import("../src/lib/source");
+  const registeredCases: [string, string][] = [
+    [
+      "www.miryang.go.kr",
+      "/tur/sim/EgovSchdulDetail.do?mnNo=40100000000&schdulId=SCHDUL_1",
+    ],
+    ["www.seoul.go.kr", "/news/news_notice.do?nttNo=454731"],
+    ["www.gov.uk", "/government/organisations/civil-service"],
+    ["www.gov.uk", "/government/news/community-ownership-fund"],
+  ];
+  for (const [host, path] of registeredCases)
+    assert.equal(authorityFor(host, path).authority, "registered", host + path);
+  assert.equal(
+    authorityFor("www.seoul.go.kr").institution,
+    "Seoul Metropolitan Government",
+  );
+  for (const [host, path] of [
+    ["www.miryang.go.kr", "/bbs/freeBoard.do?bbsId=1"],
+    ["www.miryang.go.kr", "/cmmnty/list.do"],
+    ["www.example.go.kr", "/board/list.do?menu=minwon"],
+    ["www.example.go.kr", "/qna/view.do"],
+    ["www.example.go.kr", "/petition/123"],
+    ["go.kr.example.com", "/notice"],
+    ["evilgo.kr", "/notice"],
+  ])
+    assert.equal(authorityFor(host, path).authority, "unverified", host + path);
+});
+
+test("the official Miryang schedule page identifies the notice; differing place spacing stays in review", () => {
+  // Constructed text mirroring the structure of the city's schedule detail
+  // page; the model output is constructed too.
+  const official = [
+    "제4회 수산제 농경문화제",
+    "구분 : 행사",
+    "날짜/시간: 2026-11-14 ~ 2026-11-15 [10:00~17:00]",
+    "□ 제4회 수산제 농경문화제",
+    "○ 기 간: 2026. 11. 14(토) ~ 11. 15.(일) 10:00 ~ 17:00",
+    "○ 장 소: 수산제 역사공원 일원(밀양시 하남읍 수산리 927)",
+    "○ 주 최: 밀양시",
+  ].join("\n");
+  const url =
+    "https://www.miryang.go.kr/tur/sim/EgovSchdulDetail.do?mnNo=40100000000&schdulId=SCHDUL_1";
+  const src: Source = {
+    id: "source-0",
+    url,
+    title: "축제행사일정",
+    text: official,
+    authority: "registered",
+    fetchedAt: "2026-11-04T00:00:00Z",
+  };
+  const model = (after: string, afterQuote: string): ModelComparison => ({
+    same_notice: true,
+    identity_quote: "□ 제4회 수산제 농경문화제",
+    country: "KR",
+    source_role: "original",
+    comparisons: [
+      {
+        key: "location",
+        before: "수산제역사공원 일원",
+        after,
+        before_quote: "장소: 수산제역사공원 일원",
+        after_quote: afterQuote,
+        relation: "same",
+      },
+    ],
+    summary: "",
+    next_action: "",
+  });
+  // Official spacing "수산제 역사공원" differs from the poster: not "same".
+  let run = check(
+    poster,
+    src,
+    model(
+      "수산제 역사공원 일원",
+      "○ 장 소: 수산제 역사공원 일원(밀양시 하남읍 수산리 927)",
+    ),
+  );
+  assert.deepEqual(run.diagnostics, []);
+  assert.ok(!run.result.warnings.includes("identity"));
+  assert.equal(run.result.status, "review");
+  assert.equal(run.result.comparisons[0].verified, false);
+  // A fabricated exact-looking value is never verified either.
+  run = check(
+    poster,
+    src,
+    model("수산제역사공원 일원", "○ 장 소: 수산제역사공원 일원"),
+  );
+  assert.equal(run.result.comparisons[0].verified, false);
+});
