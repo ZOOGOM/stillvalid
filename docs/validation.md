@@ -311,3 +311,9 @@ A code review on `ae54a88` reproduced the following with fixed responses and a c
   - NASM search: `review` (other candidates blocked or too large) at 39.2 s. With only one comparable source, the grace period was not exercised.
 - The session was deleted with HTTP 204.
 - The user-reported 200-second wait was not matched to a request, so whether these changes remove that particular wait is not established.
+
+## 2026-11-04 background check during review (production `fc1ad60`)
+
+The check now starts right after reading when the official link is known, and is reused only if the notice, region, language and link are unchanged at the tap. Local checks: 188 unit tests and six browser scripts (including `test:browser-early`: started before the tap and reused, dropped after an edit, not started without a link, with an uncertain reading or on a region mismatch). Fixed fetch responses; no model call.
+
+One production browser run, a Seoul notice as text with its printed official link, 10 s spent reviewing: reading 5.5 s; the link field was filled from the notice and the check started 0.2 s before the review screen appeared; after the tap the result arrived in 3.9 s with a verified `changed` outcome; 19.4 s from the start including the 10 s review; one POST to the check route. Two model calls (one reading, one comparison). This is one run on a text notice. It hides model time behind the user's review time and does not reduce the model's own time: reading a dense photo still takes about 17–25 s and the comparison about 7–25 s, so the original P50 15 s / P90 30 s target is not shown to be met by this change.
