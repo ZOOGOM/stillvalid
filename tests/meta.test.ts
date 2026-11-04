@@ -781,7 +781,7 @@ test("notice location sends one SAM 3.1 request and keeps the best large box", (
     });
     // The diagnostic holds only shape, lengths and token counts.
     assert.deepEqual(diagnostic, {
-      prompt: "poster",
+      prompt: "document",
       status: null,
       incomplete: null,
       topKeys: ["output"],
@@ -794,11 +794,15 @@ test("notice location sends one SAM 3.1 request and keeps the best large box", (
       boxAreas: [0, 65],
     });
     assert.ok(!JSON.stringify(diagnostic).includes("data="));
-    // A fixed alternative prompt is sent as given.
-    await client.locate(png, undefined, "document");
     assert.equal(
       (sent.input as { content: { text?: string }[] }[])[0].content[0].text,
       "document",
+    );
+    // A fixed alternative prompt is sent as given.
+    await client.locate(png, undefined, "paper");
+    assert.equal(
+      (sent.input as { content: { text?: string }[] }[])[0].content[0].text,
+      "paper",
     );
     // Zero matches is a normal empty result, not an error.
     const none = new MetaClient(

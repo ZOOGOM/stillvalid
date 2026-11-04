@@ -505,9 +505,11 @@ export const locatePrompts = [
 export type LocatePrompt = (typeof locatePrompts)[number];
 function defaultLocatePrompt(): LocatePrompt {
   const configured = process.env.SAM_NOTICE_PROMPT as LocatePrompt | undefined;
+  // Live (2026-11-04): "poster" matched nothing on two camera-style notice
+  // photos; "document" found the sheet in both (confidence 0.90 and 0.93).
   return configured && locatePrompts.includes(configured)
     ? configured
-    : "poster";
+    : "document";
 }
 
 /**
