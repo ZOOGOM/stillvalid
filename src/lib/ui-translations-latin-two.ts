@@ -200,7 +200,7 @@ export const deUiCopy: UiCopy = {
   checkImage: "Bitte prüfen Sie, ob der Text gut lesbar ist.",
   progressElapsed: "Vergangen: {s}",
   progressTypical:
-    "In unseren Messungen dauerten Prüfungen mit offiziellem Link etwa 45–90 Sekunden, mit Suche länger. Eine Dauer wird nicht garantiert.",
+    "Mit offiziellem Link dauerte es bisher etwa 45–90 Sekunden; mit Suche kann es länger dauern.",
   autoFind: "Bekanntmachung automatisch finden",
   autoFindDone:
     "Auf den Bereich zugeschnitten, der wie die Bekanntmachung aussieht. Sie können das rückgängig machen.",
@@ -418,7 +418,7 @@ export const ptUiCopy: UiCopy = {
   checkImage: "Confira se o texto está nítido.",
   progressElapsed: "Decorrido: {s}",
   progressTypical:
-    "Em nossas medições, verificações com link oficial levaram cerca de 45–90 segundos, e mais com busca. O tempo de conclusão não é garantido.",
+    "Até agora, com link oficial levou cerca de 45–90 segundos; com busca pode demorar mais.",
   autoFind: "Encontrar o aviso automaticamente",
   autoFindDone: "Recortado na área que parece ser o aviso. Você pode desfazer.",
   autoFindNone: "Nenhuma área de aviso encontrada. Recorte você mesmo.",

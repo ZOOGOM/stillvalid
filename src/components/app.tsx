@@ -2100,15 +2100,21 @@ export default function StillValidApp() {
             </div>
             {progressStarted !== null && (
               <p className="progress-elapsed" aria-live="off">
-                {t.progressElapsed.replace(
-                  "{s}",
-                  seconds(Math.max(0, progressNow - progressStarted), lang),
-                )}
+                <Clock3 size={14} aria-hidden="true" />
+                <span>
+                  {t.progressElapsed.replace(
+                    "{s}",
+                    seconds(Math.max(0, progressNow - progressStarted), lang),
+                  )}
+                </span>
               </p>
             )}
-            <p className="progress-hint">
-              {t.takesTime} {step !== "extract" && t.progressTypical}
-            </p>
+            <p className="progress-hint">{t.takesTime}</p>
+            {step !== "extract" && (
+              <p className="progress-hint progress-typical">
+                {t.progressTypical}
+              </p>
+            )}
             <button className="secondary" onClick={() => void cancel()}>
               <X size={16} />
               {t.cancel}
