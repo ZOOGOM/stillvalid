@@ -726,3 +726,92 @@ test("an extraction stall or provider 5xx is retried once; limits, refusals and 
     assert.equal(calls, 1);
     clearInterval(keepAlive);
   }));
+
+test("notice location sends one SAM 3.1 request and keeps the best large box", () =>
+  withTestKey(async () => {
+    const png =
+      "data:image/png;base64," +
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0]).toString("base64");
+    let reserved = 0;
+    let sent: Record<string, unknown> = {};
+    const client = new MetaClient(
+      async (input, init) => {
+        assert.ok(String(input).endsWith("/responses"));
+        sent = JSON.parse(String(init?.body));
+        return Response.json({
+          output: [
+            {
+              type: "message",
+              content: [
+                {
+                  type: "output_text",
+                  text: "<0f>0<|box;x1=10;y1=10;x2=40;y2=30;w=1000;h=800;c=0.99|><|mask;x=0;y=0;c=0.99;data=2,2,!ab|>,1<|box;x1=120;y1=80;x2=880;y2=760;w=1000;h=800;c=0.91|><|mask;x=0;y=0;c=0.91;data=2,2,!cd|>",
+                },
+              ],
+            },
+          ],
+        });
+      },
+      () => {
+        reserved++;
+      },
+    );
+    const box = await client.locate(png);
+    assert.equal(reserved, 1);
+    assert.equal(sent.model, "sam-3.1");
+    const content = (sent.input as { content: { type: string }[] }[])[0]
+      .content;
+    assert.deepEqual(
+      content.map((part) => part.type),
+      ["input_text", "input_image"],
+    );
+    assert.deepEqual(sent.metadata, {
+      include_confidence: "true",
+      mask_encoding: "one_bit",
+    });
+    // The tiny high-confidence box (a label) is not offered as the notice.
+    assert.deepEqual(box, {
+      x1: 120,
+      y1: 80,
+      x2: 880,
+      y2: 760,
+      w: 1000,
+      h: 800,
+      c: 0.91,
+    });
+    // Zero matches is a normal empty result, not an error.
+    const none = new MetaClient(
+      async () => Response.json({ output_text: "" }),
+      () => {},
+    );
+    assert.equal(await none.locate(png), null);
+    // A non-image upload is rejected before any provider call.
+    let calls = 0;
+    await assert.rejects(
+      new MetaClient(
+        async () => {
+          calls++;
+          return Response.json({});
+        },
+        () => {},
+      ).locate("data:image/png;base64,bm90IGFuIGltYWdl"),
+    );
+    assert.equal(calls, 0);
+  }));
+
+test("malformed or out-of-frame SAM boxes are ignored", async () => {
+  const { bestNoticeBox } = await import("../src/lib/meta");
+  assert.equal(
+    bestNoticeBox(
+      "<|box;x1=50;y1=50;x2=10;y2=10;w=100;h=100|><|box;x1=0;y1=0;x2=500;y2=90;w=100;h=100|><|box;x1=a;y1=0;x2=90;y2=90;w=100;h=100|>",
+    ),
+    null,
+  );
+  // Without confidence values the larger qualifying box wins.
+  assert.deepEqual(
+    bestNoticeBox(
+      "<|box;x1=0;y1=0;x2=40;y2=40;w=100;h=100|>,<|box;x1=5;y1=5;x2=95;y2=95;w=100;h=100|>",
+    ),
+    { x1: 5, y1: 5, x2: 95, y2: 95, w: 100, h: 100, c: null },
+  );
+});

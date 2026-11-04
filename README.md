@@ -61,7 +61,31 @@ Browser → Next.js API routes → Meta Model API
 
 The default model is `muse-spark-1.3` at `https://api.meta.ai/v1`. Keys stay on the server. Deterministic quote checks supplement model interpretation; they do not establish general factual accuracy. Unknown authority, ambiguous fields, different editions and conflicting sources remain review states.
 
-Cancellation needs an exact, current assertion for the same notice. A document role or cancellation keyword alone cannot establish it. The current deterministic cancellation grammar accepts limited English and Korean assertions; other or uncertain wording stays in review. Institution/title/edition checks are conservative and can also require review for aliases or unsupported source headings. Only a registered official domain can confirm a change. There, the issuer or edition may come from the page's dedicated heading (exactly "<title> | <institution>") or the text around the quoted title instead of the same excerpt, but nearby text naming another issuer, another edition or an archive keeps the result in review, and listing titles such as "Events" never qualify. A fetched page sharing nothing with the notice is reported as unrelated without a model comparison. Numeric dates remain ambiguous even when followed by a time. The ten display languages do not imply validated ten-language fact checking.
+Cancellation needs an exact, current assertion for the same notice. A document role or cancellation keyword alone cannot establish it. The current deterministic cancellation grammar accepts limited English and Korean assertions; other or uncertain wording stays in review. Institution/title/edition checks are conservative and can also require review for aliases or unsupported source headings. Only a registered official domain can confirm a change. There, the issuer or edition may come from a dedicated heading or the text around the quoted title. Supported site-name suffixes, generic menu labels, recruitment wording and invitation framing can be ignored when matching that heading; different titles, institutions and editions still require review. Generic listing headings such as "Events" never qualify. Evidence from a section labelled as another programme or edition is rejected, and page-level archive, replacement or withdrawal notices prevent verification even when the identity quote is otherwise sufficient. Section detection uses text and heading heuristics: an unlabelled mixture of programmes can still depend on model interpretation. A fetched page sharing nothing with the notice is reported as unrelated without a model comparison. Numeric dates remain ambiguous even when followed by a time. The ten display languages do not imply validated ten-language fact checking.
+
+## How StillValid uses Meta models
+
+```mermaid
+flowchart LR
+  P[Notice photo or text] -->|optional tap| S[SAM 3.1: find the notice in the photo]
+  S --> P
+  P --> E[Muse Spark 1.3: transcribe into a strict JSON schema]
+  E --> R[User reviews title, institution, edition, fields]
+  R -->|official link given| F[Fetch HTML, plain text or PDF text layer]
+  R -->|no link| W[Muse Spark 1.3 + built-in web search: returned URLs only]
+  W --> F
+  F --> C[Muse Spark 1.3: field-by-field comparison with exact quotes]
+  C --> V[Deterministic verifier]
+  V --> O[Result: matched / changed / needs review, with quotes and per-source reasons]
+```
+
+- **Muse Spark 1.3, vision + structured output.** A notice photo is transcribed into `originalText` and fields under a strict JSON schema; every field value must be an exact excerpt of that text.
+- **Muse Spark 1.3, Responses API web search.** Without an official link, only URLs that the built-in search actually returned or cited become candidates. With a link, no search call is made.
+- **Muse Spark 1.3, evidence comparison.** The model compares the notice with the retrieved text and must quote both sides exactly. Official PDF notices are compared from their own text layer, extracted on the server; scanned PDFs are reported, never OCR'd.
+- **SAM 3.1 (opt-in).** "Find the notice automatically" sends the photo once to SAM 3.1 to suggest a crop around the printed notice. It runs only when the user taps it and can be undone. Its live behaviour has not yet been measured.
+- **Deterministic verifier.** A change is confirmed only when both quotes appear verbatim, the source is a registered official domain, and the notice's title, institution, edition and section match, with no archive or withdrawal notice. Anything else stays "needs review" and the result says, per source, what was missing. The model's output is evidence to check, not the verdict.
+- **Display languages.** Results can be shown in ten languages without another model call; original values and quotes are never translated.
+- **Maps.** Location values have a plain Google Maps search link that sends the shown place text only when tapped. It does not confirm the place or the source.
 
 The existing **Vercel + Upstash Redis** setup deploys from GitHub without an always-on server. The Marketplace-provided `KV_REST_API_URL` and `KV_REST_API_TOKEN` pair is accepted, as is the canonical Upstash REST pair. A local/persistent Node server with SQLite and Docker Compose is also supported. See [deployment and secret setup](docs/deployment.md) for details and remaining verification. GitHub Pages alone cannot execute the protected Meta API routes.
 

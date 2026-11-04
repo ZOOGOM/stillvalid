@@ -1,5 +1,7 @@
 import {
   normalize,
+  type IdentityCategory,
+  type SourceAttempt,
   type FieldComparison,
   type ModelComparison,
   type Notice,
@@ -205,7 +207,7 @@ const pageArchive =
 const generalLabel =
   /(?<![\p{L}\p{N}])(?:official|notices?|updates?|amendments?|cancellations?|workshops?|events?|announcements?|pages?|home|news|calendar|list|category|categories|programmes?|programs?|actualités|événements|agenda|accueil|avis|noticias|eventos|inicio|aviso|veranstaltungen|nachrichten|startseite|termine|novidades|início|мероприятия|новости|главная)(?![\p{L}\p{N}])/gu;
 const generalLabelCjk =
-  /공지사항|공지|서울소식|새소식|소식|고시·공고|고시공고|행사안내|행사|프로그램|홈|목록|お知らせ|イベント|ニュース|一覧|ホーム|通知|公告|活动|首頁|首页|الأخبار|الفعاليات|الرئيسية/gu;
+  /공지사항|공지|서울소식|새소식|소식|고시·공고|고시공고|축제행사일정|축제일정|행사일정|일정|행사안내|행사|프로그램|홈|목록|お知らせ|イベント|ニュース|一覧|ホーム|通知|公告|活动|首頁|首页|الأخبار|الفعاليات|الرئيسية/gu;
 const updateLabel =
   /^(?:(?:19|20)\d{2}\s+)?(?:updates?|amendments?|notices?|recruitment|vacanc(?:y|ies)|수정 안내|모집|채용|synthetic example|합성 예시)$/u;
 
@@ -263,6 +265,9 @@ function headingRest(sourceTitle: string, title: string): string[] | null {
   }
   return null;
 }
+
+const nameField =
+  /^(?:행사명|행사 이름|공고명|사업명|프로그램명|강좌명|축제명|대회명|교육명|과정명|event name|programme name|program name|course name)\s*[|:：]\s*(.+)$/u;
 
 // Words that describe a section or an action, never a programme's name.
 const sectionWords = new Set([
@@ -461,6 +466,10 @@ function otherSectionScope(
   if (!wanted.size) return false;
   const verdict = (label: string): "same" | "other" | "neutral" => {
     if (identifierIn(normalize(label), title)) return "same";
+    // An explicit name field ("행사명 | …", "Event name: …") that names
+    // something else starts another event's rows, even with no shared word.
+    const named = nameField.exec(normalize(label).trim());
+    if (named && named[1].trim()) return "other";
     const found = nameTokens(label, notice.institution);
     const shared = [...found].some((token) => wanted.has(token));
     if (!shared) return "neutral";
@@ -513,7 +522,10 @@ function sameIdentity(
   // Compare the complete supplied title; never infer a shorter event name.
   const title = normalize(notice.title);
   const institution = normalize(notice.institution);
-  const sourceTitle = normalize(source.title);
+  // A PDF's metadata title is not page content; it adds no heading evidence
+  // and no heading veto (as for a generic page label).
+  const heading = source.format === "pdf" ? "" : source.title;
+  const sourceTitle = normalize(heading);
   const registered = source.authority === "registered";
   // A general category, even with an institution, cannot identify one notice.
   const specificTitle = title
@@ -608,7 +620,7 @@ function sameIdentity(
     return "heading_other";
 
   const expected = editionMarkers(`${notice.title} ${notice.edition || ""}`);
-  for (const text of [quote, source.title]) {
+  for (const text of [quote, heading]) {
     for (const [kind, values] of editionMarkers(text)) {
       const wanted = expected.get(kind);
       if (wanted && [...values].some((value) => !wanted.has(value)))
@@ -768,17 +780,27 @@ export function assembleResult(args: {
   elapsedMs?: number;
   /** Receives fixed reason codes only, for server logs. */
   diagnostics?: string[];
+  /** Per-candidate outcomes from retrieval; comparison details are added. */
+  attempts?: SourceAttempt[];
 }): Result {
   const { notice, sources, analyses } = args;
   const comparisons: FieldComparison[] = [];
   const warnings = [...(args.warnings || [])];
   let identityFailed = false;
+  const perSource = new Map<string, Partial<SourceAttempt>>();
   analyses.forEach((m, i) => {
     if (!sources[i]) return;
     const verified = verifyComparison(notice, sources[i], m);
     if (verified.identityReason)
       args.diagnostics?.push(verified.identityReason);
     if (verified.scopeRejected) args.diagnostics?.push("field_scope");
+    perSource.set(sources[i].id, {
+      authority: sources[i].authority,
+      identity: identityCategory(verified.identityReason),
+      section: verified.scopeRejected,
+      verified: verified.fields.filter((field) => field.verified).length,
+      fields: verified.fields.length,
+    });
     comparisons.push(...verified.fields);
     warnings.push(...verified.warnings);
     if (!verified.identity) identityFailed = true;
@@ -860,7 +882,48 @@ export function assembleResult(args: {
     warnings: [...new Set(warnings)],
     lang: args.lang,
     elapsedMs: args.elapsedMs || 0,
+    ...(args.attempts
+      ? {
+          attempts: args.attempts.map((attempt) => ({
+            ...attempt,
+            ...((attempt.sourceId && perSource.get(attempt.sourceId)) || {}),
+            ...(attempt.sourceId && !perSource.has(attempt.sourceId)
+              ? {
+                  authority: sources.find((s) => s.id === attempt.sourceId)
+                    ?.authority,
+                }
+              : {}),
+          })),
+        }
+      : {}),
   };
+}
+
+function identityCategory(reason: IdentityReason | null): IdentityCategory {
+  switch (reason) {
+    case null:
+      return "ok";
+    case "title_generic":
+    case "title_not_in_quote":
+      return "title";
+    case "institution_generic":
+    case "institution_missing":
+    case "context_conflict":
+      return "institution";
+    case "edition_missing":
+    case "edition_marker":
+      return "edition";
+    case "heading_other":
+      return "heading";
+    case "page_archived":
+      return "archived";
+    case "model_different":
+      return "different";
+    case "quote_not_exact":
+      return "quote";
+    case "country":
+      return "country";
+  }
 }
 
 export function validExplicitTimestamp(value: string): boolean {

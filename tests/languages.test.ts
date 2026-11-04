@@ -41,6 +41,7 @@ test("source failures and input errors have useful text in every display languag
       "source_unrelated",
       "source_script_only",
       "source_compare_failed",
+      "source_pdf_no_text",
     ]) {
       assert.ok(sourceWarningText(code, lang), `${lang}: ${code}`);
     }

@@ -94,7 +94,8 @@ export const zhUiCopy: UiCopy = {
   editText: "修改原文并重新读取",
   sourceLabel: "官方公告网址",
   optional: "选填",
-  sourceHint: "没有链接？我们会查找可能的官方来源。",
+  sourceHint:
+    "填写官方页面链接可跳过搜索步骤，直接与该页面比较，速度更快。没有链接？我们会查找可能的官方来源。",
   sourcePlaceholder: "https://official-institution/notice",
   mismatch: "使用地区与公告中读取的国家不同。",
   useNoticeCountry: "使用公告中的国家",
@@ -168,6 +169,15 @@ export const zhUiCopy: UiCopy = {
   sourceSelected: "您可以使用官方网址重新核查。",
   keyboardHint: "按 Escape 键关闭",
   checkImage: "请确认照片中的文字清晰可读。",
+  progressElapsed: "已用时 {s}",
+  progressTypical:
+    "在我们的测量中，填写官方链接的核查约需 45–90 秒，经过搜索则更久。不保证完成时间。",
+  autoFind: "自动查找公告区域",
+  autoFindDone: "已裁剪到看起来像公告的区域，可以撤销。",
+  autoFindNone: "未找到公告区域，请手动裁剪。",
+  autoFindUndo: "撤销自动裁剪",
+  privacyMaps:
+    "只有在您点击地图搜索时，所选地点文字才会发送到 Google 地图，并适用 Google 的政策。点击之前不会发送任何地图请求。",
 };
 
 export const jaUiCopy: UiCopy = {
@@ -273,7 +283,8 @@ export const jaUiCopy: UiCopy = {
   editText: "原文を修正して読み直す",
   sourceLabel: "公式のお知らせの URL",
   optional: "任意",
-  sourceHint: "リンクがない場合は、公式資料の候補を探します。",
+  sourceHint:
+    "公式ページのリンクを入れると検索を省いてそのページと直接比較するため、より速くなります。リンクがない場合は、公式資料の候補を探します。",
   sourcePlaceholder: "https://official-institution/notice",
   mismatch: "利用地域とお知らせから読み取った国が異なります。",
   useNoticeCountry: "お知らせの国に変更",
@@ -362,4 +373,14 @@ export const jaUiCopy: UiCopy = {
   sourceSelected: "公式 URL を使って再確認できます。",
   keyboardHint: "Escape キーで閉じる",
   checkImage: "写真の文字が鮮明か確認してください。",
+  progressElapsed: "経過 {s}",
+  progressTypical:
+    "これまでの計測では、公式リンクありの確認で約45〜90秒、検索を経るとさらに長くかかりました。完了時間は保証されません。",
+  autoFind: "お知らせの範囲を自動で探す",
+  autoFindDone: "お知らせらしい範囲に合わせて切り抜きました。元に戻せます。",
+  autoFindNone:
+    "お知らせの範囲が見つかりませんでした。手動で切り抜いてください。",
+  autoFindUndo: "自動切り抜きを元に戻す",
+  privacyMaps:
+    "地図検索を押したときにだけ、選んだ場所の文言が Google マップに送られ、Google のポリシーが適用されます。押す前に地図へのリクエストは送りません。",
 };
