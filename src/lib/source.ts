@@ -239,8 +239,9 @@ export async function pdfText(
   const { getDocumentProxy, extractText, getMeta } = await import("unpdf");
   let pages: string[];
   let title = "";
+  let pdf: Awaited<ReturnType<typeof getDocumentProxy>> | undefined;
   try {
-    const pdf = await getDocumentProxy(bytes, {
+    pdf = await getDocumentProxy(bytes, {
       // The bundled pdf.js (6.4) has no eval/Function code path; also never
       // load font faces, system fonts or XFA forms for text extraction.
       disableFontFace: true,
@@ -261,6 +262,11 @@ export async function pdfText(
     if (error instanceof AppError) throw error;
     // Encrypted, malformed or unsupported PDFs.
     throw new AppError("source_format", 422);
+  } finally {
+    // The caller owns a proxy it passed to unpdf: release the document and
+    // its worker transport on every path, including the early page-limit
+    // rejection.
+    await pdf?.loadingTask.destroy().catch(() => {});
   }
   const text = pages
     .map((page) =>
