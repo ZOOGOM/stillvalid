@@ -95,12 +95,48 @@ function identifierIn(text: string, identifier: string): boolean {
   ).test(text);
 }
 
+// On a registered official domain only, identity evidence may come from the
+// page itself instead of the single quoted excerpt. Borrowed evidence is vetoed
+// by nearby text naming another issuer, another edition or an archive.
+const issuerPhrase =
+  /\b(?:issued|hosted|organi[sz]ed|presented)\s+by\s+([^.;\n]{2,80})|(?:주최|주관)\s*[:：]?\s*([^.\n]{2,40})/giu;
+const archiveContext =
+  /\b(?:archived?|past events?|previous (?:events?|editions?|years?)|no longer (?:current|available|valid)|this page is for|current event)\b|지난 행사|이전 회차|보관 자료|종료된 행사/iu;
+// Category words that name a listing rather than one programme or event.
+const listingTitle =
+  /^(?:events?|notices?|announcements?|updates?|news|calendar|workshops?|programmes?|programs?|공지사항|공지|새소식|행사|행사안내|お知らせ|イベント|ニュース|通知|公告|活动)$/u;
+
+function quoteWindow(text: string, quote: string): string {
+  const at = text.indexOf(quote);
+  if (at < 0) return "";
+  return text.slice(Math.max(0, at - 400), at + quote.length + 400);
+}
+
+function contextConflicts(
+  notice: Notice,
+  institution: string,
+  window: string,
+): boolean {
+  if (archiveContext.test(window)) return true;
+  for (const match of window.matchAll(issuerPhrase)) {
+    const issuer = normalize(match[1] || match[2] || "");
+    if (issuer && (!institution || !issuer.includes(institution))) return true;
+  }
+  const expected = editionMarkers(`${notice.title} ${notice.edition || ""}`);
+  for (const [kind, values] of editionMarkers(window)) {
+    const wanted = expected.get(kind);
+    if (wanted && [...values].some((value) => !wanted.has(value))) return true;
+  }
+  return false;
+}
+
 function sameIdentity(notice: Notice, source: Source, quote: string): boolean {
   const identity = normalize(quote);
   // Compare the complete supplied title; never infer a shorter event name.
   const title = normalize(notice.title);
   const institution = normalize(notice.institution);
   const sourceTitle = normalize(source.title);
+  const registered = source.authority === "registered";
   // A general category, even with an institution, cannot identify one notice.
   const specificTitle = title
     .replace(institution || "\0", "")
@@ -111,15 +147,40 @@ function sameIdentity(notice: Notice, source: Source, quote: string): boolean {
     )
     .replace(/공지사항|공지|お知らせ|通知|公告/gu, "")
     .replace(/[\s:·.,!()|/—–-]/g, "");
-  if (!specificTitle || !identifierIn(identity, title)) return false;
   const headingParts = sourceTitle.split(/\s*[|—–·]\s*/u);
-  // Keep institution evidence in the same exact source excerpt as the title.
-  // A matching page heading alone cannot tie a quoted title to its issuer.
-  if (institution && !identifierIn(identity, institution)) return false;
+  // ...except an issuer's own registered page titled exactly
+  // "<title> | <institution>" (e.g. "Fellowships | National Air and Space
+  // Museum"), unless the title merely names a listing such as "Events".
+  const dedicatedPage =
+    registered &&
+    !!institution &&
+    !listingTitle.test(title) &&
+    headingParts.length === 2 &&
+    headingParts.includes(title) &&
+    headingParts.includes(institution);
+  if ((!specificTitle && !dedicatedPage) || !identifierIn(identity, title))
+    return false;
   if (/^(?:library|museum|university|도서관|図書館)$/u.test(institution))
     return false;
-  if (notice.edition && !identifierIn(identity, normalize(notice.edition)))
-    return false;
+  const window = normalize(quoteWindow(source.text, quote));
+  // Institution and edition belong in the quoted excerpt. A registered page may
+  // supply them from its dedicated heading or the text around the quote.
+  let borrowed = !specificTitle;
+  if (institution && !identifierIn(identity, institution)) {
+    if (!registered || !(dedicatedPage || identifierIn(window, institution)))
+      return false;
+    borrowed = true;
+  }
+  if (notice.edition && !identifierIn(identity, normalize(notice.edition))) {
+    const edition = normalize(notice.edition);
+    if (
+      !registered ||
+      !(identifierIn(window, edition) || identifierIn(sourceTitle, edition))
+    )
+      return false;
+    borrowed = true;
+  }
+  if (borrowed && contextConflicts(notice, institution, window)) return false;
   // A generic page label can add no identity evidence. A specific, different
   // heading must not be overridden by an unrelated matching paragraph below it.
   const genericTitle = sourceTitle
