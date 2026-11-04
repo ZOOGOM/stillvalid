@@ -39,7 +39,7 @@ const result = {
   elapsedMs: 20,
 };
 
-async function open({ text, readability, region }) {
+async function open({ text, readability, region, freeze }) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
   });
@@ -48,14 +48,16 @@ async function open({ text, readability, region }) {
   await page.route("**/api/status", (route) =>
     route.fulfill({ json: { liveAvailable: true, demoAvailable: true } }),
   );
-  await page.route("**/api/extract", (route) =>
-    route.fulfill({
+  let reads = 0;
+  await page.route("**/api/extract", (route) => {
+    reads++;
+    return route.fulfill({
       json: {
         notice: { ...base, originalText: text },
         ...(readability ? { readability } : {}),
       },
-    }),
-  );
+    });
+  });
   const posts = [];
   await page.route("**/api/checks", async (route) => {
     if (route.request().method() !== "POST") return route.continue();
@@ -82,9 +84,13 @@ async function open({ text, readability, region }) {
   await page.goto(origin, { waitUntil: "networkidle" });
   await page.locator("#text-tab").click();
   await page.locator("textarea").first().fill(text);
+  if (freeze) {
+    await page.clock.install();
+    await page.clock.pauseAt(new Date());
+  }
   await page.locator(".start-button").click();
   await page.locator(".review-card").waitFor();
-  return { context, page, posts };
+  return { context, page, posts, reads: () => reads };
 }
 const note = "the check has already started in the background";
 
@@ -156,6 +162,60 @@ for (const [label, opts] of [
   assert.equal(posts.length, 0, label + ": nothing started");
   assert.equal(await page.getByText(note, { exact: false }).count(), 0);
   results.push(label + ": not started early");
+  await context.close();
+}
+
+// Edits made during the debounce cancel the request before it costs a call.
+{
+  const { context, page, posts } = await open({
+    text: base.originalText,
+    freeze: true,
+  });
+  await page.locator(".review-card input").first().fill("Edited immediately");
+  await page.clock.runFor(500);
+  assert.equal(
+    posts.length,
+    0,
+    "discarded reading does not start background work",
+  );
+  await page.locator(".review-card button.primary").click();
+  await page.locator(".result-container").waitFor();
+  assert.equal(posts.length, 1);
+  assert.equal(posts[0].notice.title, "Edited immediately");
+  results.push("debounce: an immediate edit prevents the discarded request");
+  await context.close();
+}
+// Display language does not restart factual verification.
+{
+  const { context, page, posts } = await open({ text: base.originalText });
+  await page.getByText(note, { exact: false }).waitFor();
+  await page.locator(".language-button").click();
+  await page.locator(".settings-language-fields select").selectOption("es");
+  await page.locator(".modal-heading .icon-button").click();
+  await page.locator(".review-card button.primary").click();
+  await page.locator(".result-container").waitFor();
+  assert.equal(posts.length, 1, "language changes reuse existing evidence");
+  results.push("display language change: no new model request");
+  await context.close();
+}
+// Returning to the same clear reading reuses OCR only; checking remains fresh.
+{
+  const { context, page, reads } = await open({ text: base.originalText });
+  await page.locator("details.transcript").evaluate((el) => (el.open = true));
+  await page.locator("details.transcript button").click();
+  await page.locator(".start-button").click();
+  await page.locator(".review-card").waitFor();
+  assert.equal(reads(), 1, "identical input does not re-extract");
+  await page.locator("details.transcript").evaluate((el) => (el.open = true));
+  await page.locator("details.transcript button").click();
+  await page
+    .locator("textarea")
+    .first()
+    .fill(base.originalText + " Changed.");
+  await page.locator(".start-button").click();
+  await page.locator(".review-card").waitFor();
+  assert.equal(reads(), 2, "changed input must re-extract");
+  results.push("reading cache: exact input reused, changed input invalidated");
   await context.close();
 }
 
