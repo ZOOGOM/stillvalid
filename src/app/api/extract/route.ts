@@ -14,7 +14,7 @@ import {
 import { errorResponse, readJson } from "@/lib/http";
 import { abuseKey, abuseSecret } from "@/lib/abuse";
 export const runtime = "nodejs";
-export const maxDuration = 90;
+export const maxDuration = 140;
 const schema = z.object({
   text: z.string().max(18000).default(""),
   image: z.string().max(3900000).optional(),
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         text,
         image,
         country,
-        AbortSignal.any([request.signal, AbortSignal.timeout(80000)]),
+        AbortSignal.any([request.signal, AbortSignal.timeout(130000)]),
       );
       if (notice.country && !isCountry(notice.country)) notice.country = null;
       return NextResponse.json(
