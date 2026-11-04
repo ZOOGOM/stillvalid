@@ -4,6 +4,8 @@
 
 A mobile-first web app that compares notice photos or text with official-source material and links changes to supporting quotes. 한국어 작업명은 **지금도 맞나요**입니다.
 
+**Full guides:** [English (README.en.md)](README.en.md) · [한국어 (README.ko.md)](README.ko.md) — features, how to use, how it works, the verification algorithm, measured results and limits.
+
 ## Implementation status
 
 The web app and server adapter include ten display languages, optional usage-region settings, image editing, extraction review, source discovery, evidence comparison, synthetic examples, deletion and failure recovery.
