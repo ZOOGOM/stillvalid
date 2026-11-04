@@ -57,7 +57,7 @@ It is meant for students, parents, newcomers, travellers and anyone who relies o
 | Area | Status |
 |---|---|
 | Web app, ten display languages, real Meta model calls, hosted storage | Working in production (`stillvalid-beta.vercel.app`). |
-| Automated tests | 188 unit and behaviour tests and six browser scripts pass locally. |
+| Automated tests | 192 unit and behaviour tests and six browser scripts pass locally. |
 | Production checks done | Session isolation and deletion, duplicate-request reuse, cancellation, concurrency limit (a 4th simultaneous check is refused). |
 | Speed target (median 15 s, 90th percentile 30 s) | **Not met.** Measured medians are 24–27 s with an official link on four runs. See [section 10](#10-measured-results). |
 | Accuracy on real notices with human-checked answers | **Not measured.** The ten-notice evaluation is prepared but has not been run. |
@@ -197,7 +197,7 @@ What was done about it:
 | Compare with the source | `muse-spark-1.3-contributor` | Chat Completions, strict `json_schema` | `reasoning_effort: minimal`, output budget 12,000 tokens |
 | Locate the notice (opt-in) | `sam-3.1` | Responses, concept prompt | Boxes parsed from tokens |
 
-The lower-priced `muse-spark-1.3-contributor` variant was chosen by the owner for cost. **Under Meta's terms for that variant, what you submit may be used to improve Meta's models.** The in-app privacy notice says so in all ten languages. Each step can be switched back with `META_EXTRACTION_MODEL`, `META_COMPARISON_MODEL` and `META_SEARCH_MODEL` (for example `muse-spark-1.3`).
+The lower-priced `muse-spark-1.3-contributor` variant was chosen by the owner for cost. **Under Meta's terms for that variant, what you submit may be used to improve Meta's models.** The in-app privacy notice says so in all ten languages. `META_MODEL` (server-only) changes all three Spark steps together; `META_EXTRACTION_MODEL`, `META_SEARCH_MODEL` and `META_COMPARISON_MODEL` override one step. Resolution is the step variable, then `META_MODEL`, then `muse-spark-1.3-contributor`; values are trimmed, and changing a variable needs a new deployment. Every Production build first runs a read-only model-catalog check (public model IDs only, no inference) and fails if a selected ID is unavailable, so the previous deployment keeps serving. Before switching models, review the privacy notice in all ten languages, because it describes the contributor configuration.
 
 Other models were measured for the reading step only: `muse-spark-1.2` read in 2.0–4.5 s and `muse-spark-1.1` in 2.4–7.9 s, but both misread a character in a Korean title in most runs, which can break the identity check. They are not used. No faster mode is named in the model list the deployment can see.
 
@@ -271,7 +271,8 @@ npm run verify:meta  # read-only model availability check (needs a key)
 | Variable | Purpose |
 |---|---|
 | `META_API_KEY` (alias `MODEL_API_KEY`) | Server-only Meta key |
-| `META_EXTRACTION_MODEL`, `META_COMPARISON_MODEL`, `META_SEARCH_MODEL` | Model for a step; default `muse-spark-1.3-contributor` |
+| `META_MODEL` | Model for all three Spark steps; default `muse-spark-1.3-contributor` |
+| `META_EXTRACTION_MODEL`, `META_SEARCH_MODEL`, `META_COMPARISON_MODEL` | Optional per-step overrides (higher priority than `META_MODEL`); leave unset for a single switch. `SAM_MODEL` controls the notice locator separately |
 | `META_REASONING_EFFORT_EXTRACTION`, `_COMPARISON`, `_SEARCH` | `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, or `none`; unset means minimal for reading and comparison, model default for search |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_URL`, `KV_REST_API_TOKEN`) | Hosted storage; use a writable token, never mix pairs |
 | `APP_URL` | Exact external HTTPS origin in production |
@@ -287,7 +288,7 @@ Never commit keys, and never prefix a secret with `NEXT_PUBLIC_`.
 
 | Route | Purpose |
 |---|---|
-| `GET /api/status` | Readiness, deployed commit and model name |
+| `GET /api/status` | Readiness, deployed commit, `model` (the comparison model) and `models` (extraction, search, comparison). These show configuration, not completed inference |
 | `POST /api/extract` | Read a photo or text; returns the notice, readability and timing |
 | `POST /api/locate` | SAM 3.1 notice area (opt-in) |
 | `POST /api/checks` | Run a check; streams `created`, `phase`, `ping`, `result` or `error` as NDJSON |
@@ -299,7 +300,7 @@ Never commit keys, and never prefix a secret with `NEXT_PUBLIC_`.
 ## 14. Testing
 
 ```bash
-npm test                 # 188 unit and behaviour tests
+npm test                 # 192 unit and behaviour tests
 npm run test:live-harness
 # with the app running and Chromium installed:
 CHROMIUM_PATH=/usr/bin/chromium npm run test:browser
