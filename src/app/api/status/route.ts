@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { configured, stepModel } from "@/lib/meta";
+import {
+  configured,
+  stepModel,
+  reasoningEffort,
+  searchToolLimit,
+} from "@/lib/meta";
 import { cleanup, newSession } from "@/lib/store";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +26,12 @@ export async function GET(request: NextRequest) {
         search: stepModel("search"),
         comparison: stepModel("comparison"),
       },
+      reasoning: {
+        extraction: reasoningEffort("extraction") ?? null,
+        search: reasoningEffort("search") ?? null,
+        comparison: reasoningEffort("comparison") ?? null,
+      },
+      searchMaxToolCalls: searchToolLimit() ?? null,
     },
     { headers: { "Cache-Control": "no-store" } },
   );
