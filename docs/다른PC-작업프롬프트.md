@@ -33,12 +33,8 @@
 두 문서가 다르면 시연영상-전체본.md 를 따른다. 문서에 없는 판단은 "정직성 우선, 시간 안에 끝내기"로 결정해.
 
 # 3. 자료 위치와 확인
-작업 폴더 ~/stillvalid-video/ 안에서 찾아:
-- takes/take-N/capture.mp4 (이전 녹화: take-2, 1170x2532, 60fps, 약 173초), takes/take-2/take.json (단계별 시각, 정지 이미지 촬영 구간), takes/take-2/stills/ (2340x5064 PNG 10장)
-- 없으면 handoff/ 의 stillvalid-handoff.zip(SHA-256 6e4e7455e03335da63c39ddfae820e28e982dab3efe88cf3e8c001c4bf1ed8a5)을 ~/stillvalid-video/ 에 풀어. HANDOFF.md 가 있으면 읽어.
-  (stillvalid-frames.zip, SHA-256 30fd7df12bbb9dff871e3c8b4b1469f21bc106cff77a4d926ef14c8b664eff04 는 원본 프레임 6,725장이다. capture.mp4 가 멀쩡하면 풀 필요 없다.)
-- 해시가 다르거나 capture.mp4 가 없거나 ffprobe 로 못 읽으면: 프레임 zip 에서 take.json 의 타임스탬프로 60fps 격자 재구성을 해(문서 19절 방법: 프레임마다 실제 타임스탬프를 가장 가까운 1/60초 칸에 놓고 빈 칸은 직전 프레임으로 채운 뒤 -framerate 60 으로 인코딩).
-- 그래도 자료가 없으면 3-2절로 직접 녹화한다. 이 컴퓨터에 녹화 자료가 전혀 없다고 미리 알려져 있으니, 자료 찾기에 3분 넘게 쓰지 말고 바로 3-2절로 가.
+이 컴퓨터에는 이전 녹화(takes/take-2 등)가 없다고 알려져 있다. ~/stillvalid-video/ 를 1분만 확인해서 takes/take-N/capture.mp4 와 take.json, stills/ 가 있으면 그것을 쓰고(ffprobe 로 1170x2532, 60fps 확인), 없으면 바로 3-2절로 가서 직접 녹화해. 자료 찾기에 3분 넘게 쓰지 마.
+(handoff zip 이 있으면: stillvalid-handoff.zip SHA-256 6e4e7455e03335da63c39ddfae820e28e982dab3efe88cf3e8c001c4bf1ed8a5 을 확인하고 풀어. stillvalid-frames.zip SHA-256 30fd7df12bbb9dff871e3c8b4b1469f21bc106cff77a4d926ef14c8b664eff04 는 capture.mp4 가 멀쩡하면 풀 필요 없다.)
 확인: `ffprobe`로 해상도·프레임율·길이, take.json 을 읽어 단계 이름과 시각, stills 파일 이름을 표로 정리해 ~/stillvalid-video/final/inventory.md 에 저장. 정지 이미지는 이미지 읽기 도구로 직접 열어 어떤 화면인지 확인해.
 
 # 3-1. 병렬 작업: 서브에이전트 사용
@@ -99,6 +95,7 @@ R7 "Your next step" 까지 스크롤.
 R9 Display language 를 한국어 → العربية → English 순서로 전환(아랍어 결과 정지 이미지). 이 동안 GET 이외의 요청이 0건인지 확인해 기록.
 R10 "Copy summary" 클릭(클립보드 길이 기록) → "Delete this result" 클릭 → 삭제 확인창이 뜨면 정지 이미지 → 확인하지 말고 닫기.
 R8 (맨 마지막) 홈 → "When it's a different edition" 예제 → 결과(합성 예제 배너가 보이게) 정지 이미지.
+(6-1절과 문서의 S0~S11 이름은 여기의 R0~R10 과 같은 단계다: S3=R3, S4=R4, S5=R5, S6=R6, S7=R7, S8=R8(합성 예제), S9=R9(언어 전환), S10=R10(복사·삭제 확인창).)
 저장: ~/stillvalid-video/takes/take-N/ 에 capture.mp4, stills/, take.json(단계별 시각, 읽기/확인 시간, 요청 로그, 프레임 통계, status 응답, 결과 요약).
 
 ## 3-2-4. 성공 판정과 재시도
@@ -112,6 +109,7 @@ R8 (맨 마지막) 홈 → "When it's a different edition" 예제 → 결과(합
 - 이 경우 N07 을 아래로 바꾸고, 정직성 자막을 "Synthetic example · No live lookup" 으로 하며, Demo card 날짜 자막과 "registered Seoul government domain" 주장은 빼:
   "When a deadline changes, StillValid shows the saved value and the new value side by side, each with the exact quote. This one is a built-in synthetic example, with no live lookup."
 - 유튜브 설명란에도 "the live comparison did not complete in our final recording" 를 사실대로 적어.
+- 읽기 이후 화면을 담은 테이크가 하나도 없으면(extract 도 실패) 앱 홈·설정·합성 예제 두 개(When a deadline changes, When it's a different edition)·언어 전환(합성 예제 결과 화면에서)·요약 복사로만 약 1분 30초 영상을 만든다. 이 경우 반드시 실제로 보여준 것만 내레이션과 자막에 쓰고, 보고서 맨 위에 "실제 공고 비교는 영상에 없음"이라고 적어.
 
 ## 3-2-6. 녹화값으로 바꿔야 하는 문서 값
 문서의 `f60f6fe`, `Reading: 22 s`, `Check: 61 s`, "3 checks 중 2 confirmed" 는 이전 녹화 값이다. 이번 녹화의 `/api/status` 의 deploymentSha 앞 7자리, 실측 읽기/확인 시간, 실제 성공/전체 테이크 수로 모든 자막, 설명란(description.txt), 엔딩 문구를 바꿔라. 모델 이름은 status 의 models 값을 그대로(현재 muse-spark-1.3-contributor 일 것) 쓰고 엔딩 구조도의 모델 표기는 "Muse Spark" 로 둔다.
