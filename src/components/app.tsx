@@ -85,6 +85,23 @@ function countryName(code: string | null, lang: ResultLang) {
       ) || code
     : copy(lang).unset;
 }
+type ClientTiming = {
+  prepareMs?: number;
+  extractMs?: number;
+  extractServerMs?: number;
+  extractCalls?: number;
+  extractedAt?: number;
+  reviewMs?: number;
+  checkMs?: number;
+};
+function seconds(ms: number, lang: ResultLang): string {
+  return new Intl.NumberFormat(resultLocale(lang), {
+    style: "unit",
+    unit: "second",
+    unitDisplay: "short",
+    maximumFractionDigits: ms < 10000 ? 1 : 0,
+  }).format(ms / 1000);
+}
 function hostOf(url: string): string {
   try {
     return new URL(url).hostname;
@@ -550,6 +567,22 @@ export default function StillValidApp() {
   const [notice, setNotice] = useState<Notice | null>(null),
     [sourceUrl, setSourceUrl] = useState(""),
     [result, setResult] = useState<Result | null>(null);
+  // Client-observed stage durations for the current flow (not stored).
+  const timings = useRef<ClientTiming>({});
+  const [clientTiming, setClientTiming] = useState<ClientTiming>({});
+  const [progressStarted, setProgressStarted] = useState<number | null>(null),
+    [progressNow, setProgressNow] = useState(0);
+  useEffect(() => {
+    if (stage !== "processing") {
+      setProgressStarted(null);
+      return;
+    }
+    const begin = Date.now();
+    setProgressStarted(begin);
+    setProgressNow(begin);
+    const tick = setInterval(() => setProgressNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, [stage]);
   const [live, setLive] = useState<boolean | null>(null),
     [error, setError] = useState<string | null>(null),
     [toast, setToast] = useState<{ text: string; lang: ResultLang } | null>(
@@ -684,6 +717,8 @@ export default function StillValidApp() {
     setCountryConfirmed(false);
   };
   const reset = () => {
+    setClientTiming({});
+    timings.current = {};
     controller.current?.abort();
     operation.current++;
     uploadGeneration.current++;
@@ -710,7 +745,9 @@ export default function StillValidApp() {
     setPreparing(true);
     setError(null);
     try {
+      const prepareStart = performance.now();
       const prepared = await prepareImage(file);
+      timings.current = { prepareMs: performance.now() - prepareStart };
       if (generation === uploadGeneration.current) {
         setImage(prepared);
         setImageName(file.name);
@@ -742,6 +779,8 @@ export default function StillValidApp() {
     setStep("extract");
     const abort = new AbortController();
     controller.current = abort;
+    const extractStart = performance.now();
+    if (mode === "text") timings.current = {};
     try {
       const response = await fetch("/api/extract", {
         method: "POST",
@@ -757,6 +796,13 @@ export default function StillValidApp() {
         throw new Error(await responseError(response, "upload_too_large"));
       const data = await response.json();
       if (abort.signal.aborted || operation.current !== generation) return;
+      timings.current = {
+        prepareMs: timings.current.prepareMs,
+        extractMs: performance.now() - extractStart,
+        extractServerMs: data.timing?.extractMs,
+        extractCalls: data.timing?.modelCalls,
+        extractedAt: performance.now(),
+      };
       setNotice(data.notice);
       setCountryConfirmed(false);
       setStage("review");
@@ -789,6 +835,25 @@ export default function StillValidApp() {
     setStep("search");
     const abort = new AbortController();
     controller.current = abort;
+    const checkStart = performance.now();
+    const reviewMs =
+      timings.current.extractedAt !== undefined
+        ? checkStart - timings.current.extractedAt
+        : undefined;
+    const finishTiming = () => {
+      // Photo and reading stages belong only to the first check after them.
+      const observed =
+        reviewMs === undefined
+          ? { checkMs: performance.now() - checkStart }
+          : {
+              ...timings.current,
+              reviewMs,
+              checkMs: performance.now() - checkStart,
+            };
+      // A recheck of the same notice is not a new review period.
+      timings.current = { ...timings.current, extractedAt: undefined };
+      setClientTiming(observed);
+    };
     try {
       const response = await fetch("/api/checks", {
         method: "POST",
@@ -809,6 +874,7 @@ export default function StillValidApp() {
         const saved = await response.json();
         if (!saved.result) throw new Error("busy");
         if (abort.signal.aborted || operation.current !== generation) return;
+        finishTiming();
         setResult(saved.result);
         setStage("result");
         return;
@@ -837,6 +903,7 @@ export default function StillValidApp() {
           if (event.type === "phase") setStep(event.data.step);
           if (event.type === "error") throw new Error(event.data.code);
           if (event.type === "result") {
+            finishTiming();
             setResult(event.data);
             setStage("result");
             inFlightId.current = null;
@@ -1630,7 +1697,17 @@ export default function StillValidApp() {
                 );
               })}
             </div>
-            <p className="progress-hint">{t.takesTime}</p>
+            {progressStarted !== null && (
+              <p className="progress-elapsed" aria-live="off">
+                {t.progressElapsed.replace(
+                  "{s}",
+                  seconds(Math.max(0, progressNow - progressStarted), lang),
+                )}
+              </p>
+            )}
+            <p className="progress-hint">
+              {t.takesTime} {step !== "extract" && t.progressTypical}
+            </p>
             <button className="secondary" onClick={() => void cancel()}>
               <X size={16} />
               {t.cancel}
@@ -1907,7 +1984,10 @@ export default function StillValidApp() {
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              {rt.openSource}
+                              {a.outcome === "compared" &&
+                              a.authority === "registered"
+                                ? rt.openSource
+                                : rt.openLink}
                               <ArrowUpRight size={13} />
                             </a>
                           </div>
@@ -1978,6 +2058,50 @@ export default function StillValidApp() {
                 )}
               </aside>
             </div>
+            {result.mode === "live" &&
+              (result.timing || clientTiming.checkMs !== undefined) && (
+                <details className="timing-details">
+                  <summary>{rt.timingTitle}</summary>
+                  <dl>
+                    {(
+                      [
+                        ["timing_prepare", clientTiming.prepareMs],
+                        ["timing_extract", clientTiming.extractMs],
+                        ["timing_extractServer", clientTiming.extractServerMs],
+                        ["timing_review", clientTiming.reviewMs],
+                        ["timing_search", result.timing?.searchMs],
+                        ["timing_fetch", result.timing?.fetchMs],
+                        ["timing_compare", result.timing?.compareMs],
+                        ["timing_total", result.elapsedMs || undefined],
+                        ["timing_check", clientTiming.checkMs],
+                      ] as [ResultCopyKey, number | undefined][]
+                    )
+                      // A skipped search (official link given) is not shown.
+                      .filter(
+                        ([key, ms]) =>
+                          ms !== undefined &&
+                          !(key === "timing_search" && ms === 0),
+                      )
+                      .map(([key, ms]) => (
+                        <div key={key}>
+                          <dt>{rt[key]}</dt>
+                          <dd>{seconds(ms!, lang)}</dd>
+                        </div>
+                      ))}
+                  </dl>
+                  {result.timing && (
+                    <p>
+                      {rt.timing_calls.replace(
+                        "{n}",
+                        String(
+                          result.timing.modelCalls +
+                            (clientTiming.extractCalls || 0),
+                        ),
+                      )}
+                    </p>
+                  )}
+                </details>
+              )}
             <div className="result-bottom">
               <p>
                 <Info size={15} />

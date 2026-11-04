@@ -1064,3 +1064,65 @@ h2 {
 .transcript p {
   max-height: 260px;
 }
+
+/* Elapsed time on the progress screen and per-check stage timing */
+.progress-elapsed {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.timing-details {
+  margin: 18px 0 0;
+  padding: 14px 18px;
+  border-radius: 20px;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+}
+.timing-details summary {
+  cursor: pointer;
+  font-weight: 650;
+  color: var(--ink);
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+.timing-details dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 16px;
+  margin: 10px 0 4px;
+}
+.timing-details dl div {
+  display: contents;
+}
+.timing-details dt {
+  color: var(--muted);
+}
+.timing-details dd {
+  margin: 0;
+  color: var(--ink);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.timing-details p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+/* Per-candidate source outcomes */
+.source-entry .attempt-outcome {
+  margin: 2px 0;
+  font-weight: 700;
+  color: var(--ink);
+}
+.source-entry.attempt-fetch_failed .attempt-outcome,
+.source-entry.attempt-compare_failed .attempt-outcome {
+  color: #7a4300;
+}
+.source-entry.attempt-unrelated .attempt-outcome {
+  color: var(--muted);
+}

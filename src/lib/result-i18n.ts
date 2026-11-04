@@ -87,6 +87,12 @@ const resultKeys = [
   "timing_calls",
   "timing_total",
   "attemptsNote",
+  "timing_prepare",
+  "timing_extract",
+  "timing_extractServer",
+  "timing_review",
+  "timing_check",
+  "openLink",
 ] as const;
 
 export type ResultCopyKey = (typeof resultKeys)[number];
@@ -195,6 +201,12 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_calls: "模型调用 {n} 次",
     timing_total: "服务器合计",
     attemptsNote: "各来源的具体问题已在“各来源的核查情况”中分别列出。",
+    timing_prepare: "照片准备",
+    timing_extract: "读取（整个请求）",
+    timing_extractServer: "读取（服务器）",
+    timing_review: "您的核对",
+    timing_check: "核查请求（整体）",
+    openLink: "打开链接",
   },
   es: {
     resultEyebrow: "Resultado de la comprobación",
@@ -306,6 +318,12 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_total: "Total del servidor",
     attemptsNote:
       "Los problemas de cada fuente se muestran por separado en «Qué pasó con cada fuente».",
+    timing_prepare: "Preparación de la foto",
+    timing_extract: "Lectura (solicitud completa)",
+    timing_extractServer: "Lectura (servidor)",
+    timing_review: "Tu revisión",
+    timing_check: "Solicitud de comprobación (completa)",
+    openLink: "Abrir enlace",
   },
   fr: {
     resultEyebrow: "Résultat de la vérification",
@@ -419,6 +437,12 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_total: "Total serveur",
     attemptsNote:
       "Les problèmes propres à chaque source sont indiqués séparément dans « Ce qui s'est passé pour chaque source ».",
+    timing_prepare: "Préparation de la photo",
+    timing_extract: "Lecture (requête complète)",
+    timing_extractServer: "Lecture (serveur)",
+    timing_review: "Votre relecture",
+    timing_check: "Requête de vérification (complète)",
+    openLink: "Ouvrir le lien",
   },
   de: {
     resultEyebrow: "Ergebnis der Prüfung",
@@ -536,6 +560,12 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_total: "Server gesamt",
     attemptsNote:
       "Probleme einzelner Quellen stehen separat unter „Was mit jeder Quelle geschah“.",
+    timing_prepare: "Fotovorbereitung",
+    timing_extract: "Lesen (gesamte Anfrage)",
+    timing_extractServer: "Lesen (Server)",
+    timing_review: "Ihre Prüfung",
+    timing_check: "Prüfanfrage (gesamt)",
+    openLink: "Link öffnen",
   },
   ja: {
     resultEyebrow: "お知らせの確認結果",
@@ -640,6 +670,12 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_total: "サーバー合計",
     attemptsNote:
       "出典ごとの問題は「出典ごとの確認結果」に分けて表示しています。",
+    timing_prepare: "写真の準備",
+    timing_extract: "読み取り（リクエスト全体）",
+    timing_extractServer: "読み取り（サーバー）",
+    timing_review: "内容の確認（ユーザー）",
+    timing_check: "確認リクエスト全体",
+    openLink: "リンクを開く",
   },
   pt: {
     resultEyebrow: "Resultado da verificação",
@@ -753,6 +789,12 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_total: "Total do servidor",
     attemptsNote:
       "Os problemas de cada fonte aparecem separadamente em “O que aconteceu com cada fonte”.",
+    timing_prepare: "Preparação da foto",
+    timing_extract: "Leitura (solicitação inteira)",
+    timing_extractServer: "Leitura (servidor)",
+    timing_review: "Sua revisão",
+    timing_check: "Solicitação de verificação (inteira)",
+    openLink: "Abrir link",
   },
   ar: {
     resultEyebrow: "نتيجة التحقق من الإعلان",
@@ -853,6 +895,12 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_calls: "{n} استدعاءات للنموذج",
     timing_total: "إجمالي الخادم",
     attemptsNote: "تظهر مشكلات كل مصدر بشكل منفصل في «ما حدث لكل مصدر».",
+    timing_prepare: "تجهيز الصورة",
+    timing_extract: "القراءة (الطلب كاملًا)",
+    timing_extractServer: "القراءة (الخادم)",
+    timing_review: "مراجعتك",
+    timing_check: "طلب التحقق (كاملًا)",
+    openLink: "فتح الرابط",
   },
   ru: {
     resultEyebrow: "Результат проверки объявления",
@@ -964,6 +1012,12 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_total: "Итого на сервере",
     attemptsNote:
       "Проблемы отдельных источников показаны в разделе «Что произошло с каждым источником».",
+    timing_prepare: "Подготовка фото",
+    timing_extract: "Чтение (весь запрос)",
+    timing_extractServer: "Чтение (сервер)",
+    timing_review: "Ваша проверка",
+    timing_check: "Запрос проверки (целиком)",
+    openLink: "Открыть ссылку",
   },
 };
 
