@@ -40,11 +40,12 @@ export async function POST(request: NextRequest) {
     const started = Date.now();
     let modelCalls = 0;
     let contentKind: string | null = null;
+    const client = new MetaClient(undefined, async () => {
+      await reserveModelCall();
+      modelCalls++;
+    });
     try {
-      const notice = await new MetaClient(undefined, async () => {
-        await reserveModelCall();
-        modelCalls++;
-      }).extract(
+      const notice = await client.extract(
         text,
         image,
         country,
@@ -70,6 +71,8 @@ export async function POST(request: NextRequest) {
           event: "extract_timing",
           extractMs: Date.now() - started,
           modelCalls,
+          // Per attempt: duration, outcome and token counts only.
+          calls: client.calls,
         }),
       );
       // A failed release keeps the lease until expiry; it must not discard an

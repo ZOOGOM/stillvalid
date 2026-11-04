@@ -83,14 +83,31 @@ class ProviderStall extends AppError {
   }
 }
 // English photos extract in 8-21 s, but a dense Korean photo measured ~40 s or
-// more, so the first attempt keeps the full 60 s. Only a stall or 5xx is
-// retried, inside the extraction route's 130 s budget.
+// more, so the first attempt keeps the full 60 s. A stall or 5xx is retried
+// once inside the route's 130 s budget, and only when it failed quickly.
 const extractionAttemptMs = 60000;
+// Only a stall that failed within this time is retried automatically.
+const fastFailureMs = 20000;
+
+// One provider call, for logs: no prompt, image or output text.
+export type CallRecord = {
+  path: string;
+  ms: number;
+  outcome: "ok" | "stall" | "limit" | "refused" | "output" | "cancelled";
+  inputTokens?: number;
+  outputTokens?: number;
+};
 
 export class MetaClient {
+  /** Per-call durations, outcomes and token usage for server logs. */
+  readonly calls: CallRecord[] = [];
   constructor(
     private fetcher: Fetcher = fetch,
     private reserve: () => void | Promise<void> = reserveModelCall,
+    private timing: {
+      extractionAttemptMs?: number;
+      fastFailureMs?: number;
+    } = {},
   ) {}
   async call(
     path: string,
@@ -101,6 +118,26 @@ export class MetaClient {
     const key = process.env.META_API_KEY || process.env.MODEL_API_KEY;
     if (!key) throw new AppError("not_configured", 503);
     await this.reserve();
+    const started = Date.now();
+    const attempt = AbortSignal.timeout(timeoutMs);
+    const record = (
+      outcome: CallRecord["outcome"],
+      usage?: Record<string, unknown>,
+    ) => {
+      const tokens = (key: string) =>
+        typeof usage?.[key] === "number" ? (usage[key] as number) : undefined;
+      this.calls.push({
+        path: path.replace(/^\//, ""),
+        ms: Date.now() - started,
+        outcome,
+        inputTokens: tokens("prompt_tokens") ?? tokens("input_tokens"),
+        outputTokens: tokens("completion_tokens") ?? tokens("output_tokens"),
+      });
+    };
+    // A caller abort cancels; this call's own deadline or the route's
+    // deadline (a TimeoutError reason) is a provider stall.
+    const userCancelled = () =>
+      !!signal?.aborted && signal.reason?.name !== "TimeoutError";
     let response: Response;
     try {
       response = await this.fetcher(endpoint + path, {
@@ -111,36 +148,56 @@ export class MetaClient {
         },
         body: JSON.stringify({ model: modelId(), ...body }),
         cache: "no-store",
-        signal: AbortSignal.any([
-          AbortSignal.timeout(timeoutMs),
-          ...(signal ? [signal] : []),
-        ]),
+        signal: AbortSignal.any([attempt, ...(signal ? [signal] : [])]),
         ...(proxy ? { dispatcher: proxy } : {}),
       } as RequestInit);
     } catch {
-      // The route's own deadline is a stall too; only a caller abort cancels.
-      if (signal?.aborted && signal.reason?.name !== "TimeoutError")
+      if (userCancelled()) {
+        record("cancelled");
         throw new AppError("cancelled", 503);
+      }
+      record("stall");
       throw new ProviderStall();
     }
     if (!response.ok) {
       await response.body?.cancel();
-      if (response.status === 429) throw new AppError("provider_limit", 429);
-      if (response.status >= 500) throw new ProviderStall();
+      if (response.status === 429) {
+        record("limit");
+        throw new AppError("provider_limit", 429);
+      }
+      if (response.status >= 500) {
+        record("stall");
+        throw new ProviderStall();
+      }
+      record("refused");
       throw new AppError("model_unavailable", 503);
     }
     let result: unknown;
     try {
       result = await response.json();
     } catch {
-      throw signal?.aborted
-        ? new AppError("cancelled", 503)
-        : outputFailure("response_json");
+      if (userCancelled()) {
+        record("cancelled");
+        throw new AppError("cancelled", 503);
+      }
+      // Headers arrived but the body did not finish in time: a stall, not a
+      // malformed model output.
+      if (attempt.aborted || signal?.aborted) {
+        record("stall");
+        throw new ProviderStall();
+      }
+      record("output");
+      throw outputFailure("response_json");
     }
     if (!result || typeof result !== "object" || Array.isArray(result)) {
-      if (signal?.aborted) throw new AppError("cancelled", 503);
+      if (userCancelled()) {
+        record("cancelled");
+        throw new AppError("cancelled", 503);
+      }
+      record("output");
       throw outputFailure("response_shape");
     }
+    record("ok", (result as { usage?: Record<string, unknown> }).usage);
     return result as Record<string, unknown>;
   }
   async structured<T>(
@@ -214,17 +271,29 @@ export class MetaClient {
     }
   }
   /** One retry after a provider stall; the caller's signal bounds the total. */
+  /**
+   * One retry after a provider stall, but only when the failure came quickly
+   * (a dropped connection or a 5xx). After a long wait the user is told at
+   * once rather than made to wait the same time again.
+   */
   private async retryStall<T>(
     attempt: (timeoutMs: number) => Promise<T>,
     signal?: AbortSignal,
   ): Promise<T> {
+    const started = Date.now();
     try {
-      return await attempt(extractionAttemptMs);
+      return await attempt(
+        this.timing.extractionAttemptMs ?? extractionAttemptMs,
+      );
     } catch (error) {
-      if (!(error instanceof ProviderStall) || signal?.aborted) throw error;
+      const quick =
+        Date.now() - started < (this.timing.fastFailureMs ?? fastFailureMs);
+      if (!(error instanceof ProviderStall) || signal?.aborted || !quick)
+        throw error;
       return attempt(60000);
     }
   }
+
   async extract(
     text: string,
     image: string | undefined,
