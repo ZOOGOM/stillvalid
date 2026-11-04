@@ -1021,3 +1021,36 @@ test("a long stall is not retried, a body timeout is a stall, and each call is r
       clearInterval(keepAlive);
     }
   }));
+test("reasoning effort is sent only when configured with a known value", () =>
+  withTestKey(async () => {
+    const { originalText: _ignored, ...extracted } = notice;
+    const sent: unknown[] = [];
+    const client = new MetaClient(
+      async (_input, init) => {
+        sent.push(JSON.parse(String(init?.body)).reasoning_effort);
+        return Response.json({
+          choices: [
+            {
+              finish_reason: "stop",
+              message: { content: JSON.stringify(extracted) },
+            },
+          ],
+        });
+      },
+      () => {},
+    );
+    const previous = process.env.META_REASONING_EFFORT_EXTRACTION;
+    try {
+      delete process.env.META_REASONING_EFFORT_EXTRACTION;
+      await client.extract("Workshop. Open.", undefined, null);
+      process.env.META_REASONING_EFFORT_EXTRACTION = "Low";
+      await client.extract("Workshop. Open.", undefined, null);
+      process.env.META_REASONING_EFFORT_EXTRACTION = "fastest";
+      await client.extract("Workshop. Open.", undefined, null);
+    } finally {
+      if (previous === undefined)
+        delete process.env.META_REASONING_EFFORT_EXTRACTION;
+      else process.env.META_REASONING_EFFORT_EXTRACTION = previous;
+    }
+    assert.deepEqual(sent, [undefined, "low", undefined]);
+  }));
