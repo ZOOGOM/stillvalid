@@ -138,7 +138,7 @@ export const esUiCopy: UiCopy = {
   error_provider_limit:
     "El servicio de análisis alcanzó su límite de solicitudes. Inténtalo de nuevo más tarde.",
   error_model_unavailable:
-    "No pudimos conectar con el servicio de análisis. No se consideró nada verificado.",
+    "No pudimos conectar con el servicio de análisis. No se consideró nada verificado. Inténtalo de nuevo en un momento.",
   error_model_output:
     "No pudimos leer el aviso con suficiente claridad. Prueba una foto más nítida o pega el texto.",
   error_source_url:
@@ -335,7 +335,7 @@ export const frUiCopy: UiCopy = {
   error_provider_limit:
     "Le service d'analyse a atteint sa limite de demandes. Réessayez plus tard.",
   error_model_unavailable:
-    "Nous n'avons pas pu joindre le service d'analyse. Rien n'a été considéré comme vérifié.",
+    "Nous n'avons pas pu joindre le service d'analyse. Rien n'a été considéré comme vérifié. Réessayez dans un instant.",
   error_model_output:
     "Nous n'avons pas pu lire l'annonce assez clairement. Essayez une photo plus nette ou collez son texte.",
   error_source_url:

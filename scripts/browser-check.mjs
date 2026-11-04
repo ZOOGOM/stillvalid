@@ -588,8 +588,28 @@ try {
     .getByRole("alert")
     .getByText("No notice could be read. Try another photo or text.")
     .waitFor();
+  // A provider failure keeps the chosen photo so the same image can be retried.
+  await uploadErrors.unroute("**/api/extract");
+  await uploadErrors.route("**/api/extract", (route) =>
+    route.fulfill({ status: 503, json: { error: "model_unavailable" } }),
+  );
+  await uploadErrors
+    .getByRole("button", { name: "Read this notice", exact: true })
+    .click();
+  await uploadErrors
+    .getByRole("alert")
+    .getByText("Please try again in a moment.", { exact: false })
+    .waitFor();
+  assert.equal(
+    await uploadErrors
+      .getByRole("button", { name: "Read this notice", exact: true })
+      .isEnabled(),
+    true,
+  );
   await uploadErrors.close();
-  results.push("non-JSON 413 and non-notice errors offer recovery");
+  results.push(
+    "non-JSON 413, non-notice and provider errors keep the photo for retry",
+  );
   await page.route("**/api/status", (route) =>
     route.fulfill({ json: { liveAvailable: true, demoAvailable: true } }),
   );
