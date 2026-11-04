@@ -189,17 +189,31 @@ export async function POST(request: NextRequest) {
           );
           if (unrelated.length) warnings.push("source_unrelated");
           await ensureActive();
-          analyses.push(
-            ...(await measure("compareMs", () =>
-              Promise.all(
-                related.map((source) =>
-                  meta.compare(notice, source, lang, signal),
-                ),
+          const settled = await measure("compareMs", () =>
+            Promise.all(
+              related.map((source) =>
+                settle(meta.compare(notice, source, lang, signal)),
               ),
-            )),
+            ),
           );
+          const compared = related.filter((_source, i) => settled[i].ok);
+          const failed = related.filter((_source, i) => !settled[i].ok);
+          // One failed analysis must not discard the others. Only when every
+          // related source failed is the check itself an error.
+          const firstFailure = settled.find((outcome) => !outcome.ok);
+          if (firstFailure && !firstFailure.ok && !compared.length)
+            throw firstFailure.error;
+          if (failed.length) warnings.push("source_compare_failed");
+          for (const outcome of settled)
+            if (outcome.ok) analyses.push(outcome.value);
           // assembleResult pairs analyses with sources by position.
-          sources.splice(0, sources.length, ...related, ...unrelated);
+          sources.splice(
+            0,
+            sources.length,
+            ...compared,
+            ...failed,
+            ...unrelated,
+          );
           await ensureActive();
           const result = assembleResult({
             id: job.id,

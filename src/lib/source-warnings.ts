@@ -11,7 +11,8 @@ const warnings: Record<
     | "timeout"
     | "technical"
     | "unrelated"
-    | "script",
+    | "script"
+    | "compare",
     string
   >
 > = {
@@ -25,6 +26,8 @@ const warnings: Record<
     unrelated: "가져온 출처가 이 공고와 관련 없어 보여 비교하지 않았어요.",
     script:
       "이 페이지는 내용을 스크립트로만 보여줘서 읽을 수 없어요. 공고 본문 페이지의 주소를 입력해 보세요.",
+    compare:
+      "출처 하나는 분석을 끝내지 못해 비교에서 뺐어요. 나머지 출처로만 판단했어요.",
   },
   en: {
     format: "The source format or text encoding is not supported.",
@@ -37,6 +40,8 @@ const warnings: Record<
       "A fetched source did not appear related to this notice, so it was not compared.",
     script:
       "This page shows its content only through scripts, so it could not be read. Try the address of the notice page itself.",
+    compare:
+      "One source could not be analysed and was left out; the result uses the other sources only.",
   },
   zh: {
     format: "不支持该来源的格式或文字编码。",
@@ -47,6 +52,7 @@ const warnings: Record<
     technical: "此地址指向技术文件，而非公告。",
     unrelated: "获取的来源似乎与此公告无关，因此未进行比对。",
     script: "此页面仅通过脚本显示内容，无法读取。请尝试公告正文页面的地址。",
+    compare: "有一个来源未能完成分析，已排除在比较之外；结果仅基于其他来源。",
   },
   es: {
     format: "No se admite el formato o la codificación de la fuente.",
@@ -59,6 +65,8 @@ const warnings: Record<
       "Una fuente obtenida no parecía relacionada con este aviso, así que no se comparó.",
     script:
       "Esta página muestra su contenido solo mediante scripts y no se pudo leer. Prueba con la dirección de la página del aviso.",
+    compare:
+      "No se pudo analizar una fuente y se dejó fuera; el resultado usa solo las demás fuentes.",
   },
   fr: {
     format: "Le format ou l’encodage de la source n’est pas pris en charge.",
@@ -71,6 +79,8 @@ const warnings: Record<
       "Une source récupérée ne semblait pas liée à cette annonce ; elle n’a pas été comparée.",
     script:
       "Cette page n’affiche son contenu qu’au moyen de scripts ; elle n’a pas pu être lue. Essayez l’adresse de la page de l’annonce elle-même.",
+    compare:
+      "Une source n'a pas pu être analysée et a été écartée ; le résultat repose uniquement sur les autres sources.",
   },
   de: {
     format:
@@ -85,6 +95,8 @@ const warnings: Record<
       "Eine abgerufene Quelle schien nicht zu dieser Mitteilung zu passen und wurde nicht verglichen.",
     script:
       "Diese Seite zeigt ihren Inhalt nur über Skripte an und konnte nicht gelesen werden. Versuchen Sie die Adresse der Mitteilungsseite selbst.",
+    compare:
+      "Eine Quelle konnte nicht analysiert werden und wurde ausgelassen; das Ergebnis beruht nur auf den übrigen Quellen.",
   },
   ja: {
     format: "この資料の形式または文字コードには対応していません。",
@@ -97,6 +109,8 @@ const warnings: Record<
       "取得した出典はこのお知らせと関係がないようだったため、比較しませんでした。",
     script:
       "このページはスクリプトでのみ内容を表示するため読み取れませんでした。お知らせ本文のページのアドレスをお試しください。",
+    compare:
+      "1つの出典は分析を完了できなかったため比較から除外しました。結果は他の出典のみに基づいています。",
   },
   pt: {
     format: "O formato ou a codificação da fonte não é compatível.",
@@ -110,6 +124,8 @@ const warnings: Record<
       "Uma fonte obtida não parecia relacionada a este aviso, então não foi comparada.",
     script:
       "Esta página mostra o conteúdo apenas por scripts e não pôde ser lida. Tente o endereço da própria página do aviso.",
+    compare:
+      "Não foi possível analisar uma fonte, que ficou de fora; o resultado usa apenas as demais fontes.",
   },
   ar: {
     format: "تنسيق المصدر أو ترميز النص غير مدعوم.",
@@ -122,6 +138,8 @@ const warnings: Record<
       "بدا أن أحد المصادر التي جرى جلبها غير مرتبط بهذا الإعلان، لذلك لم تتم مقارنته.",
     script:
       "تعرض هذه الصفحة محتواها عبر البرامج النصية فقط، لذلك تعذّرت قراءتها. جرّب عنوان صفحة الإعلان نفسها.",
+    compare:
+      "تعذر تحليل أحد المصادر فاستُبعد من المقارنة؛ تعتمد النتيجة على المصادر الأخرى فقط.",
   },
   ru: {
     format: "Формат или кодировка источника не поддерживается.",
@@ -134,6 +152,8 @@ const warnings: Record<
       "Полученный источник, похоже, не связан с этим объявлением, поэтому сравнение не выполнялось.",
     script:
       "Эта страница показывает содержимое только с помощью скриптов, поэтому её не удалось прочитать. Попробуйте адрес самой страницы объявления.",
+    compare:
+      "Один источник не удалось проанализировать, и он исключён; результат основан только на остальных источниках.",
   },
 };
 const categories: Record<string, keyof (typeof warnings)["en"]> = {
@@ -146,6 +166,7 @@ const categories: Record<string, keyof (typeof warnings)["en"]> = {
   source_not_notice: "technical",
   source_unrelated: "unrelated",
   source_script_only: "script",
+  source_compare_failed: "compare",
 };
 export function sourceWarningText(
   code: string,

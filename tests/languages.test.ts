@@ -38,6 +38,9 @@ test("source failures and input errors have useful text in every display languag
       "source_blocked",
       "source_not_found",
       "source_not_notice",
+      "source_unrelated",
+      "source_script_only",
+      "source_compare_failed",
     ]) {
       assert.ok(sourceWarningText(code, lang), `${lang}: ${code}`);
     }
