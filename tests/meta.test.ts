@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { MetaClient } from "../src/lib/meta";
 import { comparisonSchema, noticeSchema } from "../src/lib/schema";
 import { resultLanguages } from "../src/lib/languages";
+import { z } from "zod";
 const notice = {
   title: "Workshop",
   institution: "Library",
@@ -317,6 +318,22 @@ test("built-in web search uses Responses and preserves actual source candidates"
 test("comparison sends the selected result language without changing source facts", () =>
   withTestKey(async () => {
     let expected: string;
+    const modelOutput = {
+      same_notice: true,
+      identity_quote: "Workshop. Open.",
+      country: "US",
+      source_role: "original",
+      comparisons: [
+        {
+          key: "status",
+          before: "Open",
+          after: "Open",
+          before_quote: "Workshop. Open.",
+          after_quote: "Workshop. Open.",
+          relation: "same",
+        },
+      ],
+    };
     const source = {
       id: "source-0",
       url: "https://nypl.org/notice",
@@ -333,20 +350,28 @@ test("comparison sends the selected result language without changing source fact
         assert.equal(payload.result_language, expected);
         assert.deepEqual(payload.notice, notice);
         assert.equal(payload.source.text, source.text);
+        const providerSchema = body.response_format.json_schema.schema;
+        const internalSchema = z.toJSONSchema(comparisonSchema);
+        assert.equal(body.response_format.json_schema.strict, true);
+        assert.equal("summary" in providerSchema.properties, false);
+        assert.equal("next_action" in providerSchema.properties, false);
+        for (const key of Object.keys(modelOutput)) {
+          assert.deepEqual(
+            providerSchema.properties[key],
+            internalSchema.properties?.[key],
+          );
+          assert.ok(providerSchema.required.includes(key));
+        }
+        assert.deepEqual(
+          Object.keys(providerSchema.properties).sort(),
+          Object.keys(modelOutput).sort(),
+        );
         return Response.json({
           choices: [
             {
               finish_reason: "stop",
               message: {
-                content: JSON.stringify({
-                  same_notice: false,
-                  identity_quote: "",
-                  country: null,
-                  source_role: "unknown",
-                  comparisons: [],
-                  summary: "invented fact",
-                  next_action: "invented action",
-                }),
+                content: JSON.stringify(modelOutput),
               },
             },
           ],
@@ -356,7 +381,11 @@ test("comparison sends the selected result language without changing source fact
     );
     for (const lang of resultLanguages) {
       expected = lang;
-      await client.compare(notice, source, lang);
+      assert.deepEqual(await client.compare(notice, source, lang), {
+        ...modelOutput,
+        summary: "",
+        next_action: "",
+      });
     }
   }));
 test("comparison truncation remains an error without retry at the larger limit", () =>
