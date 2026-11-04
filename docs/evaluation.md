@@ -59,3 +59,35 @@ Map the ten real-notice slots in [the acceptance checklist](acceptance.md) to op
 After a permitted live run, record each case's success/failure, verdict, elapsed time and deployment SHA in that worksheet. Keep operational success separate from accuracy; report accuracy denominator only from `scoredCases`, and do not combine fixture-test counts with real notices. A failed/deferred run is evidence of a limitation, never a substituted synthetic success. Refresh time-sensitive references before comparing a later run.
 
 This tool does not establish physical-device photo quality, mobile Safari/Android behavior, full-session deletion, 24-hour expiry, externally measured costs, official competition rules, submission/video readiness, or worldwide source/language coverage. Actual photos, actual deployment networking, real provider inference/search/source comparison, hosted Redis behavior and human-reviewed notice accuracy remain separate evidence until run and reviewed.
+
+## 2026-11-04 synthetic release run
+
+A production run against `https://stillvalid-beta.vercel.app` used commit `7f99b7a76c2cdb3a71e6743efa5cd0c202ea9266`, synthetic images/text, and the public Smithsonian fellowship page. These are operational and safety examples, not human-reviewed accuracy cases. The official page showed `December 18, 2026` for applications at test time, **with separate dates for the Engen Conservation and Postdoctoral Earth and Planetary Sciences fellowships**; a general result does not establish every fellowship's deadline.
+
+Client times below add extraction and check HTTP elapsed times; the test intentionally waited at least seven seconds between POST starts, so some times include pacing. Discover/fetch/compare durations and check call counts are from Vercel `check_timing` logs matched to request IDs. Each extraction used one model call according to `extract_timing`. Values are milliseconds; `—` means that stage did not run or was not logged.
+
+| Case                                   | Observed result                                                      | Client elapsed ms | Discover / fetch / compare ms | Model calls, extract + check |
+| -------------------------------------- | -------------------------------------------------------------------- | ----------------: | ----------------------------- | ---------------------------: |
+| L1 same deadline, official URL         | `matched`; 18 Dec → 18 Dec verified                                  |            45,686 | 0 / 335 / 28,023              |                        1 + 1 |
+| L2 changed deadline, official URL      | `changed`; 11 Dec → 18 Dec verified                                  |            36,581 | 0 / 289 / 22,541              |                        1 + 1 |
+| L3 different title, first attempt      | extraction HTTP 503 `model_unavailable`; no result                   |            60,483 | —                             |                        1 + 0 |
+| L3 different title, one retry          | `review`; difference unverified; identity/evidence/partial warnings  |            42,716 | 0 / 213 / 24,516              |                        1 + 1 |
+| L4 different year                      | `review`; difference unverified; identity/evidence/partial warnings  |            42,391 | 0 / 221 / 31,457              |                        1 + 1 |
+| L5 different institution               | `review`; difference unverified; identity/evidence/partial warnings  |            29,059 | 0 / 214 / 18,702              |                        1 + 1 |
+| L6 unrelated Korean notice             | `review`; source_unrelated/partial; no comparison                    |            11,558 | 0 / 233 / 0                   |                        1 + 0 |
+| L7 discovery without URL               | `review`; identity/evidence; Smithsonian page appeared in candidates |            81,935 | 16,044 / 192 / 44,473         |                        1 + 3 |
+| L8 synthetic cat illustration          | extraction HTTP 422 `not_a_notice`                                   |             8,627 | —                             |                        1 + 0 |
+| L9 ambiguous date and unrelated source | `03/04/2026` preserved; `review` with source_unrelated/partial       |            14,687 | 0 / 186 / 0                   |                        1 + 0 |
+
+In L1 and L2 the verified original quotes were respectively `Applications Due: December 18, 2026` and `Applications Due: December 11, 2026`; the official source quote contained `Applications Due` and `December 18, 2026` together with the published exception text. In L7 one source produced verified fields but the overall status remained `review` because another candidate did not establish identity. No incorrect definitive result was observed in these cases; L3's initial unavailable response is not an accuracy verdict.
+
+| Source failure                    | Observed result                     | Server fetch ms |                        Model calls |
+| --------------------------------- | ----------------------------------- | --------------: | ---------------------------------: |
+| F1 PDF                            | `unavailable`, `source_format`      |              34 |                                  0 |
+| F2 nonexistent page               | `unavailable`, `source_not_found`   |             454 |                                  0 |
+| F3 robots.txt                     | `unavailable`, `source_not_notice`  |              29 |                                  0 |
+| F4 script-only page               | `unavailable`, `source_script_only` |           3,795 |                                  0 |
+| F5 nonexistent host               | `unavailable`, `fetch`              |               8 |                                  0 |
+| F6 HTTP, loopback and metadata IP | each HTTP 400 `source_url`          |               — | 0 (rejected before work admission) |
+
+The initial two sessions and the L3 retry session each returned HTTP 204 on session deletion. Total recorded model calls: **18**. Token usage and dollar cost remain unmeasured. Actual camera photos, real iPhone Safari and Android Chrome, actual 24-hour expiry, and human-reviewed real-notice accuracy remain unverified.
