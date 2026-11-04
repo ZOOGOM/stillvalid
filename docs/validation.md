@@ -201,3 +201,21 @@ The server ran with `liveAvailable: false`.
 | `npm run test:browser` | **21 groups**, 0 page errors, 0 axe violations |
 | `npm run test:browser-maps` | all checks above passed |
 | `npm audit --omit=dev` | **0 vulnerabilities** |
+
+## 2026-11-04 production after merging PR #5 (`11836c7`, then `a9411e6`)
+
+With the user's approval, PR #5 was merged (merge commit `11836c74aa5f155855f20674fda809ee0e0b5e20`) and both production aliases reported it with HTTP 200 home pages.
+
+The first live PDF check showed that the Seoul notice's official PDF attachment is served as `application/octet-stream` with a `.pdf` file name. A follow-up commit (`a9411e6a0ec7981e8711534746ae742c51c73c71`, 176 tests and 7 harness tests passed, build passed) accepts generic downloads as PDF only when named `.pdf`, still requiring the `%PDF-` signature. Both aliases then reported `a9411e6`.
+
+Live checks on `a9411e6` used **five model calls** (approved limit six). The session was deleted with HTTP 204; tokens and cost were not measured. Notices were sent directly to the check endpoint (no extraction); the Seoul notice's earlier end date is artificial, and the Miryang notice was reconstructed from the user's report, not from the original photo.
+
+| Check | Result | Time |
+| --- | --- | ---: |
+| SAM 3.1 crop, Seoul notice photo (camera-style rendering) | HTTP 200, **no box returned** | 2.6 s |
+| SAM 3.1 crop, NASM poster photo (camera-style rendering) | HTTP 200, **no box returned** | 1.3 s |
+| Seoul internship notice, official HTML page | `changed` 3/31 → 4/3 15:00, verified; source registered, identity `ok`, 1/1 quotes | 30.6 s (fetch 1.7 s, compare 28.3 s) |
+| Same notice, official PDF attachment (`seoulboard.seoul.go.kr`) | PDF read and compared; `review`. The PDF's title wording (`여름·가을학기`, `참여기업 (사업장, 단체)`) differs from the photographed title, so the identity category is `title` | 28.1 s (fetch 3.5 s, compare 24.1 s) |
+| 제4회 수산제 농경문화제, official Miryang City schedule page (`www.miryang.go.kr`, now registered) | Source registered and identity `ok`. Date and place were not verified because their wording differs from the poster (`2026. 11. 14 ~ 15` vs `2026. 11. 14(토) ~ 11. 15.(일) …`; `수산제역사공원 일원` vs `수산제 역사공원 일원(…)`); overall `review` | 58.8 s (fetch 9.3 s, compare 49.1 s) |
+
+SAM 3.1 returned no qualifying box with the default `poster` prompt for either image. The API's raw output is not returned or logged, so it is unknown whether the cause is the prompt, the photos or the response shape. The opt-in button therefore currently says no notice was found and leaves the photo unchanged. This is not a working crop feature yet. Real devices, HEIC and the map app hand-off remain unverified.
