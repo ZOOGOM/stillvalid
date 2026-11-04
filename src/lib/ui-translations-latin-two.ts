@@ -218,6 +218,8 @@ export const deUiCopy: UiCopy = {
     "Das Foto ist klein, daher wird möglicherweise nicht der ganze Text gelesen. Ein näheres Foto der Bekanntmachung wird genauer gelesen.",
   readUncertain:
     "Das Foto wirkte abgeschnitten oder unscharf, daher kann Text fehlen. Vergleichen Sie den erkannten Text unten mit dem Foto und korrigieren Sie ihn.",
+  error_client_timeout:
+    "Das hat zu lange gedauert, daher warten wir nicht mehr. Ihre Eingabe ist noch da – bitte erneut versuchen.",
 };
 
 export const ptUiCopy: UiCopy = {
@@ -433,4 +435,6 @@ export const ptUiCopy: UiCopy = {
     "A foto é pequena e parte do texto pode não ser lida. Uma foto mais próxima do aviso é lida com mais precisão.",
   readUncertain:
     "A foto parecia cortada ou desfocada, então pode faltar texto. Compare o texto reconhecido abaixo com a foto e corrija-o.",
+  error_client_timeout:
+    "Demorou demais, então paramos de esperar. O que você inseriu continua aqui; tente novamente.",
 };

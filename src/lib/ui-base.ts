@@ -235,6 +235,7 @@ const ko = {
   timing_total: "서버 처리 합계",
   attemptsNote: "출처마다 다른 문제는 '후보별 확인 결과'에 따로 표시했어요.",
   timing_prepare: "사진 준비",
+  timing_locate: "공고 영역 찾기",
   timing_extract: "공고 읽기(요청 전체)",
   timing_extractServer: "공고 읽기(서버)",
   timing_review: "내용 확인(사용자)",
@@ -264,6 +265,8 @@ const ko = {
     "공개된 HTTPS 공고 주소를 입력해 주세요. 내부 주소·인증 정보가 있는 주소는 사용할 수 없어요.",
   error_too_large: "파일이 너무 커요. 10MB 이하의 사진을 선택해 주세요.",
   error_image_type: "JPG, PNG, WebP 사진을 선택해 주세요.",
+  error_client_timeout:
+    "응답이 너무 오래 걸려 기다리기를 멈췄어요. 입력한 내용은 그대로 있으니 다시 시도해 주세요.",
   error_image_heic:
     "이 브라우저는 HEIC 사진을 읽지 못해요. 사진을 JPEG로 보내거나, iPhone 설정 > 카메라 > 포맷에서 '높은 호환성'을 선택해 주세요.",
   error_image_compression:
@@ -560,6 +563,7 @@ const en: Copy = {
   attemptsNote:
     "Source-specific problems are listed separately under 'What happened with each source'.",
   timing_prepare: "Photo preparation",
+  timing_locate: "Finding the notice",
   timing_extract: "Reading (whole request)",
   timing_extractServer: "Reading (server)",
   timing_review: "Your review",
@@ -590,6 +594,8 @@ const en: Copy = {
     "Enter a public HTTPS notice URL without credentials. Internal addresses aren't supported.",
   error_too_large: "This file is too large. Choose a photo under 10MB.",
   error_image_type: "Choose a JPG, PNG or WebP photo.",
+  error_client_timeout:
+    "This took too long, so we stopped waiting. Your input is still here; please try again.",
   error_image_heic:
     "This browser can't read HEIC photos. Share the photo as JPEG, or choose 'Most Compatible' in iPhone Settings > Camera > Formats.",
   error_image_compression:

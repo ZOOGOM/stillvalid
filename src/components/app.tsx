@@ -130,6 +130,8 @@ type NoticeBoxShape = {
 };
 type ClientTiming = {
   prepareMs?: number;
+  locateMs?: number;
+  locateCalls?: number;
   extractMs?: number;
   extractServerMs?: number;
   extractCalls?: number;
@@ -144,6 +146,53 @@ function seconds(ms: number, lang: ResultLang): string {
     unitDisplay: "short",
     maximumFractionDigits: ms < 10000 ? 1 : 0,
   }).format(ms / 1000);
+}
+// Browser-side limits for one request. Each is above the matching server
+// limit, so a working request is never cut short by the browser.
+const extractClientMs = 150000; // server: 130 s
+const checkClientMs = 200000; // server: 170 s
+const checkSilenceMs = 45000; // server heartbeat: every 10 s
+const locateClientMs = 80000; // server: 65 s
+
+// Settles with the abort as soon as the signal fires, even if the underlying
+// read (a response body, a stream chunk) does not observe the signal itself.
+function abortable<T>(work: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    work.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(error);
+      },
+    );
+  });
+}
+
+// A finished, saved check can be shown even if its stream broke.
+async function recoverCheck(id: string): Promise<Result | null> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 10000);
+  try {
+    const response = await fetch(`/api/checks/${encodeURIComponent(id)}`, {
+      signal: abort.signal,
+    });
+    if (!response.ok) return null;
+    const saved = (await response.json()) as {
+      state?: string;
+      result?: Result | null;
+    };
+    return saved.state === "complete" && saved.result ? saved.result : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 function hostOf(url: string): string {
   try {
@@ -883,17 +932,37 @@ export default function StillValidApp() {
     setError(null);
     setBoxChoice(null);
     let found: NoticeBoxShape[] = [];
+    const abort = new AbortController();
+    let timedOut = false;
+    const deadline = setTimeout(() => {
+      timedOut = true;
+      abort.abort();
+    }, locateClientMs);
+    const locateStart = performance.now();
     try {
-      const response = await fetch("/api/locate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image }),
-      });
+      const response = await abortable(
+        fetch("/api/locate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image }),
+          signal: abort.signal,
+        }),
+        abort.signal,
+      );
       if (!response.ok)
         throw new Error(await responseError(response, "upload_too_large"));
-      const data = (await response.json()) as {
+      const data = (await abortable(response.json(), abort.signal)) as {
         box: NoticeBoxShape | null;
         boxes?: NoticeBoxShape[];
+        timing?: { modelCalls?: number };
+      };
+      // Count notice location in the processing-time panel too.
+      timings.current = {
+        ...timings.current,
+        locateMs:
+          (timings.current.locateMs || 0) + performance.now() - locateStart,
+        locateCalls:
+          (timings.current.locateCalls || 0) + (data.timing?.modelCalls || 0),
       };
       if (generation !== uploadGeneration.current) return;
       found = data.boxes?.length ? data.boxes : data.box ? [data.box] : [];
@@ -909,8 +978,15 @@ export default function StillValidApp() {
       else if (found.length > 1) setBoxChoice({ image, boxes: found });
     } catch (e) {
       if (generation === uploadGeneration.current)
-        setError(e instanceof Error ? e.message : "network");
+        setError(
+          timedOut
+            ? "client_timeout"
+            : e instanceof Error
+              ? e.message
+              : "network",
+        );
     } finally {
+      clearTimeout(deadline);
       if (generation === uploadGeneration.current) setPreparing(false);
     }
     if (found.length === 1 && generation === uploadGeneration.current)
@@ -936,23 +1012,40 @@ export default function StillValidApp() {
     const extractStart = performance.now();
     setReadUncertain(false);
     if (mode === "text") timings.current = {};
+    // The browser's own deadline (the server stops at 130 s). A timer, not
+    // AbortSignal.timeout, so it also runs under a test clock.
+    let timedOut = false;
+    const deadline = setTimeout(() => {
+      timedOut = true;
+      abort.abort();
+    }, extractClientMs);
     try {
-      const response = await fetch("/api/extract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: mode === "text" ? text : "",
-          image: mode === "photo" ? image : undefined,
-          country,
+      const response = await abortable(
+        fetch("/api/extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: mode === "text" ? text : "",
+            image: mode === "photo" ? image : undefined,
+            country,
+          }),
+          signal: abort.signal,
         }),
-        signal: abort.signal,
-      });
+        abort.signal,
+      );
       if (!response.ok)
-        throw new Error(await responseError(response, "upload_too_large"));
-      const data = await response.json();
+        throw new Error(
+          await abortable(
+            responseError(response, "upload_too_large"),
+            abort.signal,
+          ),
+        );
+      const data = await abortable(response.json(), abort.signal);
       if (abort.signal.aborted || operation.current !== generation) return;
       timings.current = {
         prepareMs: timings.current.prepareMs,
+        locateMs: timings.current.locateMs,
+        locateCalls: timings.current.locateCalls,
         extractMs: performance.now() - extractStart,
         extractServerMs: data.timing?.extractMs,
         extractCalls: data.timing?.modelCalls,
@@ -963,17 +1056,24 @@ export default function StillValidApp() {
       setCountryConfirmed(false);
       setStage("review");
     } catch (e) {
-      if (!abort.signal.aborted) {
+      if (
+        operation.current === generation &&
+        (timedOut || !abort.signal.aborted)
+      ) {
+        // The photo or text stays in place for another try.
         setError(
-          e instanceof TypeError || e instanceof SyntaxError
-            ? "network"
-            : e instanceof Error
-              ? e.message
-              : "network",
+          timedOut
+            ? "client_timeout"
+            : e instanceof TypeError || e instanceof SyntaxError
+              ? "network"
+              : e instanceof Error
+                ? e.message
+                : "network",
         );
         setStage("input");
       }
     } finally {
+      clearTimeout(deadline);
       if (operation.current === generation) busy.current = false;
     }
   };
@@ -1010,39 +1110,72 @@ export default function StillValidApp() {
       timings.current = { ...timings.current, extractedAt: undefined };
       setClientTiming(observed);
     };
+    // Browser-side limits: a total budget from the click (the server stops at
+    // 170 s) and a silence watchdog. The server sends a heartbeat every 10 s,
+    // so 45 s without any bytes means the connection is stuck.
+    let stopReason: "timeout" | "silent" | null = null;
+    const stopAs = (reason: "timeout" | "silent") => {
+      stopReason = reason;
+      abort.abort();
+    };
+    const total = setTimeout(() => stopAs("timeout"), checkClientMs);
+    let silence = setTimeout(() => stopAs("silent"), checkSilenceMs);
+    const heard = () => {
+      clearTimeout(silence);
+      silence = setTimeout(() => stopAs("silent"), checkSilenceMs);
+    };
+    let completed = false;
+    const showResult = (value: Result) => {
+      finishTiming();
+      setResult(value);
+      setStage("result");
+      inFlightId.current = null;
+      completed = true;
+      // The work is done as far as the user is concerned, even if the
+      // connection has not closed yet.
+      busy.current = false;
+    };
+    let checkId: string | null = null;
     try {
-      const response = await fetch("/api/checks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          notice,
-          country,
-          lang: lang,
-          sourceUrl: overrideUrl ?? sourceUrl,
-          requestKey: crypto.randomUUID(),
+      const response = await abortable(
+        fetch("/api/checks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            notice,
+            country,
+            lang: lang,
+            sourceUrl: overrideUrl ?? sourceUrl,
+            requestKey: crypto.randomUUID(),
+          }),
+          signal: abort.signal,
         }),
-        signal: abort.signal,
-      });
+        abort.signal,
+      );
+      heard();
       if (!response.ok) {
         throw new Error(await responseError(response, "too_large"));
       }
       if (response.headers.get("content-type")?.includes("application/json")) {
-        const saved = await response.json();
+        const saved = await abortable(response.json(), abort.signal);
         if (!saved.result) throw new Error("busy");
         if (abort.signal.aborted || operation.current !== generation) return;
-        finishTiming();
-        setResult(saved.result);
-        setStage("result");
+        showResult(saved.result);
         return;
       }
       const reader = response.body?.getReader();
       if (!reader) throw new Error("network");
       const decoder = new TextDecoder();
-      let buffer = "",
-        completed = false;
+      let buffer = "";
+      abort.signal.addEventListener(
+        "abort",
+        () => void reader.cancel().catch(() => {}),
+        { once: true },
+      );
       for (;;) {
-        const part = await reader.read();
-        if (abort.signal.aborted || operation.current !== generation) return;
+        const part = await abortable(reader.read(), abort.signal);
+        if (operation.current !== generation) return;
+        heard();
         buffer += decoder.decode(part.value, { stream: !part.done });
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
@@ -1050,6 +1183,7 @@ export default function StillValidApp() {
           if (!line.trim()) continue;
           const event = JSON.parse(line);
           if (event.type === "created") {
+            checkId = event.data.id;
             activeId.current = event.data.id;
             inFlightId.current = event.data.id;
             try {
@@ -1059,28 +1193,43 @@ export default function StillValidApp() {
           if (event.type === "phase") setStep(event.data.step);
           if (event.type === "error") throw new Error(event.data.code);
           if (event.type === "result") {
-            finishTiming();
-            setResult(event.data);
-            setStage("result");
-            inFlightId.current = null;
-            completed = true;
+            showResult(event.data);
+            // Stop reading: a late transport error or an unclosed stream must
+            // not undo or block a result that has already arrived.
+            await reader.cancel().catch(() => {});
+            return;
           }
         }
         if (part.done) break;
       }
       if (!completed) throw new Error("network");
     } catch (e) {
-      if (!abort.signal.aborted) {
-        setError(
-          e instanceof TypeError || e instanceof SyntaxError
+      // A result already shown is kept, whatever happens afterwards.
+      if (completed || operation.current !== generation) return;
+      if (abort.signal.aborted && !stopReason) return; // the user cancelled
+      // Before reporting a failure, ask once whether this check finished and
+      // was saved (owner-scoped); this costs no model call.
+      if (checkId) {
+        const recovered = await recoverCheck(checkId);
+        if (recovered && operation.current === generation) {
+          showResult(recovered);
+          return;
+        }
+      }
+      if (operation.current !== generation) return;
+      setError(
+        stopReason
+          ? "client_timeout"
+          : e instanceof TypeError || e instanceof SyntaxError
             ? "network"
             : e instanceof Error
               ? e.message
               : "network",
-        );
-        setStage("review");
-      }
+      );
+      setStage("review");
     } finally {
+      clearTimeout(total);
+      clearTimeout(silence);
       if (operation.current === generation) busy.current = false;
     }
   };
@@ -2350,6 +2499,7 @@ export default function StillValidApp() {
                     {(
                       [
                         ["timing_prepare", clientTiming.prepareMs],
+                        ["timing_locate", clientTiming.locateMs],
                         ["timing_extract", clientTiming.extractMs],
                         ["timing_extractServer", clientTiming.extractServerMs],
                         ["timing_review", clientTiming.reviewMs],
@@ -2379,7 +2529,8 @@ export default function StillValidApp() {
                         "{n}",
                         String(
                           result.timing.modelCalls +
-                            (clientTiming.extractCalls || 0),
+                            (clientTiming.extractCalls || 0) +
+                            (clientTiming.locateCalls || 0),
                         ),
                       )}
                     </p>
