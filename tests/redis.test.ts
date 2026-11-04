@@ -1,4 +1,5 @@
 import test from "node:test";
+import { IP_WORK_LIMIT } from "../src/lib/abuse";
 import assert from "node:assert/strict";
 import Redis from "ioredis-mock";
 import { randomUUID } from "node:crypto";
@@ -175,13 +176,13 @@ test("network counter has bounded TTL and rejected admissions do not create leas
   const ttl = await client.pttl(keys[0]);
   assert.ok(ttl > 0 && ttl <= 3600000);
   await store.releaseWork(id, "a");
-  await client.set(keys[0], "39", "PX", ttl);
+  await client.set(keys[0], String(IP_WORK_LIMIT - 1), "PX", ttl);
   const results = await Promise.allSettled(
     Array.from({ length: 8 }, (_, i) =>
       store.acquireExtraction(`network-concurrent-${i}`, ip),
     ),
   );
   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
-  assert.equal(await client.get(keys[0]), "40");
+  assert.equal(await client.get(keys[0]), String(IP_WORK_LIMIT));
   assert.equal(await client.zcard(store.key("active:v2")), 1);
 });
