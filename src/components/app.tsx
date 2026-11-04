@@ -662,6 +662,9 @@ export default function StillValidApp() {
     // True while the link field holds an address read from the notice that
     // the user has not edited.
     [sourcePrefilled, setSourcePrefilled] = useState(false),
+    // True while a check started in the background (see startEarlyCheck) is
+    // waiting for the user to confirm the reading.
+    [earlyStarted, setEarlyStarted] = useState(false),
     [result, setResult] = useState<Result | null>(null);
   // The photo before an automatic notice crop, so it can be restored.
   const [beforeAutoCrop, setBeforeAutoCrop] = useState<string | null>(null);
@@ -862,6 +865,7 @@ export default function StillValidApp() {
     setError(null);
     setSourceUrl("");
     setSourcePrefilled(false);
+    dropEarly();
     activeId.current = null;
     inFlightId.current = null;
     try {
@@ -1060,11 +1064,21 @@ export default function StillValidApp() {
       setNotice(data.notice);
       // Offer an address printed on the notice, without replacing one the
       // user typed. The check still decides whether that page is official.
+      let linkNow = sourceUrl;
       if (!sourceUrl.trim() || sourcePrefilled) {
         const printed = printedUrl(data.notice?.originalText || "");
-        setSourceUrl(printed ?? "");
+        linkNow = printed ?? "";
+        setSourceUrl(linkNow);
         setSourcePrefilled(Boolean(printed));
       }
+      dropEarly();
+      if (
+        /^https:\/\//i.test(linkNow.trim()) &&
+        data.readability !== "uncertain" &&
+        data.notice?.title?.trim() &&
+        !(data.notice.country && country && data.notice.country !== country)
+      )
+        startEarlyCheck(data.notice, linkNow);
       setCountryConfirmed(false);
       setStage("review");
     } catch (e) {
@@ -1088,6 +1102,40 @@ export default function StillValidApp() {
       clearTimeout(deadline);
       if (operation.current === generation) busy.current = false;
     }
+  };
+  // Time saving: when the official link is already known (typed, or printed on
+  // the notice) the check starts right after reading, while the user reviews
+  // the fields. It is used only if the notice, region, language and link are
+  // unchanged when the button is tapped; otherwise it is dropped and a normal
+  // check runs. At most one background check is started per reading.
+  const early = useRef<{
+    key: string;
+    response: Promise<Response | null>;
+  } | null>(null);
+  const checkKey = (n: Notice, c: string | null, l: string, url: string) =>
+    JSON.stringify([n, c, l, url]);
+  const dropEarly = () => {
+    const pending = early.current;
+    early.current = null;
+    setEarlyStarted(false);
+    void pending?.response.then((r) => r?.body?.cancel().catch(() => {}));
+  };
+  const startEarlyCheck = (n: Notice, url: string) => {
+    early.current = {
+      key: checkKey(n, country, lang, url),
+      response: fetch("/api/checks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notice: n,
+          country,
+          lang,
+          sourceUrl: url,
+          requestKey: crypto.randomUUID(),
+        }),
+      }).catch(() => null),
+    };
+    setEarlyStarted(true);
   };
   const runCheck = async (overrideUrl?: string) => {
     if (!notice || busy.current) return;
@@ -1149,7 +1197,21 @@ export default function StillValidApp() {
     };
     let checkId: string | null = null;
     try {
-      const response = await abortable(
+      const url = overrideUrl ?? sourceUrl;
+      const pending = early.current;
+      early.current = null;
+      setEarlyStarted(false);
+      let response: Response | null = null;
+      if (pending && pending.key === checkKey(notice, country, lang, url)) {
+        response = await abortable(pending.response, abort.signal);
+        if (response && !response.ok) {
+          void response.body?.cancel().catch(() => {});
+          response = null;
+        }
+      } else if (pending) {
+        void pending.response.then((r) => r?.body?.cancel().catch(() => {}));
+      }
+      response ??= await abortable(
         fetch("/api/checks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1157,7 +1219,7 @@ export default function StillValidApp() {
             notice,
             country,
             lang: lang,
-            sourceUrl: overrideUrl ?? sourceUrl,
+            sourceUrl: url,
             requestKey: crypto.randomUUID(),
           }),
           signal: abort.signal,
@@ -2053,6 +2115,11 @@ export default function StillValidApp() {
                   />
                 </div>
               </label>
+              {earlyStarted && (
+                <p className="field-hint early-check-note" role="status">
+                  {t.earlyCheckNote}
+                </p>
+              )}
               {sourcePrefilled && sourceUrl && (
                 <p className="field-hint source-prefilled" role="status">
                   {t.sourcePrefilled}
