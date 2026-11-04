@@ -54,3 +54,21 @@ The hosted network limit uses `IP_RATE_LIMIT_SECRET` when set, otherwise a key d
 On commit `7f99b7a76c2cdb3a71e6743efa5cd0c202ea9266`, Node 24 verification passed TypeScript, 150 behavioral/security tests, seven live-evaluation fixture tests, the production build, and 21 Chromium browser-flow groups. The browser run reported no page errors and no automatically detected accessibility violations. GitHub's Vercel preview and a production deployment reached READY; the public home and status endpoint returned HTTP 200 and the deployed status reported that SHA. These checks do not establish physical-device behavior.
 
 A bounded production run used synthetic images and text against public sources. Eight of nine requested scenarios produced the expected result on their first attempt; L3 initially returned `503 model_unavailable` after 60.5 seconds and produced the expected `review` on one retry. Source failure and unsafe-URL checks behaved as listed in [the evaluation record](evaluation.md#2026-11-04-synthetic-release-run). This is not a human-reviewed real-notice accuracy study. Eighteen model calls were observed in server timing logs; cost and tokens were not measured. Three test sessions were deleted with HTTP 204.
+
+## 2026-11-04 identity counterexamples, retry and real-notice photo run
+
+Independent review found two deterministic gaps on `87c13b9`, each reproduced as a verified `changed` result: a changed value quoted from a section labelled with another edition of the same title (for example "2027 Garden Workshop" on a 2026 notice), and a dedicated official page whose archive notice sat more than 400 characters from the quote. Both now yield `review`; regression tests also keep cross-year deadlines of the notice's own edition, unlabelled title repeats and Korean `제N회` labels verified. On a page listing several programmes, whether a quoted value belongs to *this* programme still depends on the model when no edition label distinguishes the sections.
+
+Extraction keeps a 60-second first attempt; only a provider stall or 5xx is retried once, inside a 130-second route budget (`maxDuration` 140). Comparisons now have a 12,000-token completion budget and a 100-second call limit after a long official page twice ended in `model_output`. If one of several comparisons fails, the others are kept with a `source_compare_failed` warning. Titles that differ only by whitespace beside a bracket or punctuation mark (a printed line break) are matched; letters and digits must still match.
+
+Live checks on production `445996b` used camera-style JPEG photos (tilted sheet, uneven light, slight blur) of real public notices. These were rendered posters, not physical camera captures:
+
+| Case | Official source | Result | Extraction | Check |
+| --- | --- | --- | ---: | ---: |
+| Seoul internship notice, unchanged | seoul.go.kr notice 454731 | `matched`, verified (earlier deployment, after the institution fix) | 26.1 s | 57.7 s |
+| Same notice, poster with an older deadline (3/31 18:00) | same URL | `changed` 3/31 → 4/3 15:00, verified | 26.0 s | 49.4 s |
+| Engen Conservation Fellowship poster with the general date | airandspace.si.edu fellowships | `review`; the model quoted Engen's own February 15 deadline | 9.2 s | 34.0 s |
+| NASM Fellowships, no URL (search) | found airandspace.si.edu | deadline `same`, verified; overall `review` because two other candidates were blocked or too large | — | 43.9 s |
+| Seoul notice, no URL (search) | candidates were attachments and a script-only page | `unavailable` with reasons | — | 19.9 s |
+
+Before the comparison budget change the same Seoul page failed with `model_output` in two of three comparisons; after it, one further comparison succeeded and one result was lost to a network reset in the test environment, so stability is not yet measured. Human-reviewed real-notice accuracy evaluations completed remain **0**. All test sessions were deleted with HTTP 204.
