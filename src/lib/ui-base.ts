@@ -260,6 +260,8 @@ const ko = {
     "공개된 HTTPS 공고 주소를 입력해 주세요. 내부 주소·인증 정보가 있는 주소는 사용할 수 없어요.",
   error_too_large: "파일이 너무 커요. 10MB 이하의 사진을 선택해 주세요.",
   error_image_type: "JPG, PNG, WebP 사진을 선택해 주세요.",
+  error_image_heic:
+    "이 브라우저는 HEIC 사진을 읽지 못해요. 사진을 JPEG로 보내거나, iPhone 설정 > 카메라 > 포맷에서 '높은 호환성'을 선택해 주세요.",
   error_image_compression:
     "사진을 충분히 압축하지 못했어요. 더 작은 사진을 선택해 주세요.",
   error_busy: "다른 확인 작업이 진행 중이에요. 잠시 뒤 다시 시도해 주세요.",
@@ -580,6 +582,8 @@ const en: Copy = {
     "Enter a public HTTPS notice URL without credentials. Internal addresses aren't supported.",
   error_too_large: "This file is too large. Choose a photo under 10MB.",
   error_image_type: "Choose a JPG, PNG or WebP photo.",
+  error_image_heic:
+    "This browser can't read HEIC photos. Share the photo as JPEG, or choose 'Most Compatible' in iPhone Settings > Camera > Formats.",
   error_image_compression:
     "We couldn't compress this photo enough. Please choose a smaller image.",
   error_busy: "Other checks are running. Please try again shortly.",

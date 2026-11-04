@@ -206,6 +206,8 @@ export const esUiCopy: UiCopy = {
     "Se encontraron varios avisos. Elige el que quieres comprobar.",
   autoFindPick: "Elegir el aviso {n}",
   autoFindClose: "Cerrar sin elegir",
+  error_image_heic:
+    "Este navegador no puede leer fotos HEIC. Comparte la foto como JPEG o elige «Más compatible» en Ajustes > Cámara > Formatos del iPhone.",
 };
 
 export const frUiCopy: UiCopy = {
@@ -418,4 +420,6 @@ export const frUiCopy: UiCopy = {
     "Plusieurs avis ont été trouvés. Choisissez celui à vérifier.",
   autoFindPick: "Choisir l'avis {n}",
   autoFindClose: "Fermer sans choisir",
+  error_image_heic:
+    "Ce navigateur ne lit pas les photos HEIC. Partagez la photo en JPEG ou choisissez « Le plus compatible » dans Réglages > Appareil photo > Formats de l'iPhone.",
 };

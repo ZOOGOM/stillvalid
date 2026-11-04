@@ -212,6 +212,8 @@ export const deUiCopy: UiCopy = {
     "Mehrere Bekanntmachungen gefunden. Wählen Sie die zu prüfende aus.",
   autoFindPick: "Bekanntmachung {n} wählen",
   autoFindClose: "Ohne Auswahl schließen",
+  error_image_heic:
+    "Dieser Browser kann keine HEIC-Fotos lesen. Teilen Sie das Foto als JPEG oder wählen Sie „Maximale Kompatibilität“ unter iPhone-Einstellungen > Kamera > Formate.",
 };
 
 export const ptUiCopy: UiCopy = {
@@ -421,4 +423,6 @@ export const ptUiCopy: UiCopy = {
     "Vários avisos foram encontrados. Escolha o que deseja verificar.",
   autoFindPick: "Escolher o aviso {n}",
   autoFindClose: "Fechar sem escolher",
+  error_image_heic:
+    "Este navegador não consegue ler fotos HEIC. Envie a foto em JPEG ou escolha “Mais Compatível” em Ajustes > Câmera > Formatos no iPhone.",
 };
