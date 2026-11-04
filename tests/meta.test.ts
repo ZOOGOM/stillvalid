@@ -329,7 +329,7 @@ test("comparison sends the selected result language without changing source fact
       async (_input, init) => {
         const body = JSON.parse(String(init?.body));
         const payload = JSON.parse(body.messages[1].content);
-        assert.equal(body.max_completion_tokens, 4500);
+        assert.equal(body.max_completion_tokens, 6000);
         assert.equal(payload.result_language, expected);
         assert.deepEqual(payload.notice, notice);
         assert.equal(payload.source.text, source.text);
@@ -358,6 +358,55 @@ test("comparison sends the selected result language without changing source fact
       expected = lang;
       await client.compare(notice, source, lang);
     }
+  }));
+test("comparison truncation remains an error without retry at the larger limit", () =>
+  withTestKey(async () => {
+    let calls = 0;
+    const client = new MetaClient(
+      async (_input, init) => {
+        calls++;
+        assert.equal(
+          JSON.parse(String(init?.body)).max_completion_tokens,
+          6000,
+        );
+        return Response.json({
+          choices: [
+            {
+              finish_reason: "length",
+              message: {
+                content: JSON.stringify({
+                  same_notice: false,
+                  identity_quote: "",
+                  country: null,
+                  source_role: "unknown",
+                  comparisons: [],
+                  summary: "",
+                  next_action: "",
+                }),
+              },
+            },
+          ],
+        });
+      },
+      () => {},
+    );
+    await assert.rejects(
+      () =>
+        client.compare(
+          notice,
+          {
+            id: "source-0",
+            url: "https://nypl.org/notice",
+            title: "Notice",
+            text: notice.originalText,
+            authority: "registered",
+            fetchedAt: "2026-11-03T00:00:00Z",
+          },
+          "en",
+        ),
+      { code: "model_output", status: 422 },
+    );
+    assert.equal(calls, 1);
   }));
 test("extraction rejects values and quotes rewritten from the original", () =>
   withTestKey(async () => {

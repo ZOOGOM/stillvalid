@@ -125,9 +125,9 @@ export class MetaClient {
     const response = await this.call(
       "/chat/completions",
       {
-        // Image extraction also returns the full transcription. Give it bounded
-        // extra headroom without increasing other calls or retrying truncation.
-        max_completion_tokens: image ? 6000 : 4500,
+        // Transcription and evidence comparisons need bounded extra headroom.
+        // Text extraction stays smaller; truncation never triggers a retry.
+        max_completion_tokens: image || name === "comparison" ? 6000 : 4500,
         messages: [
           {
             role: "developer",

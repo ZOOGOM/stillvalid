@@ -88,6 +88,8 @@ export const zhUiCopy: UiCopy = {
   institution: "发布机构",
   edition: "年份或期次",
   noticeCountry: "从公告中读取的国家",
+  imageReviewWarning:
+    "图片中的表格或小字可能被遗漏或误读。请将下方图片与识别出的文字进行比较。如有遗漏或错误，请修改文字后重新读取。",
   original: "查看识别出的原文",
   editText: "修改原文并重新读取",
   sourceLabel: "官方公告网址",
@@ -260,6 +262,8 @@ export const jaUiCopy: UiCopy = {
   institution: "発行機関",
   edition: "年・開催回",
   noticeCountry: "お知らせから読み取った国",
+  imageReviewWarning:
+    "表や小さな文字が抜けたり、誤って読み取られたりすることがあります。下の画像と読み取ったテキストを比較し、抜けや誤りがあればテキストを修正して読み直してください。",
   original: "読み取った原文を見る",
   editText: "原文を修正して読み直す",
   sourceLabel: "公式のお知らせの URL",

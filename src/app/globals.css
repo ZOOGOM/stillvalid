@@ -878,6 +878,11 @@ html[lang="en"] .hero h1 {
   overflow: hidden;
   background: #f3f5ee;
 }
+.image-review img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 .image-preview > img {
   display: block;
   max-width: 100%;

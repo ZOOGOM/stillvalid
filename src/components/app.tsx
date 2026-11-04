@@ -1373,6 +1373,18 @@ export default function StillValidApp() {
               <p>{t.reviewDesc}</p>
             </div>
             <div className="review-card">
+              {mode === "photo" && image && (
+                <div className="image-review">
+                  <p className="notice-warning">{t.imageReviewWarning}</p>
+                  <details className="transcript" open>
+                    <summary>
+                      {t.imagePreview}
+                      <ChevronDown size={15} />
+                    </summary>
+                    <img src={image} alt={t.imagePreview} />
+                  </details>
+                </div>
+              )}
               <div className="notice-head-icon">
                 <FileText size={25} />
               </div>
@@ -1449,7 +1461,10 @@ export default function StillValidApp() {
               {!notice.fields.length && (
                 <p className="notice-warning">{t.noFields}</p>
               )}
-              <details className="transcript">
+              <details
+                className="transcript"
+                open={mode === "photo" && !!image}
+              >
                 <summary>
                   {t.original}
                   <ChevronDown size={15} />
