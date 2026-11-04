@@ -86,13 +86,23 @@ function editionMarkers(text: string): Map<string, Set<string>> {
   return markers;
 }
 
+// Line breaks on a printed notice often become a space next to a bracket or
+// punctuation mark ("인턴십 (여름" for "인턴십(여름"). Only that whitespace is
+// ignored; every letter, digit and mark must still match.
+function tight(value: string): string {
+  return value.replace(
+    /\s*([()[\]{}「」『』《》〈〉<>,.:;·/~\-–—])\s*/gu,
+    "$1",
+  );
+}
+
 function identifierIn(text: string, identifier: string): boolean {
   if (!identifier) return false;
-  const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escaped = tight(identifier).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(
     `(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`,
     "u",
-  ).test(text);
+  ).test(tight(text));
 }
 
 // On a registered official domain only, identity evidence may come from the
@@ -249,7 +259,7 @@ function sameIdentity(notice: Notice, source: Source, quote: string): boolean {
       "",
     )
     .replace(
-      /공지사항|공지|새소식|행사안내|행사|홈|목록|お知らせ|イベント|ニュース|一覧|ホーム|通知|公告|活动|首頁|首页|الأخبار|الفعاليات|الرئيسية/gu,
+      /공지사항|공지|서울소식|새소식|소식|고시·공고|고시공고|행사안내|행사|홈|목록|お知らせ|イベント|ニュース|一覧|ホーム|通知|公告|活动|首頁|首页|الأخبار|الفعاليات|الرئيسية/gu,
       "",
     )
     .replace(/[\s:·.,!()|/—–-]/g, "");

@@ -82,9 +82,10 @@ class ProviderStall extends AppError {
     super("model_unavailable", 503);
   }
 }
-// Normal extraction measured 8-21 s. A first attempt that stalls past this is
-// retried once inside the route's 80 s budget instead of failing at 60 s.
-const extractionAttemptMs = 38000;
+// English photos extract in 8-21 s, but a dense Korean photo measured ~40 s or
+// more, so the first attempt keeps the full 60 s. Only a stall or 5xx is
+// retried, inside the extraction route's 130 s budget.
+const extractionAttemptMs = 60000;
 
 export class MetaClient {
   constructor(

@@ -1226,3 +1226,48 @@ test("a page-level archive notice anywhere on a dedicated page vetoes borrowed i
     "changed",
   );
 });
+
+test("a printed line break beside a bracket does not break an otherwise exact title", () => {
+  const title = "「2026년 정원 인턴십(여름,가을학기)」 참여기업 모집 공고";
+  const printed = "「2026년 정원 인턴십 (여름,가을학기)」 참여기업 모집 공고";
+  const n: Notice = {
+    title: printed,
+    institution: "예시도서관",
+    edition: "2026년",
+    country: "KR",
+    originalText: `${printed}\n예시도서관\n접수기간 : 3. 31.(화) 18:00`,
+    fields: [
+      {
+        key: "deadline",
+        value: "3. 31.(화) 18:00",
+        quote: "접수기간 : 3. 31.(화) 18:00",
+      },
+    ],
+  };
+  const s: Source = {
+    ...source,
+    title: "서울소식 | 예시도서관",
+    text: `${title}\n예시도서관\n접수기간 : 4. 3.(금) 15:00`,
+  };
+  const a: ModelComparison = {
+    ...analysis,
+    identity_quote: `${title}\n예시도서관`,
+    country: "KR",
+    comparisons: [
+      {
+        key: "deadline",
+        before: "3. 31.(화) 18:00",
+        after: "4. 3.(금) 15:00",
+        before_quote: "접수기간 : 3. 31.(화) 18:00",
+        after_quote: "접수기간 : 4. 3.(금) 15:00",
+        relation: "changed",
+      },
+    ],
+  };
+  assert.equal(run(n, s, a).status, "changed");
+  // Letters still have to match: a different programme name is rejected.
+  assert.equal(
+    run({ ...n, title: printed.replace("정원", "공원") }, s, a).status,
+    "review",
+  );
+});
