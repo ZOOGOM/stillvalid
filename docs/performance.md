@@ -63,3 +63,31 @@ Official references:
 - https://dev.meta.ai/docs/image-understanding
 - https://dev.meta.ai/docs/protocols/chat-completions
 - https://dev.meta.ai/docs/api-reference/responses/schemas
+
+## Request efficiency in the current application
+
+The following additions are covered by offline regression checks. A new live-model
+latency study has not been run for this revision; no completion-time guarantee or
+accuracy improvement is inferred from the code changes.
+
+- Search candidates are ranked for registered authority and notice relevance
+  **before** the three-page cap. Later official citations are not discarded simply
+  because three raw search results preceded them.
+- Source retrieval has a **15-second aggregate budget**, including DNS, redirects
+  and body retrieval, in addition to the 12-second per-request limit. Unread sources
+  remain explicit warnings.
+- Eligible pages among the first two candidates can start comparison on arrival,
+  even when an earlier fetch is still pending. Final source selection retains
+  priority order and the two-source ceiling. Exact matches of final URL, title,
+  body and authority share comparison work; similar pages at different URLs do not.
+- Background checking starts after **350 ms** and is aborted if the reading,
+  usage region or source link changes. Display-language changes can reuse the
+  same factual check. Aborting cannot guarantee a refund for a provider call
+  already received.
+- One clear extraction is reusable for identical input and country for **10 minutes
+  in tab memory**. Reset/unmount clears it; uncertain readings are not cached.
+  This cache does not store source freshness or final validity decisions.
+
+The earlier 205-unit / 7-harness-test release verification and seven browser
+suites cover the implemented behaviour. Screenshots in the refreshed READMEs are
+production UI with built-in synthetic examples, not new latency measurements.
