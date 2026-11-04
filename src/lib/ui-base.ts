@@ -94,6 +94,8 @@ const ko = {
   institution: "발행 기관",
   edition: "연도·회차",
   noticeCountry: "안내문에서 읽은 국가",
+  imageReviewWarning:
+    "이미지에서 표나 작은 글자가 빠지거나 잘못 읽힐 수 있어요. 아래 이미지와 인식한 텍스트를 비교해 주세요. 빠진 내용이나 잘못 읽힌 항목은 텍스트를 수정해 다시 읽어 주세요.",
   original: "인식한 원문 보기",
   editText: "원문을 수정해 다시 읽기",
   sourceLabel: "공식 공고 주소",
@@ -349,6 +351,8 @@ const en: Copy = {
   institution: "Issuing institution",
   edition: "Year or edition",
   noticeCountry: "Country read from the notice",
+  imageReviewWarning:
+    "Tables or small print may be missing or misread. Compare the image below with the extracted text. If anything is missing or incorrect, edit the text and read it again.",
   original: "Read extracted text",
   editText: "Edit the text and read again",
   sourceLabel: "Official notice URL",

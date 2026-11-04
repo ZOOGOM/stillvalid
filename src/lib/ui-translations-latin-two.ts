@@ -99,6 +99,8 @@ export const deUiCopy: UiCopy = {
   institution: "Herausgebende Institution",
   edition: "Jahr oder Ausgabe",
   noticeCountry: "Aus der Mitteilung erkanntes Land",
+  imageReviewWarning:
+    "Tabellen oder Kleingedrucktes können fehlen oder falsch erkannt werden. Vergleiche das Bild unten mit dem erkannten Text. Ergänze fehlende Inhalte, korrigiere Fehler und lasse den Text erneut lesen.",
   original: "Erkannten Text ansehen",
   editText: "Text bearbeiten und erneut lesen",
   sourceLabel: "URL der offiziellen Mitteilung",
@@ -288,6 +290,8 @@ export const ptUiCopy: UiCopy = {
   institution: "Instituição emissora",
   edition: "Ano ou edição",
   noticeCountry: "País identificado no aviso",
+  imageReviewWarning:
+    "Tabelas ou letras pequenas podem faltar ou ser lidas incorretamente. Compare a imagem abaixo com o texto extraído. Se houver omissões ou erros, edite o texto e leia novamente.",
   original: "Ver texto extraído",
   editText: "Editar o texto e ler novamente",
   sourceLabel: "URL do aviso oficial",

@@ -97,6 +97,8 @@ export const esUiCopy: UiCopy = {
   institution: "Institución emisora",
   edition: "Año o edición",
   noticeCountry: "País leído en el aviso",
+  imageReviewWarning:
+    "Pueden faltar tablas o letra pequeña, o haberse leído mal. Compara la imagen con el texto extraído. Si falta algo o hay errores, edita el texto y vuelve a leerlo.",
   original: "Ver texto extraído",
   editText: "Editar el texto y leer de nuevo",
   sourceLabel: "URL del aviso oficial",
@@ -285,6 +287,8 @@ export const frUiCopy: UiCopy = {
   institution: "Organisme émetteur",
   edition: "Année ou édition",
   noticeCountry: "Pays lu dans l'annonce",
+  imageReviewWarning:
+    "Des tableaux ou des petits caractères peuvent manquer ou être mal lus. Comparez l’image ci-dessous au texte extrait. En cas d’omission ou d’erreur, modifiez le texte et relancez la lecture.",
   original: "Voir le texte extrait",
   editText: "Modifier le texte et relire",
   sourceLabel: "URL de l'annonce officielle",
