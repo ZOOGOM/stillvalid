@@ -782,6 +782,7 @@ test("notice location sends one SAM 3.1 request and keeps the best large box", (
     // The diagnostic holds only shape, lengths and token counts.
     assert.deepEqual(diagnostic, {
       prompt: "document",
+      tried: ["document"],
       status: null,
       incomplete: null,
       topKeys: ["output"],
@@ -843,3 +844,71 @@ test("malformed or out-of-frame SAM boxes are ignored", async () => {
     { x1: 5, y1: 5, x2: 95, y2: 95, w: 100, h: 100, c: null },
   );
 });
+
+test("several notices are offered once each, and a second phrase is tried only after nothing", () =>
+  withTestKey(async () => {
+    const { noticeBoxes } = await import("../src/lib/meta");
+    // Two distinct notices plus a near-duplicate of the first.
+    const boxes = noticeBoxes(
+      "<0f>0<|box;x1=10;y1=10;x2=400;y2=500;w=1000;h=1000;c=0.9|>,1<|box;x1=12;y1=12;x2=402;y2=498;w=1000;h=1000;c=0.8|>,2<|box;x1=500;y1=100;x2=900;y2=700;w=1000;h=1000;c=0.7|>",
+    );
+    assert.deepEqual(
+      boxes.map((b) => [b.x1, b.c]),
+      [
+        [10, 0.9],
+        [500, 0.7],
+      ],
+    );
+    const png =
+      "data:image/png;base64," +
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0]).toString("base64");
+    const prompts: string[] = [];
+    const answer = (text: string) =>
+      Response.json({
+        status: "completed",
+        output: [{ type: "message", content: [{ type: "output_text", text }] }],
+      });
+    // Nothing for "document", then a poster box: two calls.
+    let client = new MetaClient(
+      async (_input, init) => {
+        const body = JSON.parse(String(init?.body));
+        prompts.push(body.input[0].content[0].text);
+        return answer(
+          prompts.length === 1
+            ? ""
+            : "<0f>0<|box;x1=50;y1=50;x2=700;y2=950;w=772;h=1024;c=0.8|>",
+        );
+      },
+      () => {},
+    );
+    let found = await client.locate(png);
+    assert.deepEqual(prompts, ["document", "poster"]);
+    assert.equal(found.box?.x1, 50);
+    assert.deepEqual(found.diagnostic.tried, ["document", "poster"]);
+    // Found at once: a single call.
+    prompts.length = 0;
+    client = new MetaClient(
+      async (_input, init) => {
+        prompts.push(JSON.parse(String(init?.body)).input[0].content[0].text);
+        return answer(
+          "<0f>0<|box;x1=10;y1=10;x2=500;y2=500;w=1000;h=1000;c=0.9|>",
+        );
+      },
+      () => {},
+    );
+    found = await client.locate(png);
+    assert.deepEqual(prompts, ["document"]);
+    assert.equal(found.boxes.length, 1);
+    // An explicit diagnostic prompt is never followed by a second phrase.
+    prompts.length = 0;
+    client = new MetaClient(
+      async (_input, init) => {
+        prompts.push(JSON.parse(String(init?.body)).input[0].content[0].text);
+        return answer("");
+      },
+      () => {},
+    );
+    found = await client.locate(png, undefined, "paper");
+    assert.deepEqual(prompts, ["paper"]);
+    assert.equal(found.box, null);
+  }));

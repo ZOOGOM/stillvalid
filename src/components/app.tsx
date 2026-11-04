@@ -120,6 +120,14 @@ function MapSearchLink({
     </a>
   );
 }
+type NoticeBoxShape = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  w: number;
+  h: number;
+};
 type ClientTiming = {
   prepareMs?: number;
   extractMs?: number;
@@ -604,6 +612,11 @@ export default function StillValidApp() {
     [result, setResult] = useState<Result | null>(null);
   // The photo before an automatic notice crop, so it can be restored.
   const [beforeAutoCrop, setBeforeAutoCrop] = useState<string | null>(null);
+  // Several detected notices waiting for the user's choice.
+  const [boxChoice, setBoxChoice] = useState<{
+    image: string;
+    boxes: NoticeBoxShape[];
+  } | null>(null);
   // Client-observed stage durations for the current flow (not stored).
   const timings = useRef<ClientTiming>({});
   const [clientTiming, setClientTiming] = useState<ClientTiming>({});
@@ -803,11 +816,49 @@ export default function StillValidApp() {
   };
   // Opt-in: one SAM 3.1 call finds the printed notice and crops to it, with a
   // small margin. The user can undo, crop by hand or rotate as before.
+  // Crops the current photo to one detected box with a small margin.
+  const cropToBox = async (source: string, box: NoticeBoxShape) => {
+    const loaded = await loadImage(source);
+    const sx = loaded.naturalWidth / box.w,
+      sy = loaded.naturalHeight / box.h;
+    const marginX = loaded.naturalWidth * 0.02,
+      marginY = loaded.naturalHeight * 0.02;
+    const x = Math.max(0, box.x1 * sx - marginX),
+      y = Math.max(0, box.y1 * sy - marginY);
+    return transformImage(source, 0, {
+      x,
+      y,
+      width: Math.min(loaded.naturalWidth, (box.x2 + 1) * sx + marginX) - x,
+      height: Math.min(loaded.naturalHeight, (box.y2 + 1) * sy + marginY) - y,
+    });
+  };
+  const applyBox = async (source: string, box: NoticeBoxShape) => {
+    const generation = ++uploadGeneration.current;
+    setPreparing(true);
+    try {
+      const cropped = await cropToBox(source, box);
+      if (generation !== uploadGeneration.current) return;
+      setBoxChoice(null);
+      setBeforeAutoCrop(source);
+      setImage(cropped);
+      setToast({ text: t.autoFindDone, lang });
+    } catch (e) {
+      if (generation === uploadGeneration.current)
+        setError(e instanceof Error ? e.message : "image_type");
+    } finally {
+      if (generation === uploadGeneration.current) setPreparing(false);
+    }
+  };
+  // Opt-in: SAM 3.1 finds printed notices in the photo. One notice is cropped
+  // directly; several are offered for the user to choose; none leaves the
+  // photo unchanged. The user can undo, crop by hand or rotate as before.
   const autoFind = async () => {
     if (!image || preparing || !live) return;
     const generation = ++uploadGeneration.current;
     setPreparing(true);
     setError(null);
+    setBoxChoice(null);
+    let found: NoticeBoxShape[] = [];
     try {
       const response = await fetch("/api/locate", {
         method: "POST",
@@ -817,46 +868,21 @@ export default function StillValidApp() {
       if (!response.ok)
         throw new Error(await responseError(response, "upload_too_large"));
       const data = (await response.json()) as {
-        box: {
-          x1: number;
-          y1: number;
-          x2: number;
-          y2: number;
-          w: number;
-          h: number;
-        } | null;
+        box: NoticeBoxShape | null;
+        boxes?: NoticeBoxShape[];
       };
       if (generation !== uploadGeneration.current) return;
-      if (!data.box) {
-        setToast({ text: t.autoFindNone, lang });
-        return;
-      }
-      const loaded = await loadImage(image);
-      const sx = loaded.naturalWidth / data.box.w,
-        sy = loaded.naturalHeight / data.box.h;
-      const marginX = loaded.naturalWidth * 0.02,
-        marginY = loaded.naturalHeight * 0.02;
-      const x = Math.max(0, data.box.x1 * sx - marginX),
-        y = Math.max(0, data.box.y1 * sy - marginY);
-      const area = {
-        x,
-        y,
-        width:
-          Math.min(loaded.naturalWidth, (data.box.x2 + 1) * sx + marginX) - x,
-        height:
-          Math.min(loaded.naturalHeight, (data.box.y2 + 1) * sy + marginY) - y,
-      };
-      const cropped = await transformImage(image, 0, area);
-      if (generation !== uploadGeneration.current) return;
-      setBeforeAutoCrop(image);
-      setImage(cropped);
-      setToast({ text: t.autoFindDone, lang });
+      found = data.boxes?.length ? data.boxes : data.box ? [data.box] : [];
+      if (!found.length) setToast({ text: t.autoFindNone, lang });
+      else if (found.length > 1) setBoxChoice({ image, boxes: found });
     } catch (e) {
       if (generation === uploadGeneration.current)
         setError(e instanceof Error ? e.message : "network");
     } finally {
       if (generation === uploadGeneration.current) setPreparing(false);
     }
+    if (found.length === 1 && generation === uploadGeneration.current)
+      await applyBox(image, found[0]);
   };
   const extract = async () => {
     if (busy.current) return;
@@ -1389,6 +1415,49 @@ export default function StillValidApp() {
                             <Trash2 size={17} />
                           </button>
                         </div>
+                        {boxChoice && boxChoice.image === image && (
+                          <div
+                            className="notice-choice"
+                            role="group"
+                            aria-label={t.autoFindChoose}
+                          >
+                            <p>{t.autoFindChoose}</p>
+                            <div className="notice-choice-image">
+                              <img src={boxChoice.image} alt="" />
+                              {boxChoice.boxes.map((box, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  style={{
+                                    left: (box.x1 / box.w) * 100 + "%",
+                                    top: (box.y1 / box.h) * 100 + "%",
+                                    width:
+                                      ((box.x2 - box.x1) / box.w) * 100 + "%",
+                                    height:
+                                      ((box.y2 - box.y1) / box.h) * 100 + "%",
+                                  }}
+                                  aria-label={t.autoFindPick.replace(
+                                    "{n}",
+                                    String(i + 1),
+                                  )}
+                                  disabled={preparing}
+                                  onClick={() =>
+                                    void applyBox(boxChoice.image, box)
+                                  }
+                                >
+                                  <span aria-hidden="true">{i + 1}</span>
+                                </button>
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              className="text-button"
+                              onClick={() => setBoxChoice(null)}
+                            >
+                              {t.autoFindClose}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div
