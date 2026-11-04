@@ -319,3 +319,17 @@ The check now starts right after reading when the official link is known, and is
 One production browser run, a Seoul notice as text with its printed official link, 10 s spent reviewing: reading 5.5 s; the link field was filled from the notice and the check started 0.2 s before the review screen appeared; after the tap the result arrived in 3.9 s with a verified `changed` outcome; 19.4 s from the start including the 10 s review; one POST to the check route. Two model calls (one reading, one comparison). This is one run on a text notice. It hides model time behind the user's review time and does not reduce the model's own time: reading a dense photo still takes about 17–25 s and the comparison about 7–25 s, so the original P50 15 s / P90 30 s target is not shown to be met by this change.
 
 Production `e314b1b`, no official link (a Smithsonian fellowship notice as text, 15 s spent reviewing): reading 3.4 s; the link field stayed empty and the check, including the official-source search, started in the background before the review screen finished; after the tap the result arrived in 7.9 s with `review` (the unchanged verifier did not confirm); 26.3 s from the start including the 15 s review; one POST. The same path measured about 22–42 s when started at the tap (2026-11-04 search runs). One run on a text notice; it moves model time into the review period and does not shorten the model's own time. Roughly three to four model calls (reading, search, up to two comparisons).
+
+## 2026-11-04 reading with other Meta models (production, read step only)
+
+The deployment's Meta key listed these model IDs: `muse-spark-1.3` (current), `muse-spark-1.3-contributor`, `muse-spark-1.2`, `muse-spark-1.2-contributor`, `muse-spark-1.1`, plus `sam-3.1`, `muse-wonder-1.0`, `muse-image-1.0`, `muse-voice-transcribe-1.0`. No model is named as a faster tier. The two "contributor" variants were not tried because their data-handling terms were not checked.
+
+Reading only, two photos (a Seoul notice and a Smithsonian fellowship, reconstructed as photos) twice each, one model call per run, temporary deployments:
+
+| Model | Reading time | Seoul title read correctly | Smithsonian |
+|---|---|---|---|
+| `muse-spark-1.3` (default, earlier runs) | 17–25 s | 4 of 4 ("서울영커리언스") | correct |
+| `muse-spark-1.2` | 2.0–4.5 s | 0 of 2 ("서울영커리어스") | correct |
+| `muse-spark-1.1` | 2.4–7.9 s | 1 of 2 | correct |
+
+The faster models were far quicker but misread one character of the Seoul title in most runs; the identity check compares the notice title with the official page, so such a misreading can send a correct comparison to review. Four runs per model is a small sample, and this does not measure comparison or search with these models. The default stays `muse-spark-1.3`; `META_EXTRACTION_MODEL` can select another reading model without a code change. Eight model calls.
