@@ -23,7 +23,7 @@ import { assembleResult } from "@/lib/compare";
 import { errorResponse, readJson } from "@/lib/http";
 import { abuseKey, abuseSecret } from "@/lib/abuse";
 import { sourceRelevant } from "@/lib/relevance";
-import { firstInOrder, settle } from "@/lib/priority";
+import { settle } from "@/lib/priority";
 export const runtime = "nodejs";
 export const maxDuration = 180;
 const sourceWarningCodes = new Set([
@@ -71,6 +71,8 @@ export async function POST(request: NextRequest) {
     ]);
     const started = Date.now();
     const timing = { discoverMs: 0, fetchMs: 0, compareMs: 0, modelCalls: 0 };
+    // Fixed identity/scope reason codes; never notice or source text.
+    const diagnostics: string[] = [];
     const measure = async <T>(
       key: "discoverMs" | "fetchMs" | "compareMs",
       operation: () => Promise<T>,
@@ -158,8 +160,10 @@ export async function POST(request: NextRequest) {
           send("phase", { step: "sources", elapsedMs: Date.now() - started });
           await ensureActive();
           // Fetch candidates concurrently but decide in priority order, exactly
-          // as a sequential loop would: stop at two sources and record only the
-          // failures that came before them. Unneeded requests are aborted.
+          // as a sequential loop would: stop once two sources related to the
+          // notice are in hand, recording only the failures and unrelated pages
+          // met before them. An unrelated page no longer uses up a slot that a
+          // later, related candidate needs. Unneeded requests are aborted.
           const fetchAbort = new AbortController();
           const fetchSignal = AbortSignal.any([signal, fetchAbort.signal]);
           const fetchStarted = Date.now();
@@ -169,11 +173,20 @@ export async function POST(request: NextRequest) {
               settle(fetchSource(candidate.url, "pending", fetchSignal)),
             );
           try {
-            const fetched = await firstInOrder(attempts, 2);
-            for (const source of fetched.values)
-              sources.push({ ...source, id: "source-" + sources.length });
-            for (const error of fetched.errors)
-              warnings.push(fetchWarning(error));
+            let relatedFound = 0;
+            for (const attempt of attempts) {
+              if (relatedFound >= 2) break;
+              const outcome = await attempt;
+              if (!outcome.ok) {
+                warnings.push(fetchWarning(outcome.error));
+                continue;
+              }
+              sources.push({
+                ...outcome.value,
+                id: "source-" + sources.length,
+              });
+              if (sourceRelevant(notice, outcome.value)) relatedFound++;
+            }
           } finally {
             fetchAbort.abort();
             timing.fetchMs += Date.now() - fetchStarted;
@@ -223,6 +236,7 @@ export async function POST(request: NextRequest) {
             lang,
             warnings,
             elapsedMs: Date.now() - started,
+            diagnostics,
           });
           result.candidates = candidates.slice(0, 3);
           await finishCheck(job.id, actor, result);
@@ -250,6 +264,7 @@ export async function POST(request: NextRequest) {
             JSON.stringify({
               event: "check_timing",
               ...timing,
+              rejected: diagnostics,
               elapsedMs: Date.now() - started,
             }),
           );

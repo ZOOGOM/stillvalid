@@ -1271,3 +1271,188 @@ test("a printed line break beside a bracket does not break an otherwise exact ti
     "review",
   );
 });
+
+// Section scope: a value must come from this programme's own section, never a
+// sibling programme listed on the same official page.
+function siblingRun(text: string, afterQuote: string, after: string) {
+  const n: Notice = {
+    title: "Garden Workshop",
+    institution: "Example Library",
+    edition: null,
+    country: "US",
+    originalText: "Garden Workshop\nExample Library\nApply by 4 November 2026.",
+    fields: [
+      {
+        key: "deadline",
+        value: "4 November 2026",
+        quote: "Apply by 4 November 2026.",
+      },
+    ],
+  };
+  const diagnostics: string[] = [];
+  const result = assembleResult({
+    id: "test",
+    notice: n,
+    sources: [{ ...source, title: "Programmes | Example Library", text }],
+    analyses: [
+      {
+        ...analysis,
+        identity_quote: "Garden Workshop",
+        comparisons: [
+          {
+            key: "deadline",
+            before: "4 November 2026",
+            after,
+            before_quote: "Apply by 4 November 2026.",
+            after_quote: afterQuote,
+            relation: "changed",
+          },
+        ],
+      },
+    ],
+    lang: "en",
+    checkedAt: "2026-11-03T00:00:00Z",
+    diagnostics,
+  });
+  return { status: result.status, diagnostics };
+}
+
+test("a value quoted from a sibling programme's section is never confirmed", () => {
+  const listing =
+    "Example Library programmes\nGarden Workshop\nOpen to adults\nApply by 12 November 2026.\nMusic Workshop\nOpen to adults\nApply by 10 November 2026.";
+  let r = siblingRun(listing, "Apply by 10 November 2026.", "10 November 2026");
+  assert.equal(r.status, "review");
+  assert.ok(r.diagnostics.includes("field_scope"));
+  // Inline lead-ins on one line are sections too.
+  r = siblingRun(
+    "Example Library. Garden Workshop: apply by 12 November 2026. Music Workshop: apply by 10 November 2026.",
+    "apply by 10 November 2026.",
+    "10 November 2026",
+  );
+  assert.equal(r.status, "review");
+  // The programme's own section still confirms the change.
+  assert.equal(
+    siblingRun(listing, "Apply by 12 November 2026.", "12 November 2026")
+      .status,
+    "changed",
+  );
+  // Neutral sub-headings ("Timeline", "Applications Due") do not change scope.
+  assert.equal(
+    siblingRun(
+      "Garden Workshop at Example Library\nTimeline\nApplications Due\nApply by 12 November 2026.",
+      "Apply by 12 November 2026.",
+      "12 November 2026",
+    ).status,
+    "changed",
+  );
+});
+
+test("a sibling Korean programme section is never confirmed", () => {
+  const n: Notice = {
+    title: "정원 워크숍",
+    institution: "예시도서관",
+    edition: null,
+    country: "KR",
+    originalText: "정원 워크숍\n예시도서관\n신청 마감: 11월 4일",
+    fields: [
+      { key: "deadline", value: "11월 4일", quote: "신청 마감: 11월 4일" },
+    ],
+  };
+  const text =
+    "예시도서관 프로그램\n정원 워크숍\n신청 마감: 11월 12일\n음악 워크숍\n신청 마감: 11월 10일";
+  const go = (after: string) =>
+    run(
+      n,
+      { ...source, title: "프로그램 | 예시도서관", text },
+      {
+        ...analysis,
+        identity_quote: "정원 워크숍",
+        country: "KR",
+        comparisons: [
+          {
+            key: "deadline",
+            before: "11월 4일",
+            after,
+            before_quote: "신청 마감: 11월 4일",
+            after_quote: `신청 마감: ${after}`,
+            relation: "changed",
+          },
+        ],
+      },
+    ).status;
+  assert.equal(go("11월 10일"), "review");
+  assert.equal(go("11월 12일"), "changed");
+  const diagnostics: string[] = [];
+  assembleResult({
+    id: "test",
+    notice: n,
+    sources: [{ ...source, title: "프로그램 | 예시도서관", text }],
+    analyses: [
+      {
+        ...analysis,
+        identity_quote: "정원 워크숍",
+        country: "KR",
+        comparisons: [
+          {
+            key: "deadline",
+            before: "11월 4일",
+            after: "11월 10일",
+            before_quote: "신청 마감: 11월 4일",
+            after_quote: "신청 마감: 11월 10일",
+            relation: "changed",
+          },
+        ],
+      },
+    ],
+    lang: "ko",
+    diagnostics,
+  });
+  assert.deepEqual(diagnostics, ["field_scope"]);
+});
+
+test("a page that says it is archived or withdrawn never confirms, even with a complete quote", () => {
+  for (const banner of [
+    "This page is an archive.",
+    "This news article was withdrawn on 1 November 2026",
+    "This event has been superseded by a newer listing.",
+    "이 페이지는 보관된 자료입니다.",
+  ]) {
+    const diagnostics: string[] = [];
+    const result = assembleResult({
+      id: "test",
+      notice,
+      sources: [{ ...source, text: `${banner}\n${source.text}` }],
+      analyses: [analysis],
+      lang: "en",
+      checkedAt: "2026-11-03T00:00:00Z",
+      diagnostics,
+    });
+    assert.equal(result.status, "review", banner);
+    assert.ok(diagnostics.includes("page_archived"), banner);
+  }
+  // A site menu link named "News archive" is not a page-level statement.
+  assert.equal(
+    run(notice, {
+      ...source,
+      text: `News archive\nPast events\n${source.text}`,
+    }).status,
+    "changed",
+  );
+});
+
+test("site-name suffixes and lead-in headings are neutral; another programme name is not", () => {
+  const gov = (title: string) =>
+    run(notice, {
+      ...source,
+      url: "https://www.gov.uk/government/news/x",
+      title,
+    }).status;
+  assert.equal(gov("2026 Garden workshop - GOV.UK"), "changed");
+  assert.equal(gov("2026 Garden workshop: recruitment - GOV.UK"), "changed");
+  assert.equal(gov("Join the 2026 Garden workshop - GOV.UK"), "changed");
+  // "Local History" is not "History": a different name still fails.
+  assert.equal(gov("Local 2026 Garden workshop - GOV.UK"), "review");
+  assert.equal(gov("2026 Garden workshop for teens - GOV.UK"), "review");
+  // A foreign domain name in the heading is not this site's label.
+  assert.equal(gov("2026 Garden workshop - example.com"), "review");
+});
