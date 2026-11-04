@@ -28,14 +28,14 @@ An explicit location button may request a one-time HTTPS location permission. Br
 | Optional region and independent display language | Usage-region picker and ten display-language dictionaries | Region memory/clear, mismatch confirmation and fact-preservation checks; live language quality remains unverified |
 | Image/text input and local editing | Browser preparation, crop and rotation | Real browser file input and canvas flow; unsupported-file recovery |
 | Extraction review | Editable title, institution, edition and transcript | HTTP-fixture extraction and review checks |
-| Official-source discovery | Meta Responses search and actual returned URL evidence | Provider-contract tests; live search still requires deployment validation |
-| Bounded source retrieval | Public DNS pinning, HTTPS and redirect/body limits | Security and parser tests; actual institution access remains a live release check |
-| Identity and evidence comparison | Quote checks, edition/country/date guards, partial/conflict handling | Comparison tests and clearly labeled synthetic examples |
+| Official-source discovery | Meta Responses search and actual returned URL evidence | Provider-contract tests and recorded production search observations; attachment/blocked candidates can prevent confirmation |
+| Bounded source retrieval | Public DNS pinning, HTTPS and redirect/body limits | Security/parser tests and recorded production retrieval from Seoul, GOV.UK and Smithsonian; coverage of other institutions is unmeasured |
+| Identity and evidence comparison | Quote checks, identity/edition/section/archive/country/date guards, partial/conflict handling | Regression tests and controlled production comparisons; no human-labelled accuracy benchmark |
 | Candidate recovery | Candidate URL selection followed by a new check | Browser HTTP-fixture flow; no claim that a candidate alone is official |
 | Progress and cancellation | NDJSON phases, cancellation and stale-operation guards | Browser fixture and cancellation checks |
 | Deletion and expiry | Owner-scoped result/session deletion and 24-hour lifetime | SQLite and Redis behavior tests, browser deletion/error checks |
 | Shared usage controls | Atomic Redis operations or SQLite transactions | Emulator tests and SQLite multi-process concurrency tests |
-| Accessible mobile presentation | Focus handling, keyboard controls, readable inputs and touch targets | Automated browser/accessibility checks; actual iOS/Android remains pending |
+| Accessible mobile presentation | Focus handling, keyboard controls, readable inputs and touch targets | Automated browser/accessibility checks and one user-reported iPhone camera/result flow; comprehensive Safari/HEIC and Android checks remain pending |
 | Deployable service | Vercel + Marketplace Upstash Redis settings, or single-server Docker | Vercel production deployment reached READY; real provider/storage and external HTTP verification are separate checks |
 
 ## Live release gate
@@ -44,12 +44,14 @@ Complete these on the deployed HTTPS service before describing it as ready for j
 
 - [x] Connect the reviewed GitHub version to Vercel with Node.js 24.
 - [x] Register `META_API_KEY`, both Marketplace KV REST variables and the correct production `APP_URL` as server environment variables.
-- [ ] Check account/model access, then perform actual image extraction, web search, source retrieval and comparison. A models-list response alone is insufficient.
+- [x] Check account/model access, then perform actual image extraction, web search, source retrieval and comparison. The dated production observations in [validation](validation.md) cover these operations; they are separate runs, not a claim that every search yields a verified result.
 - [ ] Run the ten real-notice tasks below, record human reference answers and investigate every incorrect definitive result.
 - [ ] Evaluate actual Meta output quality for each display language separately from the implemented dictionaries; record observed evidence and limitations. Selecting 249 regions does not establish worldwide notice coverage.
-- [ ] Exercise a different anonymous session, individual deletion, session-wide deletion, expiry, duplicate submission and shared request/concurrency limits on hosted Redis.
-- [ ] Test a real iPhone Safari and Android Chrome, including camera permission failure, upload, editing, keyboard, zoom and network interruption.
-- [ ] Check source-site failures, provider timeout/limit errors, insufficient configuration and recovery without returning a synthetic result as live output.
+- [x] Exercise individual and session-wide deletion on the deployed service; see the dated production validation records.
+- [ ] Complete hosted anonymous-session isolation, expiry, duplicate submission and shared request/concurrency limit coverage. Local SQLite/emulator tests and successful deletion alone do not complete this item.
+- [ ] Complete real iPhone Safari and Android Chrome coverage, including camera permission failure, upload, editing, keyboard, zoom and network interruption. One user-reported iPhone camera/result flow is recorded in [validation](validation.md); it does not complete the full gate or establish HEIC support.
+- [x] Record production source failures and provider stall/output failures without presenting synthetic output as a live result; see [evaluation](evaluation.md#2026-11-04-synthetic-release-run) and [validation](validation.md).
+- [ ] Complete hosted provider-limit and insufficient-configuration recovery coverage. Local HTTP fixtures and normal successful traffic do not establish these production failure modes.
 - [ ] Confirm provider retention, billing/credits, hosting quotas, deployment rollback and service availability through judging.
 - [ ] Align the public code, README, deployment URL and three-minute demonstration with one stable version.
 
