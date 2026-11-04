@@ -1056,3 +1056,36 @@ test("reading defaults to minimal reasoning effort; a known value or none overri
     }
     assert.deepEqual(sent, ["minimal", "low", "minimal", undefined]);
   }));
+test("reading can use its own model while comparison keeps the main one", () =>
+  withTestKey(async () => {
+    const { originalText: _ignored, ...extracted } = notice;
+    const models: string[] = [];
+    const client = new MetaClient(
+      async (_input, init) => {
+        models.push(JSON.parse(String(init?.body)).model);
+        return Response.json({
+          choices: [
+            {
+              finish_reason: "stop",
+              message: { content: JSON.stringify(extracted) },
+            },
+          ],
+        });
+      },
+      () => {},
+    );
+    const previous = process.env.META_EXTRACTION_MODEL;
+    try {
+      delete process.env.META_EXTRACTION_MODEL;
+      await client.extract("Workshop. Open.", undefined, null);
+      process.env.META_EXTRACTION_MODEL = "reader-model";
+      await client.extract("Workshop. Open.", undefined, null);
+    } finally {
+      if (previous === undefined) delete process.env.META_EXTRACTION_MODEL;
+      else process.env.META_EXTRACTION_MODEL = previous;
+    }
+    assert.deepEqual(models, [
+      process.env.META_MODEL || "muse-spark-1.3",
+      "reader-model",
+    ]);
+  }));

@@ -57,6 +57,10 @@ export function configured(): boolean {
 export function modelId(): string {
   return process.env.META_MODEL || "muse-spark-1.3";
 }
+/** Model for reading notices; defaults to the main model. */
+export function extractionModel(): string {
+  return process.env.META_EXTRACTION_MODEL || modelId();
+}
 export function validateImage(data: string): void {
   const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(
     data,
@@ -251,6 +255,9 @@ export class MetaClient {
         max_completion_tokens:
           name === "comparison" ? 12000 : image ? 6000 : 4500,
         ...(effort ? { reasoning_effort: effort } : {}),
+        ...(name !== "comparison" && extractionModel() !== modelId()
+          ? { model: extractionModel() }
+          : {}),
         messages: [
           {
             role: "developer",
