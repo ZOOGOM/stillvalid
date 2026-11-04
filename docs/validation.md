@@ -241,3 +241,43 @@ SAM 3.1 returned no qualifying box with the default `poster` prompt for either i
 - The default prompt is now `document`; the change is covered by unit tests.
 - After this change, the default path itself was not called again live.
 - These were rendered test images, not physical camera photos. Behaviour on real photos, in poor light or with several notices in one photo remains unmeasured.
+
+## 2026-11-04 real photographs, limits for testing, HEIC and partial readings (`22cdec4`)
+
+**Usage limits.** At the user's request, while the app is being tested, the request ceilings now live in `src/lib/limits.ts`:
+- network starts per hour: 40 → 200 (this limit had blocked live testing);
+- per-session extractions per hour: 20 → 60;
+- per-session checks per hour: 12 → 40;
+- daily model calls when `DAILY_MODEL_CALL_LIMIT` is unset: 100 → 300.
+
+Concurrency (3) and the 10-starts-per-minute burst are unchanged. The Meta Billing spend limit remains the money ceiling. Setting `DAILY_MODEL_CALL_LIMIT` lowers the daily limit without a code change.
+
+**Real photographs.** Openly licensed (Creative Commons) Flickr photographs, found through Openverse, were used for testing only and are not stored in the repository: a poster on a wall, a framed notice board with four notices, and a dense school notice board. A darkened, noisier copy of the poster was also tested. All calls went to production through the default locate path.
+
+| Photo | Phrases tried | Boxes offered | Notes |
+| --- | --- | --- | --- |
+| Colourful poster on a wall | document (none) → poster | 2: the poster (77% of frame, 0.94) and a partly visible poster above it (8%, 0.82) | "document" alone found nothing; the fallback was needed |
+| Same, darkened and noisy | document | 1: the poster (77%, 0.50) | Lower confidence |
+| Framed board, four notices | document | 4 after lowering the minimum to 3%; drawn on the photo, each box encloses one notice (confidence 0.72–0.83) | With the earlier 8% minimum only 2 of 4 were offered |
+| Dense school board | document (none) → poster | 1: the whole board (92%, 0.74) | Individual sheets were not separated |
+| Seoul notice rendering (default path recheck) | document | 1 (0.90) | Confirms the default prompt |
+
+**Reading from cropped real photographs**, at the app's crop with a 2% margin:
+- **The board's main poster** (crop ~350×505 px): the title, institution and full text were transcribed correctly in 15.1 s. No fields were invented for a poster without dates.
+- **A small typed notice** (crop 261×185 px): only partly read, in 26.7 s and later 27.7 s. The title also changed between runs ("monthly" vs "evening" lectures).
+
+**Changes from these results:**
+- Photos with a short side under 500 px or under 0.3 MP now show a "take a closer photo" hint.
+- `/api/extract` reports `readability: "uncertain"` when the reader classes a photo as cropped, blurry or sparse. Production returned `uncertain` for the small typed notice, and the review screen asks the user to compare and correct.
+- Several detected notices are numbered in reading order. The minimum box size for offering a notice is 3%.
+
+**HEIC.** A HEIC/HEIF file is now decoded where the browser supports it and re-encoded to JPEG. Otherwise a HEIC-specific message explains how to send JPEG. Only the Chromium path (the guidance message) was tested; decoding on Safari or iPhone was not.
+
+**Cost.** This round used **13 model calls**, including two calls before the limits were raised; cost was not measured. Sessions were deleted with HTTP 204.
+
+**Still unverified:**
+- physical iPhone and Android devices;
+- map app vs web map;
+- HEIC decoding on Safari;
+- photographs taken with the app's own camera input;
+- human-labelled accuracy.
