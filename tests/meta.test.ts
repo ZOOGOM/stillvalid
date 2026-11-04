@@ -488,7 +488,7 @@ test("comparison sends the selected result language without changing source fact
       async (_input, init) => {
         const body = JSON.parse(String(init?.body));
         const payload = JSON.parse(body.messages[1].content);
-        assert.equal(body.max_completion_tokens, 6000);
+        assert.equal(body.max_completion_tokens, 12000);
         assert.equal(payload.result_language, expected);
         assert.deepEqual(payload.notice, notice);
         assert.equal(payload.source.text, source.text);
@@ -538,7 +538,7 @@ test("comparison truncation remains an error without retry at the larger limit",
         calls++;
         assert.equal(
           JSON.parse(String(init?.body)).max_completion_tokens,
-          6000,
+          12000,
         );
         return Response.json({
           choices: [
