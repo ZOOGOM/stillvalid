@@ -1,4 +1,9 @@
 import { IP_WORK_LIMIT, IP_WORK_WINDOW_MS } from "./abuse";
+import {
+  SESSION_CHECKS_PER_HOUR,
+  SESSION_EXTRACTIONS_PER_HOUR,
+  dailyModelCallLimit,
+} from "./limits";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -70,9 +75,7 @@ export function reserve(key: string, maximum: number, windowMs: number): void {
   if (!row) throw new AppError("rate_limit", 429);
 }
 export function reserveModelCall(): void {
-  const raw = Number(process.env.DAILY_MODEL_CALL_LIMIT || 100);
-  const maximum = Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 100;
-  reserve("model:global", maximum, 86400000);
+  reserve("model:global", dailyModelCallLimit(), 86400000);
 }
 export function createCheck(
   actor: string,
@@ -101,7 +104,7 @@ export function createCheck(
       now = Date.now();
     if (abuse) reserve("ip-work:" + abuse, IP_WORK_LIMIT, IP_WORK_WINDOW_MS);
     admitWork(id, actor, key);
-    reserve("check:" + actor, 12, 3600000);
+    reserve("check:" + actor, SESSION_CHECKS_PER_HOUR, 3600000);
     database
       .prepare(
         "INSERT INTO checks (id, owner, state, created, expires, request_key) VALUES (?, ?, 'processing', ?, ?, ?)",
@@ -174,7 +177,7 @@ export function acquireExtraction(actor: string, abuse?: string): string {
     const id = randomUUID();
     if (abuse) reserve("ip-work:" + abuse, IP_WORK_LIMIT, IP_WORK_WINDOW_MS);
     admitWork(id, actor, null);
-    reserve("extract:" + actor, 20, 3600000);
+    reserve("extract:" + actor, SESSION_EXTRACTIONS_PER_HOUR, 3600000);
     database.exec("COMMIT");
     return id;
   } catch (error) {

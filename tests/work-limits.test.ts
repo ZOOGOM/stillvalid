@@ -1,4 +1,6 @@
 import test from "node:test";
+import { IP_WORK_LIMIT } from "../src/lib/abuse";
+import { DAILY_MODEL_CALLS_DEFAULT } from "../src/lib/limits";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -38,7 +40,7 @@ for (const [name, store] of [
   test(`${name}: network quota survives cookie rotation and deletion, without charging duplicates`, async (t) => {
     let now = Math.floor(Date.now() / 3600000) * 3600000 + 1000;
     t.mock.method(Date, "now", () => now);
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < IP_WORK_LIMIT; i++) {
       const actor = `ip-actor-${i}`;
       if (i % 2) {
         const requestKey = randomUUID();
@@ -53,7 +55,8 @@ for (const [name, store] of [
         const id = await store.acquireExtraction(actor, "network-a");
         await store.releaseWork(id, actor);
       }
-      now += 61000;
+      // Within one hourly window and under the 10-starts-per-minute burst.
+      now += Math.min(61000, Math.floor(3500000 / IP_WORK_LIMIT));
     }
     await assert.rejects(
       async () => store.acquireExtraction("fresh", "network-a"),
@@ -217,9 +220,14 @@ for (const [name, store] of [
   });
   test(`${name}: daily model allowance remains atomic across actors`, async () => {
     const outcomes = await Promise.allSettled(
-      Array.from({ length: 105 }, async () => store.reserveModelCall()),
+      Array.from({ length: DAILY_MODEL_CALLS_DEFAULT + 5 }, async () =>
+        store.reserveModelCall(),
+      ),
     );
-    assert.equal(outcomes.filter((r) => r.status === "fulfilled").length, 100);
+    assert.equal(
+      outcomes.filter((r) => r.status === "fulfilled").length,
+      DAILY_MODEL_CALLS_DEFAULT,
+    );
     assert.equal(
       outcomes.filter(
         (r) => r.status === "rejected" && r.reason.code === "rate_limit",
@@ -228,3 +236,12 @@ for (const [name, store] of [
     );
   });
 }
+
+test("the daily model limit reads DAILY_MODEL_CALL_LIMIT and falls back to the default", async () => {
+  const { dailyModelCallLimit, DAILY_MODEL_CALLS_DEFAULT: fallback } =
+    await import("../src/lib/limits");
+  assert.equal(dailyModelCallLimit({}), fallback);
+  assert.equal(dailyModelCallLimit({ DAILY_MODEL_CALL_LIMIT: "100" }), 100);
+  assert.equal(dailyModelCallLimit({ DAILY_MODEL_CALL_LIMIT: "-3" }), fallback);
+  assert.equal(dailyModelCallLimit({ DAILY_MODEL_CALL_LIMIT: "x" }), fallback);
+});

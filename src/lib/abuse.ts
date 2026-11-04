@@ -1,11 +1,12 @@
 import { createHash, createHmac } from "node:crypto";
 import { isIP } from "node:net";
 import ipaddr from "ipaddr.js";
+import { IP_WORK_PER_HOUR } from "./limits";
 
 // Additional network-level protection, never an identity or result owner.
 // Disabled without an explicit Vercel runtime and a dedicated secret. Existing
 // global/session limits must remain enabled when this optional layer is absent.
-export const IP_WORK_LIMIT = 40;
+export const IP_WORK_LIMIT = IP_WORK_PER_HOUR;
 export const IP_WORK_WINDOW_MS = 3600000;
 export function abuseKey(
   headers: Pick<Headers, "get">,

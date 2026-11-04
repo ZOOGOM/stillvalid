@@ -1,4 +1,9 @@
 import { IP_WORK_LIMIT } from "./abuse";
+import {
+  SESSION_CHECKS_PER_HOUR,
+  SESSION_EXTRACTIONS_PER_HOUR,
+  dailyModelCallLimit,
+} from "./limits";
 import { randomUUID } from "node:crypto";
 import { EnvHttpProxyAgent } from "undici";
 import { AppError, type Result } from "./schema";
@@ -66,12 +71,7 @@ export class RedisStore {
     if (Number(result) !== 1) throw new AppError("rate_limit", 429);
   }
   async reserveModelCall() {
-    const raw = Number(process.env.DAILY_MODEL_CALL_LIMIT || 100);
-    await this.reserve(
-      "model:global",
-      Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 100,
-      86400000,
-    );
+    await this.reserve("model:global", dailyModelCallLimit(), 86400000);
   }
   // Admissions share a rolling 60-second window and three execution leases
   // across both paid routes. 210 seconds exceeds their 180s/90s hard deadlines.
@@ -96,7 +96,7 @@ export class RedisStore {
       end;
       redis.call('ZREMRANGEBYSCORE',KEYS[2],'-inf',ARGV[1]);
       if redis.call('ZCARD',KEYS[2])>=3 then return {'busy','error'} end;
-      local count=tonumber(redis.call('GET',KEYS[3]) or '0'); if count>=12 then return {'rate_limit','error'} end;
+      local count=tonumber(redis.call('GET',KEYS[3]) or '0'); if count>=${SESSION_CHECKS_PER_HOUR} then return {'rate_limit','error'} end;
       redis.call('ZREMRANGEBYSCORE',KEYS[6],'-inf',tonumber(ARGV[1])-60000);
       if redis.call('ZCARD',KEYS[6])>=10 then return {'rate_limit','error'} end;
       if ARGV[8]=='1' and tonumber(redis.call('GET',KEYS[10]) or '0')>=tonumber(ARGV[9]) then return {'rate_limit','error'} end;
@@ -230,7 +230,7 @@ export class RedisStore {
       if redis.call('ZCARD',KEYS[1])>=3 then return 'busy' end;
       redis.call('ZREMRANGEBYSCORE',KEYS[2],'-inf',tonumber(ARGV[1])-60000);
       if redis.call('ZCARD',KEYS[2])>=10 then return 'rate_limit' end;
-      if tonumber(redis.call('GET',KEYS[3]) or '0')>=20 then return 'rate_limit' end;
+      if tonumber(redis.call('GET',KEYS[3]) or '0')>=${SESSION_EXTRACTIONS_PER_HOUR} then return 'rate_limit' end;
       if ARGV[6]=='1' and tonumber(redis.call('GET',KEYS[5]) or '0')>=tonumber(ARGV[7]) then return 'rate_limit' end;
       if ARGV[6]=='1' then redis.call('INCR',KEYS[5]);redis.call('PEXPIREAT',KEYS[5],ARGV[5]) end;
       redis.call('INCR',KEYS[3]);redis.call('PEXPIREAT',KEYS[3],ARGV[5]);
