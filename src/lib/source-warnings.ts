@@ -4,7 +4,13 @@ import type { ResultLang } from "./languages";
 const warnings: Record<
   ResultLang,
   Record<
-    "format" | "size" | "blocked" | "missing" | "timeout" | "technical",
+    | "format"
+    | "size"
+    | "blocked"
+    | "missing"
+    | "timeout"
+    | "technical"
+    | "unrelated",
     string
   >
 > = {
@@ -15,6 +21,7 @@ const warnings: Record<
     missing: "해당 출처 페이지를 찾을 수 없어요.",
     timeout: "출처 응답 시간이 초과됐어요.",
     technical: "이 주소는 공고가 아닌 기술 파일이에요.",
+    unrelated: "가져온 출처가 이 공고와 관련 없어 보여 비교하지 않았어요.",
   },
   en: {
     format: "The source format or text encoding is not supported.",
@@ -23,6 +30,8 @@ const warnings: Record<
     missing: "The source page could not be found.",
     timeout: "The source did not respond in time.",
     technical: "This address points to a technical file, not a notice.",
+    unrelated:
+      "A fetched source did not appear related to this notice, so it was not compared.",
   },
   zh: {
     format: "不支持该来源的格式或文字编码。",
@@ -31,6 +40,7 @@ const warnings: Record<
     missing: "找不到来源页面。",
     timeout: "来源响应超时。",
     technical: "此地址指向技术文件，而非公告。",
+    unrelated: "获取的来源似乎与此公告无关，因此未进行比对。",
   },
   es: {
     format: "No se admite el formato o la codificación de la fuente.",
@@ -39,6 +49,8 @@ const warnings: Record<
     missing: "No se encontró la página de la fuente.",
     timeout: "La fuente tardó demasiado en responder.",
     technical: "Esta dirección apunta a un archivo técnico, no a un aviso.",
+    unrelated:
+      "Una fuente obtenida no parecía relacionada con este aviso, así que no se comparó.",
   },
   fr: {
     format: "Le format ou l’encodage de la source n’est pas pris en charge.",
@@ -47,6 +59,8 @@ const warnings: Record<
     missing: "La page de la source est introuvable.",
     timeout: "La source n’a pas répondu à temps.",
     technical: "Cette adresse désigne un fichier technique, pas une annonce.",
+    unrelated:
+      "Une source récupérée ne semblait pas liée à cette annonce ; elle n’a pas été comparée.",
   },
   de: {
     format:
@@ -57,6 +71,8 @@ const warnings: Record<
     timeout: "Die Quelle hat nicht rechtzeitig geantwortet.",
     technical:
       "Diese Adresse verweist auf eine technische Datei, nicht auf eine Mitteilung.",
+    unrelated:
+      "Eine abgerufene Quelle schien nicht zu dieser Mitteilung zu passen und wurde nicht verglichen.",
   },
   ja: {
     format: "この資料の形式または文字コードには対応していません。",
@@ -65,6 +81,8 @@ const warnings: Record<
     missing: "出典ページが見つかりません。",
     timeout: "出典の応答がタイムアウトしました。",
     technical: "このアドレスはお知らせではなく技術ファイルを指しています。",
+    unrelated:
+      "取得した出典はこのお知らせと関係がないようだったため、比較しませんでした。",
   },
   pt: {
     format: "O formato ou a codificação da fonte não é compatível.",
@@ -74,6 +92,8 @@ const warnings: Record<
     timeout: "A fonte não respondeu a tempo.",
     technical:
       "Este endereço aponta para um arquivo técnico, não para um aviso.",
+    unrelated:
+      "Uma fonte obtida não parecia relacionada a este aviso, então não foi comparada.",
   },
   ar: {
     format: "تنسيق المصدر أو ترميز النص غير مدعوم.",
@@ -82,6 +102,8 @@ const warnings: Record<
     missing: "لم يُعثر على صفحة المصدر.",
     timeout: "لم يستجب المصدر في الوقت المحدد.",
     technical: "يشير هذا العنوان إلى ملف تقني وليس إعلانًا.",
+    unrelated:
+      "بدا أن أحد المصادر التي جرى جلبها غير مرتبط بهذا الإعلان، لذلك لم تتم مقارنته.",
   },
   ru: {
     format: "Формат или кодировка источника не поддерживается.",
@@ -90,6 +112,8 @@ const warnings: Record<
     missing: "Страница источника не найдена.",
     timeout: "Источник не ответил вовремя.",
     technical: "Этот адрес ведёт к техническому файлу, а не к объявлению.",
+    unrelated:
+      "Полученный источник, похоже, не связан с этим объявлением, поэтому сравнение не выполнялось.",
   },
 };
 const categories: Record<string, keyof (typeof warnings)["en"]> = {
@@ -100,6 +124,7 @@ const categories: Record<string, keyof (typeof warnings)["en"]> = {
   source_not_found: "missing",
   source_timeout: "timeout",
   source_not_notice: "technical",
+  source_unrelated: "unrelated",
 };
 export function sourceWarningText(
   code: string,
