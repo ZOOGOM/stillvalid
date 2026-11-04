@@ -196,6 +196,10 @@ export const esUiCopy: UiCopy = {
   progressElapsed: "Transcurrido: {s}",
   progressTypical:
     "En nuestras mediciones, las comprobaciones con enlace oficial tardaron unos 45–90 segundos, y más con búsqueda. No se garantiza el tiempo de finalización.",
+  autoFind: "Buscar el aviso automáticamente",
+  autoFindDone: "Se recortó al área que parece el aviso. Puedes deshacerlo.",
+  autoFindNone: "No se encontró el área del aviso. Recórtala tú.",
+  autoFindUndo: "Deshacer recorte automático",
 };
 
 export const frUiCopy: UiCopy = {
@@ -397,4 +401,9 @@ export const frUiCopy: UiCopy = {
   progressElapsed: "Écoulé : {s}",
   progressTypical:
     "Dans nos mesures, les vérifications avec un lien officiel ont pris environ 45 à 90 secondes, et davantage avec une recherche. La durée n'est pas garantie.",
+  autoFind: "Trouver l'avis automatiquement",
+  autoFindDone:
+    "Recadré sur la zone qui ressemble à l'avis. Vous pouvez annuler.",
+  autoFindNone: "Aucune zone d'avis trouvée. Recadrez vous-même.",
+  autoFindUndo: "Annuler le recadrage automatique",
 };

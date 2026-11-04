@@ -172,6 +172,10 @@ export const zhUiCopy: UiCopy = {
   progressElapsed: "已用时 {s}",
   progressTypical:
     "在我们的测量中，填写官方链接的核查约需 45–90 秒，经过搜索则更久。不保证完成时间。",
+  autoFind: "自动查找公告区域",
+  autoFindDone: "已裁剪到看起来像公告的区域，可以撤销。",
+  autoFindNone: "未找到公告区域，请手动裁剪。",
+  autoFindUndo: "撤销自动裁剪",
 };
 
 export const jaUiCopy: UiCopy = {
@@ -370,4 +374,9 @@ export const jaUiCopy: UiCopy = {
   progressElapsed: "経過 {s}",
   progressTypical:
     "これまでの計測では、公式リンクありの確認で約45〜90秒、検索を経るとさらに長くかかりました。完了時間は保証されません。",
+  autoFind: "お知らせの範囲を自動で探す",
+  autoFindDone: "お知らせらしい範囲に合わせて切り抜きました。元に戻せます。",
+  autoFindNone:
+    "お知らせの範囲が見つかりませんでした。手動で切り抜いてください。",
+  autoFindUndo: "自動切り抜きを元に戻す",
 };

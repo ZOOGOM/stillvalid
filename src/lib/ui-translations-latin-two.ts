@@ -201,6 +201,11 @@ export const deUiCopy: UiCopy = {
   progressElapsed: "Vergangen: {s}",
   progressTypical:
     "In unseren Messungen dauerten Prüfungen mit offiziellem Link etwa 45–90 Sekunden, mit Suche länger. Eine Dauer wird nicht garantiert.",
+  autoFind: "Bekanntmachung automatisch finden",
+  autoFindDone:
+    "Auf den Bereich zugeschnitten, der wie die Bekanntmachung aussieht. Sie können das rückgängig machen.",
+  autoFindNone: "Kein Bereich gefunden. Bitte selbst zuschneiden.",
+  autoFindUndo: "Automatischen Zuschnitt rückgängig machen",
 };
 
 export const ptUiCopy: UiCopy = {
@@ -400,4 +405,8 @@ export const ptUiCopy: UiCopy = {
   progressElapsed: "Decorrido: {s}",
   progressTypical:
     "Em nossas medições, verificações com link oficial levaram cerca de 45–90 segundos, e mais com busca. O tempo de conclusão não é garantido.",
+  autoFind: "Encontrar o aviso automaticamente",
+  autoFindDone: "Recortado na área que parece ser o aviso. Você pode desfazer.",
+  autoFindNone: "Nenhuma área de aviso encontrada. Recorte você mesmo.",
+  autoFindUndo: "Desfazer recorte automático",
 };
