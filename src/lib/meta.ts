@@ -301,7 +301,11 @@ export class MetaClient {
    * be suggested. One model call per tap; the image is not stored. Returns the
    * best box in the image's own pixels, or null when nothing matched.
    */
-  async locate(image: string, signal?: AbortSignal): Promise<NoticeBox | null> {
+  async locate(
+    image: string,
+    signal?: AbortSignal,
+    prompt: LocatePrompt = defaultLocatePrompt(),
+  ): Promise<{ box: NoticeBox | null; diagnostic: LocateDiagnostic }> {
     validateImage(image);
     const response = await this.call(
       "/responses",
@@ -312,10 +316,7 @@ export class MetaClient {
             type: "message",
             role: "user",
             content: [
-              {
-                type: "input_text",
-                text: process.env.SAM_NOTICE_PROMPT || "poster",
-              },
+              { type: "input_text", text: prompt },
               { type: "input_image", image_url: image },
             ],
           },
@@ -325,7 +326,11 @@ export class MetaClient {
       signal,
       30000,
     );
-    return bestNoticeBox(responseText(response));
+    const text = responseText(response);
+    return {
+      box: bestNoticeBox(text),
+      diagnostic: locateDiagnostic(response, text, prompt),
+    };
   }
   async discover(
     notice: Notice,
@@ -485,4 +490,82 @@ export function bestNoticeBox(text: string): NoticeBox | null {
       (b.x2 - b.x1) * (b.y2 - b.y1) - (a.x2 - a.x1) * (a.y2 - a.y1),
   );
   return boxes[0] || null;
+}
+
+// SAM concept prompts are short noun phrases. Only these fixed phrases can be
+// requested, so the route never forwards free text from a client.
+export const locatePrompts = [
+  "poster",
+  "document",
+  "paper",
+  "sign",
+  "notice",
+  "flyer",
+] as const;
+export type LocatePrompt = (typeof locatePrompts)[number];
+function defaultLocatePrompt(): LocatePrompt {
+  const configured = process.env.SAM_NOTICE_PROMPT as LocatePrompt | undefined;
+  return configured && locatePrompts.includes(configured)
+    ? configured
+    : "poster";
+}
+
+/**
+ * Shape of the provider response for diagnosis: types, lengths and token
+ * counts only. No image data, mask payloads or free text are included.
+ */
+export type LocateDiagnostic = {
+  prompt: LocatePrompt;
+  status: string | null;
+  incomplete: string | null;
+  topKeys: string[];
+  outputTypes: string[];
+  partTypes: string[];
+  textLength: number;
+  frames: number;
+  boxTokens: number;
+  maskTokens: number;
+  boxAreas: number[];
+};
+function locateDiagnostic(
+  response: Record<string, unknown>,
+  text: string,
+  prompt: LocatePrompt,
+): LocateDiagnostic {
+  const output = Array.isArray(response.output) ? response.output : [];
+  const partTypes = output.flatMap((item) =>
+    item && typeof item === "object" && Array.isArray(item.content)
+      ? item.content.map((part: { type?: unknown }) => String(part?.type))
+      : [],
+  );
+  const incomplete = response.incomplete_details as
+    { reason?: unknown } | null | undefined;
+  // Box area as a share of the frame, in whole percent, for every box token.
+  const boxAreas = [...text.matchAll(/<\|box;([^|]*)\|>/g)].map((match) => {
+    const f = Object.fromEntries(
+      match[1].split(";").map((pair) => pair.split("=") as [string, string]),
+    );
+    const area =
+      ((Number(f.x2) - Number(f.x1)) * (Number(f.y2) - Number(f.y1))) /
+      (Number(f.w) * Number(f.h));
+    return Number.isFinite(area) ? Math.round(area * 100) : -1;
+  });
+  return {
+    prompt,
+    status: typeof response.status === "string" ? response.status : null,
+    incomplete:
+      incomplete && typeof incomplete.reason === "string"
+        ? incomplete.reason
+        : null,
+    topKeys: Object.keys(response).sort().slice(0, 20),
+    outputTypes: output.map((item) =>
+      String(item && typeof item === "object" ? item.type : typeof item),
+    ),
+    partTypes,
+    textLength: text.length,
+    frames: (text.match(/<\d+f>/g) || []).length,
+    boxTokens: boxAreas.length,
+    maskTokens: (text.match(/<\|mask;/g) || []).length,
+    boxAreas,
+  };
 }

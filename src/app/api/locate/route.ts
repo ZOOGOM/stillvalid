@@ -1,7 +1,13 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { MetaClient, configured, validateImage } from "@/lib/meta";
+import {
+  MetaClient,
+  configured,
+  locatePrompts,
+  validateImage,
+  type LocateDiagnostic,
+} from "@/lib/meta";
 import { AppError } from "@/lib/schema";
 import {
   owner,
@@ -14,7 +20,11 @@ import { errorResponse, readJson } from "@/lib/http";
 import { abuseKey, abuseSecret } from "@/lib/abuse";
 export const runtime = "nodejs";
 export const maxDuration = 45;
-const schema = z.object({ image: z.string().max(3900000) });
+const schema = z.object({
+  image: z.string().max(3900000),
+  // Diagnosis only: one of a fixed list of short noun phrases.
+  prompt: z.enum(locatePrompts).optional(),
+});
 
 // Opt-in crop suggestion: one SAM 3.1 call per user tap. It shares the
 // extraction slots, per-session and IP limits and the daily model allowance.
@@ -36,17 +46,24 @@ export async function POST(request: NextRequest) {
     const started = Date.now();
     let modelCalls = 0;
     let found = false;
+    let shape: LocateDiagnostic | null = null;
     try {
-      const box = await new MetaClient(undefined, async () => {
+      const { box, diagnostic } = await new MetaClient(undefined, async () => {
         await reserveModelCall();
         modelCalls++;
       }).locate(
         parsed.data.image,
         AbortSignal.any([request.signal, AbortSignal.timeout(35000)]),
+        parsed.data.prompt,
       );
       found = !!box;
+      shape = diagnostic;
       return NextResponse.json(
-        { box, timing: { locateMs: Date.now() - started, modelCalls } },
+        {
+          box,
+          diagnostic,
+          timing: { locateMs: Date.now() - started, modelCalls },
+        },
         { headers: { "Cache-Control": "no-store" } },
       );
     } finally {
@@ -56,6 +73,8 @@ export async function POST(request: NextRequest) {
           locateMs: Date.now() - started,
           modelCalls,
           found,
+          // Response shape only (types, lengths, token counts).
+          shape,
         }),
       );
       await releaseWork(lease, actor).catch(() => {});

@@ -756,7 +756,7 @@ test("notice location sends one SAM 3.1 request and keeps the best large box", (
         reserved++;
       },
     );
-    const box = await client.locate(png);
+    const { box, diagnostic } = await client.locate(png);
     assert.equal(reserved, 1);
     assert.equal(sent.model, "sam-3.1");
     const content = (sent.input as { content: { type: string }[] }[])[0]
@@ -779,12 +779,36 @@ test("notice location sends one SAM 3.1 request and keeps the best large box", (
       h: 800,
       c: 0.91,
     });
+    // The diagnostic holds only shape, lengths and token counts.
+    assert.deepEqual(diagnostic, {
+      prompt: "poster",
+      status: null,
+      incomplete: null,
+      topKeys: ["output"],
+      outputTypes: ["message"],
+      partTypes: ["output_text"],
+      textLength: diagnostic.textLength,
+      frames: 1,
+      boxTokens: 2,
+      maskTokens: 2,
+      boxAreas: [0, 65],
+    });
+    assert.ok(!JSON.stringify(diagnostic).includes("data="));
+    // A fixed alternative prompt is sent as given.
+    await client.locate(png, undefined, "document");
+    assert.equal(
+      (sent.input as { content: { text?: string }[] }[])[0].content[0].text,
+      "document",
+    );
     // Zero matches is a normal empty result, not an error.
     const none = new MetaClient(
       async () => Response.json({ output_text: "" }),
       () => {},
     );
-    assert.equal(await none.locate(png), null);
+    const empty = await none.locate(png);
+    assert.equal(empty.box, null);
+    assert.equal(empty.diagnostic.textLength, 0);
+    assert.equal(empty.diagnostic.boxTokens, 0);
     // A non-image upload is rejected before any provider call.
     let calls = 0;
     await assert.rejects(
