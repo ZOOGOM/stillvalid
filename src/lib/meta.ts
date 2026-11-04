@@ -112,7 +112,7 @@ const defaultEffort: Record<
 > = {
   extraction: "minimal",
   comparison: "minimal",
-  search: undefined,
+  search: "minimal", // TEMPORARY search experiment (approved); kept or reverted after measuring
 };
 export function reasoningEffort(
   step: "extraction" | "comparison" | "search",
