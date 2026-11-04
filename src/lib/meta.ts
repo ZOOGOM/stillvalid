@@ -60,7 +60,7 @@ export function modelId(): string {
 /** Model for reading notices; defaults to the main model. */
 export function extractionModel(): string {
   // TEMPORARY model experiment (approved); kept or reverted after measuring.
-  return process.env.META_EXTRACTION_MODEL || "muse-spark-1.2";
+  return process.env.META_EXTRACTION_MODEL || "muse-spark-1.1";
 }
 export function validateImage(data: string): void {
   const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(
