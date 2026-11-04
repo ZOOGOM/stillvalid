@@ -100,7 +100,8 @@ const ko = {
   editText: "원문을 수정해 다시 읽기",
   sourceLabel: "공식 공고 주소",
   optional: "선택",
-  sourceHint: "주소가 없으면 공식 자료 후보를 찾아볼게요.",
+  sourceHint:
+    "공식 페이지 주소를 넣으면 검색 단계를 건너뛰고 그 페이지와 바로 비교해서 더 빨라요. 주소가 없으면 공식 자료 후보를 찾아볼게요.",
   sourcePlaceholder: "https://기관의-공식-사이트/공지",
   mismatch: "사용 지역과 안내에서 읽은 국가가 달라요.",
   useNoticeCountry: "안내의 국가로 변경",
@@ -117,6 +118,9 @@ const ko = {
   phase_resume: "이전 확인 결과 불러오기",
   cancel: "확인 중단",
   takesTime: "자료의 양과 연결 상태에 따라 시간이 걸릴 수 있어요.",
+  progressElapsed: "경과 시간 {s}",
+  progressTypical:
+    "지금까지 측정에서는 공식 주소를 넣은 확인이 약 45초~1분 30초 걸렸고, 검색을 거치면 더 오래 걸렸어요. 완료 시간을 보장하지는 않아요.",
   resultEyebrow: "안내 확인 결과",
   status_changed: "달라진 내용을 찾았어요",
   status_matched: "확인한 자료와 일치해요",
@@ -218,6 +222,12 @@ const ko = {
   timing_calls: "모델 호출 {n}회",
   timing_total: "서버 처리 합계",
   attemptsNote: "출처마다 다른 문제는 '후보별 확인 결과'에 따로 표시했어요.",
+  timing_prepare: "사진 준비",
+  timing_extract: "공고 읽기(요청 전체)",
+  timing_extractServer: "공고 읽기(서버)",
+  timing_review: "내용 확인(사용자)",
+  timing_check: "확인 요청 전체",
+  openLink: "링크 열기",
   error_default: "확인을 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요.",
   error_input: "안내문 내용을 확인해 주세요.",
   error_not_a_notice:
@@ -386,7 +396,8 @@ const en: Copy = {
   editText: "Edit the text and read again",
   sourceLabel: "Official notice URL",
   optional: "optional",
-  sourceHint: "No link? We'll look for official-source candidates.",
+  sourceHint:
+    "Adding the official page link skips the search step and compares with that page directly, which is faster. No link? We'll look for official-source candidates.",
   sourcePlaceholder: "https://official-institution/notice",
   mismatch: "Your region of use differs from the country read in this notice.",
   useNoticeCountry: "Use the notice country",
@@ -404,6 +415,9 @@ const en: Copy = {
   cancel: "Stop checking",
   takesTime:
     "This can take a little time, depending on the sources and connection.",
+  progressElapsed: "Elapsed {s}",
+  progressTypical:
+    "In our measurements, checks with an official link took about 45–90 seconds, and longer with search. Completion time is not guaranteed.",
   resultEyebrow: "Your notice check",
   status_changed: "We found a few changes",
   status_matched: "The checked details match",
@@ -512,6 +526,12 @@ const en: Copy = {
   timing_total: "Server total",
   attemptsNote:
     "Source-specific problems are listed separately under 'What happened with each source'.",
+  timing_prepare: "Photo preparation",
+  timing_extract: "Reading (whole request)",
+  timing_extractServer: "Reading (server)",
+  timing_review: "Your review",
+  timing_check: "Check request (whole)",
+  openLink: "Open link",
   error_default:
     "We couldn't finish this check. Please try again in a little while.",
   error_input: "Please check the notice content.",

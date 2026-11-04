@@ -105,7 +105,8 @@ export const deUiCopy: UiCopy = {
   editText: "Text bearbeiten und erneut lesen",
   sourceLabel: "URL der offiziellen Mitteilung",
   optional: "optional",
-  sourceHint: "Kein Link? Wir suchen nach möglichen offiziellen Quellen.",
+  sourceHint:
+    "Mit dem Link zur offiziellen Seite entfällt die Suche und es wird direkt mit dieser Seite verglichen – das geht schneller. Kein Link? Wir suchen nach möglichen offiziellen Quellen.",
   sourcePlaceholder: "https://offizielle-institution/mitteilung",
   mismatch:
     "Ihre Nutzungsregion unterscheidet sich vom Land in der Mitteilung.",
@@ -197,6 +198,9 @@ export const deUiCopy: UiCopy = {
   sourceSelected: "Sie können mit der offiziellen URL erneut prüfen.",
   keyboardHint: "Escape zum Schließen drücken",
   checkImage: "Bitte prüfen Sie, ob der Text gut lesbar ist.",
+  progressElapsed: "Vergangen: {s}",
+  progressTypical:
+    "In unseren Messungen dauerten Prüfungen mit offiziellem Link etwa 45–90 Sekunden, mit Suche länger. Eine Dauer wird nicht garantiert.",
 };
 
 export const ptUiCopy: UiCopy = {
@@ -302,7 +306,8 @@ export const ptUiCopy: UiCopy = {
   editText: "Editar o texto e ler novamente",
   sourceLabel: "URL do aviso oficial",
   optional: "opcional",
-  sourceHint: "Sem link? Vamos buscar possíveis fontes oficiais.",
+  sourceHint:
+    "Com o link da página oficial, a busca é pulada e a comparação é feita diretamente com essa página, o que é mais rápido. Sem link? Vamos buscar possíveis fontes oficiais.",
   sourcePlaceholder: "https://instituicao-oficial/aviso",
   mismatch: "Sua região de uso é diferente do país identificado no aviso.",
   useNoticeCountry: "Usar o país do aviso",
@@ -392,4 +397,7 @@ export const ptUiCopy: UiCopy = {
   sourceSelected: "Você pode verificar novamente usando a URL oficial.",
   keyboardHint: "Pressione Escape para fechar",
   checkImage: "Confira se o texto está nítido.",
+  progressElapsed: "Decorrido: {s}",
+  progressTypical:
+    "Em nossas medições, verificações com link oficial levaram cerca de 45–90 segundos, e mais com busca. O tempo de conclusão não é garantido.",
 };

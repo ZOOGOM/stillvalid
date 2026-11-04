@@ -103,7 +103,8 @@ export const esUiCopy: UiCopy = {
   editText: "Editar el texto y leer de nuevo",
   sourceLabel: "URL del aviso oficial",
   optional: "opcional",
-  sourceHint: "¿No tienes enlace? Buscaremos posibles fuentes oficiales.",
+  sourceHint:
+    "Si añades el enlace de la página oficial, se omite la búsqueda y se compara directamente con esa página, lo que es más rápido. ¿No tienes enlace? Buscaremos posibles fuentes oficiales.",
   sourcePlaceholder: "https://institucion-oficial/aviso",
   mismatch: "Tu región de uso no coincide con el país leído en el aviso.",
   useNoticeCountry: "Usar el país del aviso",
@@ -192,6 +193,9 @@ export const esUiCopy: UiCopy = {
   sourceSelected: "Puedes volver a consultar con la URL oficial.",
   keyboardHint: "Pulsa Escape para cerrar",
   checkImage: "Comprueba que el texto se vea con claridad.",
+  progressElapsed: "Transcurrido: {s}",
+  progressTypical:
+    "En nuestras mediciones, las comprobaciones con enlace oficial tardaron unos 45–90 segundos, y más con búsqueda. No se garantiza el tiempo de finalización.",
 };
 
 export const frUiCopy: UiCopy = {
@@ -299,7 +303,7 @@ export const frUiCopy: UiCopy = {
   sourceLabel: "URL de l'annonce officielle",
   optional: "facultatif",
   sourceHint:
-    "Pas de lien ? Nous chercherons des sources officielles possibles.",
+    "Avec le lien de la page officielle, la recherche est ignorée et la comparaison se fait directement avec cette page, ce qui est plus rapide. Pas de lien ? Nous chercherons des sources officielles possibles.",
   sourcePlaceholder: "https://organisme-officiel/annonce",
   mismatch: "Votre région d'utilisation diffère du pays lu dans l'annonce.",
   useNoticeCountry: "Utiliser le pays de l'annonce",
@@ -390,4 +394,7 @@ export const frUiCopy: UiCopy = {
   sourceSelected: "Vous pouvez vérifier à nouveau avec l'URL officielle.",
   keyboardHint: "Appuyez sur Échap pour fermer",
   checkImage: "Vérifiez que le texte est lisible.",
+  progressElapsed: "Écoulé : {s}",
+  progressTypical:
+    "Dans nos mesures, les vérifications avec un lien officiel ont pris environ 45 à 90 secondes, et davantage avec une recherche. La durée n'est pas garantie.",
 };

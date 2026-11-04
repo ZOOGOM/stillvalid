@@ -686,6 +686,33 @@ try {
   fixtureResult.result.candidates = [
     { title: "Synthetic source candidate", url: "https://example.org/notice" },
   ];
+  // Per-candidate outcomes and stage timing as a live check returns them.
+  const comparedSource = fixtureResult.result.sources[0];
+  fixtureResult.result.warnings.push("source_too_large");
+  fixtureResult.result.attempts = [
+    {
+      url: "https://large.example.org/notice",
+      outcome: "fetch_failed",
+      code: "source_too_large",
+    },
+    {
+      url: comparedSource.url,
+      outcome: "compared",
+      sourceId: comparedSource.id,
+      authority: "registered",
+      identity: "ok",
+      section: false,
+      verified: 2,
+      fields: 2,
+    },
+  ];
+  fixtureResult.result.timing = {
+    searchMs: 0,
+    fetchMs: 310,
+    compareMs: 24800,
+    modelCalls: 1,
+  };
+  fixtureResult.result.elapsedMs = 25600;
   let sentNotice;
   await page.route(
     "**/api/checks",
@@ -721,6 +748,28 @@ try {
       .getByText(/A candidate is not necessarily a verified official source/)
       .isVisible(),
   );
+  // One oversized candidate is reported for that source only.
+  await page
+    .getByRole("heading", { name: "What happened with each source" })
+    .waitFor();
+  assert.ok(await page.getByText("Could not be read").isVisible());
+  assert.ok(await page.getByText("Same notice confirmed").isVisible());
+  assert.ok(await page.getByText("Quotes confirmed: 2 of 2").isVisible());
+  assert.equal(
+    await page
+      .locator(".result-warnings")
+      .getByText(/too large/i)
+      .count(),
+    0,
+  );
+  await page.locator(".timing-details summary").click();
+  assert.ok(
+    await page
+      .locator(".timing-details")
+      .getByText("Comparison", { exact: true })
+      .isVisible(),
+  );
+  await audit(page, "result with per-source outcomes and timing");
   await page.getByRole("button", { name: "Check using this link" }).click();
   await page.getByRole("heading", { name: "We found a few changes" }).waitFor();
   assert.equal(sentNotice.sourceUrl, "https://example.org/notice");
