@@ -5,6 +5,10 @@ import {
   publicUrl,
   htmlText,
   decodeSourceBody,
+  sourceHttpError,
+  sourceTransportError,
+  sourceMediaType,
+  parseSourceDocument,
 } from "../src/lib/source";
 import { validateImage, candidatesFromResponse } from "../src/lib/meta";
 import { NextRequest } from "next/server";
@@ -126,11 +130,117 @@ test("invalid source bytes fail rather than generating replacement-character evi
         Uint8Array.from([0xff, 0xfe]),
         "text/plain; charset=utf-8",
       ),
-    { code: "source_format" },
+    { code: "source_encoding" },
   );
 });
 test("long source pages are not silently truncated before evidence checking", () => {
   assert.throws(() => htmlText("<main>" + "x".repeat(22001) + "</main>"), {
-    code: "source_format",
+    code: "source_too_large",
   });
+});
+
+test("source HTTP failures have bounded public categories without upstream text", () => {
+  for (const status of [401, 403, 429])
+    assert.equal(sourceHttpError(status).code, "source_blocked");
+  for (const status of [404, 410])
+    assert.equal(sourceHttpError(status).code, "source_not_found");
+  for (const status of [500, 503, 418])
+    assert.equal(sourceHttpError(status).code, "source_unavailable");
+});
+
+test("timeouts are distinguished from TLS, DNS and caller cancellation", () => {
+  assert.equal(
+    sourceTransportError(new DOMException("sensitive detail", "TimeoutError"))
+      .code,
+    "source_timeout",
+  );
+  for (const code of [
+    "UND_ERR_CONNECT_TIMEOUT",
+    "UND_ERR_HEADERS_TIMEOUT",
+    "UND_ERR_BODY_TIMEOUT",
+  ])
+    assert.equal(
+      sourceTransportError(new TypeError("fetch failed", { cause: { code } }))
+        .code,
+      "source_timeout",
+    );
+  for (const error of [
+    new Error("TLS detail"),
+    new DOMException("cancelled", "AbortError"),
+    new TypeError("fetch failed", { cause: { code: "ENOTFOUND" } }),
+    null,
+  ]) {
+    const result = sourceTransportError(error);
+    assert.equal(result.code, "source_unavailable");
+    assert.equal(result.message, "source_unavailable");
+  }
+  const typed = sourceHttpError(403);
+  assert.equal(sourceTransportError(typed), typed);
+});
+
+test("only exact HTML and plain text media types are supported", () => {
+  assert.equal(sourceMediaType("Text/HTML; charset=euc-kr"), "text/html");
+  assert.equal(sourceMediaType("text/plain; charset=utf-8"), "text/plain");
+  for (const type of [
+    "application/pdf",
+    "application/json",
+    "application/text/html",
+    "text/html-malicious",
+    "",
+  ])
+    assert.throws(() => sourceMediaType(type), { code: "source_format" });
+});
+
+test("technical files are rejected while actual plain-text notices retain their evidence", () => {
+  const text =
+    "Town Library workshop. Application deadline: 18 December 2026. Admission is free.";
+  for (const path of [
+    "/robots.txt",
+    "/robots.txt?download=1",
+    "/.well-known/security.txt",
+    "/ads.txt",
+    "/sitemap.xml",
+  ])
+    assert.throws(
+      () =>
+        parseSourceDocument(
+          text,
+          "text/plain",
+          new URL("https://nypl.org" + path),
+        ),
+      { code: "source_not_notice" },
+    );
+  const actual = parseSourceDocument(
+    text,
+    "text/plain",
+    new URL("https://nypl.org/notice.txt"),
+  );
+  assert.equal(actual.text, text);
+  assert.throws(
+    () =>
+      parseSourceDocument(
+        "x".repeat(22001),
+        "text/plain",
+        new URL("https://nypl.org/notice.txt"),
+      ),
+    { code: "source_too_large" },
+  );
+  assert.throws(
+    () =>
+      parseSourceDocument(
+        "<html><script>location.href='/';</script><body></body></html>",
+        "text/html",
+        new URL("https://nypl.org/notice"),
+      ),
+    { code: "source_script_only" },
+  );
+  // Short plain text or script-free HTML remains a generic unavailable page.
+  for (const [raw, type] of [
+    ["Too short.", "text/plain"],
+    ["<html><body><p>Too short.</p></body></html>", "text/html"],
+  ])
+    assert.throws(
+      () => parseSourceDocument(raw, type, new URL("https://nypl.org/notice")),
+      { code: "source_unavailable" },
+    );
 });

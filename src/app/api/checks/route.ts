@@ -16,11 +16,31 @@ import {
   getCheck,
   owner,
   sameOrigin,
+  releaseWork,
+  reserveModelCall,
 } from "@/lib/store";
 import { assembleResult } from "@/lib/compare";
 import { errorResponse, readJson } from "@/lib/http";
+import { abuseKey, abuseSecret } from "@/lib/abuse";
+import { sourceRelevant } from "@/lib/relevance";
+import { firstInOrder, settle } from "@/lib/priority";
 export const runtime = "nodejs";
 export const maxDuration = 180;
+const sourceWarningCodes = new Set([
+  "source_format",
+  "source_encoding",
+  "source_too_large",
+  "source_timeout",
+  "source_blocked",
+  "source_not_found",
+  "source_not_notice",
+  "source_script_only",
+]);
+function fetchWarning(error: unknown): string {
+  if (!(error instanceof AppError)) return "fetch";
+  if (error.code === "source_network") return "network";
+  return sourceWarningCodes.has(error.code) ? error.code : "fetch";
+}
 export async function POST(request: NextRequest) {
   try {
     sameOrigin(request);
@@ -30,7 +50,14 @@ export async function POST(request: NextRequest) {
     if (!input.success) throw new AppError("input");
     const { notice, country, lang, sourceUrl, requestKey } = input.data;
     if (sourceUrl) publicUrl(sourceUrl);
-    const job = await createCheck(actor, requestKey);
+    const job = await createCheck(
+      actor,
+      requestKey,
+      abuseKey(request.headers, {
+        vercel: process.env.VERCEL,
+        secret: abuseSecret(),
+      }),
+    );
     if (job.existing)
       return NextResponse.json(
         { id: job.id, ...(await getCheck(job.id, actor)) },
@@ -43,6 +70,18 @@ export async function POST(request: NextRequest) {
       AbortSignal.timeout(170000),
     ]);
     const started = Date.now();
+    const timing = { discoverMs: 0, fetchMs: 0, compareMs: 0, modelCalls: 0 };
+    const measure = async <T>(
+      key: "discoverMs" | "fetchMs" | "compareMs",
+      operation: () => Promise<T>,
+    ): Promise<T> => {
+      const start = Date.now();
+      try {
+        return await operation();
+      } finally {
+        timing[key] += Date.now() - start;
+      }
+    };
     const stream = new ReadableStream({
       async start(controller) {
         const send = (type: string, data: unknown) => {
@@ -54,17 +93,35 @@ export async function POST(request: NextRequest) {
             abort.abort();
           }
         };
+        const ensureActive = async () => {
+          if (signal.aborted) throw new AppError("cancelled", 499);
+          try {
+            if ((await getCheck(job.id, actor)).state !== "processing")
+              throw new AppError("cancelled", 499);
+          } catch (error) {
+            if (error instanceof AppError && error.code === "not_found")
+              throw new AppError("cancelled", 499);
+            throw error;
+          }
+          if (signal.aborted) throw new AppError("cancelled", 499);
+        };
         send("created", { id: job.id });
         try {
-          const meta = new MetaClient();
+          await ensureActive();
+          const meta = new MetaClient(undefined, async () => {
+            await reserveModelCall();
+            timing.modelCalls++;
+          });
           let candidates: Candidate[] = [];
           const warnings: string[] = [];
-          send("phase", { step: "search" });
+          send("phase", { step: "search", elapsedMs: Date.now() - started });
           if (sourceUrl)
             candidates = [{ url: publicUrl(sourceUrl).href, title: sourceUrl }];
           else {
             try {
-              candidates = await meta.discover(notice, country, signal);
+              candidates = await measure("discoverMs", () =>
+                meta.discover(notice, country, signal),
+              );
             } catch (error) {
               if (signal.aborted) throw error;
               warnings.push(
@@ -98,29 +155,52 @@ export async function POST(request: NextRequest) {
           );
           const sources: Source[] = [];
           const analyses: ModelComparison[] = [];
-          send("phase", { step: "sources" });
-          for (const candidate of candidates.slice(0, 3)) {
-            if (signal.aborted) throw new AppError("cancelled", 499);
-            try {
-              const source = await fetchSource(
-                candidate.url,
-                "source-" + sources.length,
-                signal,
-              );
-              sources.push(source);
-              if (sources.length >= 2) break;
-            } catch (error) {
-              warnings.push(
-                error instanceof AppError && error.code === "source_network"
-                  ? "network"
-                  : "fetch",
-              );
-            }
+          send("phase", { step: "sources", elapsedMs: Date.now() - started });
+          await ensureActive();
+          // Fetch candidates concurrently but decide in priority order, exactly
+          // as a sequential loop would: stop at two sources and record only the
+          // failures that came before them. Unneeded requests are aborted.
+          const fetchAbort = new AbortController();
+          const fetchSignal = AbortSignal.any([signal, fetchAbort.signal]);
+          const fetchStarted = Date.now();
+          const attempts = candidates
+            .slice(0, 3)
+            .map((candidate) =>
+              settle(fetchSource(candidate.url, "pending", fetchSignal)),
+            );
+          try {
+            const fetched = await firstInOrder(attempts, 2);
+            for (const source of fetched.values)
+              sources.push({ ...source, id: "source-" + sources.length });
+            for (const error of fetched.errors)
+              warnings.push(fetchWarning(error));
+          } finally {
+            fetchAbort.abort();
+            timing.fetchMs += Date.now() - fetchStarted;
           }
-          send("phase", { step: "compare" });
-          for (const source of sources)
-            analyses.push(await meta.compare(notice, source, lang, signal));
-          if (signal.aborted) throw new AppError("cancelled", 499);
+          send("phase", { step: "compare", elapsedMs: Date.now() - started });
+          // A page sharing nothing with the notice cannot yield verified
+          // evidence; skip its model call and say so instead.
+          const related = sources.filter((source) =>
+            sourceRelevant(notice, source),
+          );
+          const unrelated = sources.filter(
+            (source) => !related.includes(source),
+          );
+          if (unrelated.length) warnings.push("source_unrelated");
+          await ensureActive();
+          analyses.push(
+            ...(await measure("compareMs", () =>
+              Promise.all(
+                related.map((source) =>
+                  meta.compare(notice, source, lang, signal),
+                ),
+              ),
+            )),
+          );
+          // assembleResult pairs analyses with sources by position.
+          sources.splice(0, sources.length, ...related, ...unrelated);
+          await ensureActive();
           const result = assembleResult({
             id: job.id,
             notice,
@@ -151,6 +231,19 @@ export async function POST(request: NextRequest) {
           );
           send("error", { code });
         } finally {
+          // Aggregate durations and reserved calls only: no notices, sources or IPs.
+          console.info(
+            JSON.stringify({
+              event: "check_timing",
+              ...timing,
+              elapsedMs: Date.now() - started,
+            }),
+          );
+          try {
+            await releaseWork(job.id, actor);
+          } catch {
+            // Storage outages retain the lease until its bounded expiry.
+          }
           try {
             controller.close();
           } catch {

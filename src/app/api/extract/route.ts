@@ -4,8 +4,15 @@ import { z } from "zod";
 import { MetaClient, configured, validateImage } from "@/lib/meta";
 import { AppError } from "@/lib/schema";
 import { isCountry } from "@/lib/countries";
-import { owner, reserve, sameOrigin } from "@/lib/store";
+import {
+  owner,
+  acquireExtraction,
+  releaseWork,
+  sameOrigin,
+  reserveModelCall,
+} from "@/lib/store";
 import { errorResponse, readJson } from "@/lib/http";
+import { abuseKey, abuseSecret } from "@/lib/abuse";
 export const runtime = "nodejs";
 export const maxDuration = 90;
 const schema = z.object({
@@ -23,18 +30,42 @@ export async function POST(request: NextRequest) {
     const { text, image, country } = parsed.data;
     if (!text.trim() && !image) throw new AppError("input");
     if (image) validateImage(image);
-    await reserve("extract:" + actor, 20, 3600000);
-    const notice = await new MetaClient().extract(
-      text,
-      image,
-      country,
-      request.signal,
+    const lease = await acquireExtraction(
+      actor,
+      abuseKey(request.headers, {
+        vercel: process.env.VERCEL,
+        secret: abuseSecret(),
+      }),
     );
-    if (notice.country && !isCountry(notice.country)) notice.country = null;
-    return NextResponse.json(
-      { notice },
-      { headers: { "Cache-Control": "no-store" } },
-    );
+    const started = Date.now();
+    let modelCalls = 0;
+    try {
+      const notice = await new MetaClient(undefined, async () => {
+        await reserveModelCall();
+        modelCalls++;
+      }).extract(
+        text,
+        image,
+        country,
+        AbortSignal.any([request.signal, AbortSignal.timeout(80000)]),
+      );
+      if (notice.country && !isCountry(notice.country)) notice.country = null;
+      return NextResponse.json(
+        { notice },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    } finally {
+      console.info(
+        JSON.stringify({
+          event: "extract_timing",
+          extractMs: Date.now() - started,
+          modelCalls,
+        }),
+      );
+      // A failed release keeps the lease until expiry; it must not discard an
+      // otherwise successful extraction and encourage another provider call.
+      await releaseWork(lease, actor).catch(() => {});
+    }
   } catch (error) {
     return errorResponse(error);
   }

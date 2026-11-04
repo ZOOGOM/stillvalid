@@ -99,6 +99,8 @@ export const deUiCopy: UiCopy = {
   institution: "Herausgebende Institution",
   edition: "Jahr oder Ausgabe",
   noticeCountry: "Aus der Mitteilung erkanntes Land",
+  imageReviewWarning:
+    "Tabellen oder Kleingedrucktes können fehlen oder falsch erkannt werden. Vergleiche das Bild unten mit dem erkannten Text. Ergänze fehlende Inhalte, korrigiere Fehler und lasse den Text erneut lesen.",
   original: "Erkannten Text ansehen",
   editText: "Text bearbeiten und erneut lesen",
   sourceLabel: "URL der offiziellen Mitteilung",
@@ -128,6 +130,10 @@ export const deUiCopy: UiCopy = {
   error_default:
     "Die Prüfung konnte nicht abgeschlossen werden. Bitte versuchen Sie es später erneut.",
   error_input: "Bitte prüfen Sie den Inhalt der Mitteilung.",
+  error_not_a_notice:
+    "Es konnte keine Mitteilung gelesen werden. Versuchen Sie ein anderes Foto oder Text.",
+  error_upload_too_large:
+    "Der Upload ist zu groß. Wählen Sie ein kleineres Foto.",
   error_not_configured:
     "Live-Prüfungen sind hier noch nicht verfügbar. Probieren Sie unten ein Beispiel aus.",
   error_session:
@@ -178,6 +184,8 @@ export const deUiCopy: UiCopy = {
   aboutMeta:
     "Die Live-Prüfung nutzt serverseitig Meta Model API für Bildverständnis, Websuche und strukturierte Ausgabe. Die Verfügbarkeit wird auf dem Prüfbildschirm angezeigt. Dies ist kein offizieller Dienst von Meta.",
   privacyTitle: "Nur das Nötige, nur so lange wie nötig.",
+  privacyAbuse:
+    "Zur Missbrauchsbegrenzung kann der Dienst eine geschützte Kennung aus Ihrer IP-Adresse verwenden. Limitdaten laufen am Ende des Stundenfensters ab und werden bei der Speicherbereinigung gelöscht. Personen im selben Netzwerk können ein Limit teilen.",
   privacyBody:
     "Beim Start einer Live-Prüfung wird Ihre Eingabe an Meta Model API gesendet. Fotos werden im Browser neu kodiert, um Metadaten zu reduzieren; StillValid speichert keine Originalbilder. Ergebnisse und notwendige Zitate sind einer anonymen Sitzung zugeordnet, 24 Stunden verfügbar und können von Ihnen gelöscht werden. Abgelaufene Datensätze werden bei regelmäßiger Bereinigung oder beim nächsten Serverstart bzw. der nächsten Anfrage entfernt. Für externe Anbieter gelten eigene Datenverarbeitungsbedingungen.",
   privacyMore:
@@ -288,6 +296,8 @@ export const ptUiCopy: UiCopy = {
   institution: "Instituição emissora",
   edition: "Ano ou edição",
   noticeCountry: "País identificado no aviso",
+  imageReviewWarning:
+    "Tabelas ou letras pequenas podem faltar ou ser lidas incorretamente. Compare a imagem abaixo com o texto extraído. Se houver omissões ou erros, edite o texto e leia novamente.",
   original: "Ver texto extraído",
   editText: "Editar o texto e ler novamente",
   sourceLabel: "URL do aviso oficial",
@@ -316,6 +326,9 @@ export const ptUiCopy: UiCopy = {
   error_default:
     "Não foi possível concluir a verificação. Tente novamente mais tarde.",
   error_input: "Confira o conteúdo do aviso.",
+  error_not_a_notice:
+    "Não foi possível ler um aviso. Tente outra foto ou texto.",
+  error_upload_too_large: "O envio é grande demais. Escolha uma foto menor.",
   error_not_configured:
     "As verificações ao vivo ainda não estão disponíveis aqui. Experimente um exemplo abaixo.",
   error_session: "Sua sessão de verificação expirou. Recarregue a página.",
@@ -366,6 +379,8 @@ export const ptUiCopy: UiCopy = {
   aboutMeta:
     "A verificação ao vivo usa no servidor a Meta Model API para compreensão de imagens, busca na web e saída estruturada. A disponibilidade aparece na tela de verificação. Este não é um serviço oficial da Meta.",
   privacyTitle: "Só o necessário, pelo tempo necessário.",
+  privacyAbuse:
+    "Para limitar abusos, o serviço pode usar um identificador protegido derivado do seu IP. Os registros de limite expiram ao fim da janela de uma hora e são removidos na limpeza do armazenamento. Pessoas na mesma rede podem compartilhar um limite.",
   privacyBody:
     "Ao iniciar uma verificação ao vivo, sua entrada é enviada à Meta Model API. As fotos são recodificadas no navegador para reduzir metadados; o StillValid não salva os arquivos de imagem originais. Resultados e citações necessárias ficam vinculados a uma sessão anônima, disponíveis por 24 horas, e podem ser excluídos por você. Registros expirados são removidos na limpeza periódica ou na próxima inicialização ou solicitação ao servidor. Os termos de tratamento de dados de provedores externos se aplicam separadamente.",
   privacyMore:

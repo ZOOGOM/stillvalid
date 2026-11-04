@@ -30,6 +30,13 @@ export const noticeSchema = z.object({
   originalText: z.string().min(1).max(18000),
   fields: z.array(fieldSchema).max(12),
 });
+// Provider-only classification permits an empty transcription for non-documents;
+// successful extraction still has to satisfy noticeSchema before returning.
+export const imageExtractionSchema = noticeSchema.extend({
+  content_kind: z.enum(["notice", "not_notice", "uncertain"]),
+  title: z.string().max(300),
+  originalText: z.string().max(18000),
+});
 export const checkRequestSchema = z.object({
   notice: noticeSchema,
   country: z.string().refine(isCountry).nullable(),
