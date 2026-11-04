@@ -11,8 +11,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Delivery and automatic deployment
 
 After completing an authorized change, run the relevant checks, push the reviewed
-commit and verify its automatic deployment. The user reviews the running app with
-Claude, so report the exact deployed HTTPS URL and the source commit. Use the
+commit and verify its automatic deployment. The user reviews the running app,
+so report the exact deployed HTTPS URL and the source commit. Use the
 configured preview deployment for feature work and production for main. Keep
 preview access usable for the intended external reviewer without exposing keys,
 private notices or bypass tokens.
@@ -29,7 +29,7 @@ merge a PR automatically or change hosting accounts to conceal a blocker.
 
 The full StillValid product plan and its private source references must remain
 outside this public repository. Keep the original private Page or a separately
-verified private GitHub repository for sharing it with Claude. GitHub does not
+verified private GitHub repository for sharing it with reviewers. GitHub does not
 support a private file inside a public repository. Public implementation and
 deployment documentation may summarize behavior without copying private plan
 content, email addresses, mailbox links or credentials. Verify private repository
