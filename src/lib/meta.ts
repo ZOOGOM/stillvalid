@@ -57,9 +57,21 @@ export function configured(): boolean {
 export function modelId(): string {
   return process.env.META_MODEL || "muse-spark-1.3";
 }
-/** Model for reading notices; defaults to the main model. */
-export function extractionModel(): string {
-  return process.env.META_EXTRACTION_MODEL || modelId();
+/**
+ * Model for each Meta Spark step. Cost decision by the owner (2026-11-04): the
+ * lower-priced "contributor" variant is the default. Meta's terms for it may
+ * allow inputs to be used to improve Meta's models; the in-app privacy notice
+ * says so. META_EXTRACTION_MODEL, META_COMPARISON_MODEL and META_SEARCH_MODEL
+ * override a step (for example with "muse-spark-1.3").
+ */
+export const lowCostModel = "muse-spark-1.3-contributor";
+export function stepModel(
+  step: "extraction" | "comparison" | "search",
+): string {
+  return (
+    (process.env["META_" + step.toUpperCase() + "_MODEL"] || "").trim() ||
+    lowCostModel
+  );
 }
 export function validateImage(data: string): void {
   const match = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(
@@ -255,9 +267,7 @@ export class MetaClient {
         max_completion_tokens:
           name === "comparison" ? 12000 : image ? 6000 : 4500,
         ...(effort ? { reasoning_effort: effort } : {}),
-        ...(name !== "comparison" && extractionModel() !== modelId()
-          ? { model: extractionModel() }
-          : {}),
+        model: stepModel(name === "comparison" ? "comparison" : "extraction"),
         messages: [
           {
             role: "developer",
@@ -471,6 +481,7 @@ export class MetaClient {
     const result = await this.call(
       "/responses",
       {
+        model: stepModel("search"),
         input: [
           {
             role: "developer",

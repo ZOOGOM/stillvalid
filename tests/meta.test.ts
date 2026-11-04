@@ -240,7 +240,7 @@ test("Meta structured requests use the documented endpoint, model and JSON schem
       async (input, init) => {
         assert.equal(input, "https://api.meta.ai/v1/chat/completions");
         const body = JSON.parse(String(init?.body));
-        assert.equal(body.model, process.env.META_MODEL || "muse-spark-1.3");
+        assert.equal(body.model, "muse-spark-1.3-contributor");
         assert.equal(body.response_format.type, "json_schema");
         assert.equal(body.response_format.json_schema.strict, true);
         assert.equal(body.messages[0].role, "developer");
@@ -1056,7 +1056,7 @@ test("reading defaults to minimal reasoning effort; a known value or none overri
     }
     assert.deepEqual(sent, ["minimal", "low", "minimal", undefined]);
   }));
-test("reading can use its own model while comparison keeps the main one", () =>
+test("each step defaults to the lower-priced model and can be overridden per step", () =>
   withTestKey(async () => {
     const { originalText: _ignored, ...extracted } = notice;
     const models: string[] = [];
@@ -1084,8 +1084,5 @@ test("reading can use its own model while comparison keeps the main one", () =>
       if (previous === undefined) delete process.env.META_EXTRACTION_MODEL;
       else process.env.META_EXTRACTION_MODEL = previous;
     }
-    assert.deepEqual(models, [
-      process.env.META_MODEL || "muse-spark-1.3",
-      "reader-model",
-    ]);
+    assert.deepEqual(models, ["muse-spark-1.3-contributor", "reader-model"]);
   }));

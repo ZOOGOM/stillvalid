@@ -193,6 +193,8 @@ export const deUiCopy: UiCopy = {
     "Zur Missbrauchsbegrenzung kann der Dienst eine geschützte Kennung aus Ihrer IP-Adresse verwenden. Limitdaten laufen am Ende des Stundenfensters ab und werden bei der Speicherbereinigung gelöscht. Personen im selben Netzwerk können ein Limit teilen.",
   privacyBody:
     "Beim Start einer Live-Prüfung wird Ihre Eingabe an Meta Model API gesendet. Fotos werden im Browser neu kodiert, um Metadaten zu reduzieren; StillValid speichert keine Originalbilder. Ergebnisse und notwendige Zitate sind einer anonymen Sitzung zugeordnet, 24 Stunden verfügbar und können von Ihnen gelöscht werden. Abgelaufene Datensätze werden bei regelmäßiger Bereinigung oder beim nächsten Serverstart bzw. der nächsten Anfrage entfernt. Für externe Anbieter gelten eigene Datenverarbeitungsbedingungen.",
+  privacyModel:
+    "Um Kosten zu senken, nutzt StillValid das Modell muse-spark-1.3-contributor von Meta. Nach Metas Bedingungen für dieses Modell können Ihre Eingaben zur Verbesserung von Metas Modellen verwendet werden. Details finden Sie unten in Metas Hinweis. Senden Sie nichts, was Sie nicht auf diese Weise teilen möchten.",
   privacyMore:
     "Die Standortfreigabe wird nur angefragt, wenn Sie Ihre Region über den Standort suchen. Koordinaten bleiben zur ungefähren Länderbestimmung auf Ihrem Gerät und werden von StillValid weder gesendet noch gespeichert. Sie können die Region korrigieren; das Merken ist optional. Vermeiden Sie Schülerunterlagen und sensible Inhalte und schneiden Sie das Bild auf die relevante öffentliche Mitteilung zu.",
   privacyMeta: "Datenverarbeitung bei Meta",
@@ -415,6 +417,8 @@ export const ptUiCopy: UiCopy = {
     "Para limitar abusos, o serviço pode usar um identificador protegido derivado do seu IP. Os registros de limite expiram ao fim da janela de uma hora e são removidos na limpeza do armazenamento. Pessoas na mesma rede podem compartilhar um limite.",
   privacyBody:
     "Ao iniciar uma verificação ao vivo, sua entrada é enviada à Meta Model API. As fotos são recodificadas no navegador para reduzir metadados; o StillValid não salva os arquivos de imagem originais. Resultados e citações necessárias ficam vinculados a uma sessão anônima, disponíveis por 24 horas, e podem ser excluídos por você. Registros expirados são removidos na limpeza periódica ou na próxima inicialização ou solicitação ao servidor. Os termos de tratamento de dados de provedores externos se aplicam separadamente.",
+  privacyModel:
+    "Para reduzir custos, o StillValid usa o modelo muse-spark-1.3-contributor da Meta. Pelas condições da Meta para esse modelo, o que você envia pode ser usado para melhorar os modelos da Meta. Veja o aviso da Meta abaixo e não envie nada que não queira compartilhar assim.",
   privacyMore:
     "A permissão de localização só é solicitada quando você escolhe encontrar sua região. As coordenadas ficam no dispositivo para estimar o país e não são enviadas nem armazenadas pelo StillValid. Você pode corrigir a região; lembrá-la é opcional. Evite registros escolares ou conteúdo sensível e recorte apenas o aviso público relevante.",
   privacyMeta: "Tratamento de dados pela Meta",
