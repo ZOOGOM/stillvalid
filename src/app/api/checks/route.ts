@@ -151,12 +151,12 @@ export async function POST(request: NextRequest) {
           candidates.sort(
             (a, b) =>
               Number(
-                authorityFor(new URL(b.url).hostname).authority ===
-                  "registered",
+                authorityFor(new URL(b.url).hostname, new URL(b.url).pathname)
+                  .authority === "registered",
               ) -
               Number(
-                authorityFor(new URL(a.url).hostname).authority ===
-                  "registered",
+                authorityFor(new URL(a.url).hostname, new URL(a.url).pathname)
+                  .authority === "registered",
               ),
           );
           const sources: Source[] = [];

@@ -57,8 +57,18 @@ const registeredHosts: Record<string, string> = {
   "sfpl.org": "San Francisco Public Library",
   "london.gov.uk": "Greater London Authority",
   "data.seoul.go.kr": "Seoul Open Data Plaza",
+  // go.kr is reserved for Korean central and local government bodies.
+  "go.kr": "Korean government agency (go.kr)",
 };
-export function authorityFor(hostname: string): {
+// Public sites also host pages written by residents (free boards, Q&A,
+// petitions, proposals, complaints, comments). Such pages are never treated
+// as the issuer's own notice, whatever the host.
+const userContentPath =
+  /(?:^|[/=?&])(?:free(?:board|bbs)?|qna|q_a|minwon|epeople|petition|proposal|suggest(?:ion)?|opinion|cmmnty|community|forum|guestbook|comments?|complaint)(?:$|[/.?&=])/i;
+export function authorityFor(
+  hostname: string,
+  pathname = "",
+): {
   authority: Source["authority"];
   institution?: string;
 } {
@@ -70,6 +80,8 @@ export function authorityFor(hostname: string): {
   const match = hosts.find(
     (host) => hostname === host || hostname.endsWith("." + host),
   );
+  if (match && userContentPath.test(pathname))
+    return { authority: "unverified" };
   return match
     ? { authority: "registered", institution: registeredHosts[match] || match }
     : { authority: "unverified" };
@@ -321,7 +333,7 @@ export async function fetchSource(
         url: url.href,
         ...parsed,
         fetchedAt: new Date().toISOString(),
-        ...authorityFor(url.hostname),
+        ...authorityFor(url.hostname, url.pathname + url.search),
         ...(pdf ? { format: "pdf" as const } : {}),
       };
     } catch (error) {
