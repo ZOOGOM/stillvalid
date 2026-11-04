@@ -19,6 +19,15 @@ Built for the Meta Global AI Developer Hackathon — **Indie developer**, “Bui
 
 **Start with a notice → inspect a result with before/after values.** Try the three built-in examples on the home page—changed details, cancellation, and a different edition—without a model call.
 
+### A historical live-check screen
+
+These screens show an earlier production run comparing **reconstructed text** based on a public Seoul notice with its official page. The earlier deadline in the input was deliberately changed for the test; it does not establish a real historical deadline change. The code and deployment have since changed, so this is not evidence of current performance. [Experiment record](docs/validation.md).
+
+<p align="center">
+  <img src="docs/screenshots/readme/en-3-review.png" width="310" alt="Earlier production review of reconstructed Seoul notice text">
+  <img src="docs/screenshots/readme/en-4-result.png" width="310" alt="Earlier production result comparing a deliberately altered test deadline with the official page">
+</p>
+
 ## Check a notice in five steps
 
 1. **Add a photo or text.** Take a photo, choose one image from your device, or paste up to 18,000 characters. Crop and rotate for legibility. On a noticeboard photo, the optional SAM locator can suggest one or several notice regions; choose the one to read.
@@ -131,7 +140,7 @@ The app keeps input on timeout. A received result survives a late stream failure
 
 - StillValid does not persist original image files. Session-owned results and required text/quotes have a 24-hour expiry policy and can be deleted. The reading cache is tab-memory only. [Storage implementation](src/lib/redis-store.ts).
 - Model keys stay server-side. Source retrieval validates HTTPS, public addresses and every redirect, with DNS-to-connection pinning. Notice/source text, credentials, cookies and raw IP addresses are not written to application diagnostic logs.
-- Default ceilings: **300 model calls per UTC day**, 3 concurrent jobs per session, 10 starts per minute per session, 60 extractions and 40 checks per session/hour, and 200 starts per network/hour. These are request limits, **not a money cap**. [Limit definitions](src/lib/limits.ts).
+- Default ceilings: **300 model calls per UTC day**, 3 concurrent jobs globally, 10 starts per minute globally, 60 extractions and 40 checks per session/hour, and 200 starts per network/hour. These are request limits, **not a money cap**. [Limit definitions](src/lib/limits.ts).
 
 | Evidence | Status as of 5 November 2026 (KST) |
 |---|---|
@@ -141,6 +150,64 @@ The app keeps input on timeout. A received result survives a late stream failure
 | Accuracy and latency | Controlled historical observations exist; the complete 10-case real-notice evaluation and representative latency study remain unfinished. Ten display languages do not establish ten-language verification accuracy. |
 
 Script-only pages, scanned PDFs, ambiguous identity and unsupported cancellation wording can remain unverified. This app does not decide eligibility, provide emergency guidance or perform medical/legal judgement. [Acceptance checklist](docs/acceptance.md) · [Evaluation method](docs/evaluation.md).
+
+## Developer notes: the processing pipeline
+
+Browser → Next.js routes → Meta Model API / official HTTPS sources → Redis or SQLite → deterministic verdict. Credentials and limits stay on the server; user-facing result text comes from the ten-language dictionaries.
+
+| Stage | Implementation and purpose | Bounds |
+|---|---|---|
+| Image preparation | The browser scales the longest side to at most 2,400 px and tries JPEG quality `0.92 → 0.80 → 0.68 → 0.55`. Blank white outer margins are trimmed only when the conditions are met. | 10 MiB input limit; 3,800,000-character encoded string limit. Re-encoding removes most EXIF; the original image is not retained as a result. |
+| Locate a notice | Optional SAM 3.1 Responses request defaults to `document`, then tries `poster` if no qualifying box is found. One box is applied; multiple boxes offer a choice and undo. | Up to two model calls on the default path, 30 seconds per request. Locating a region does not establish OCR accuracy. |
+| Read the notice | Spark Chat Completions uses strict JSON. Photos are transcribed into `originalText`; pasted text is not echoed by the model. Extracted values must appear in a quote from the original. | First attempt 60 seconds; one retry is limited to fast failures, within a 130-second server budget. Image/text output budgets are 6,000/4,500 tokens. |
+| Discover sources | Without a supplied URL, Responses `web_search` returns actual result/citation URLs. Candidates are ranked by registered authority and title relevance before up to three are fetched. | Search summaries are not evidence. `META_SEARCH_MAX_TOOL_CALLS` is unset by default. |
+| Fetch sources | Up to three requests run concurrently. HTML table cells are preserved, PDF text layers are extracted, and unrelated pages are not sent for comparison. | 15-second aggregate budget, 12 seconds per request, up to three redirects; HTML/text 600,000 bytes, extracted text 22,000 characters; PDF 5,000,000 bytes / 20 pages. Failures remain visible. |
+| Compare and verify | Relevant pages in the first two slots can start comparison on arrival; up to two sources are selected in priority order. Spark proposes quotations and relations, then code checks authority, identity, quotes and scope. | 100 seconds and 12,000 output tokens per comparison. Depending on the decisive source outcomes, remaining comparisons get a 30-second grace period; unfinished evidence keeps the result in review. Fetch and comparison timings can overlap. |
+
+### Models and API paths
+
+| Function | Default model | API | Override |
+|---|---|---|---|
+| Read photo or text | `muse-spark-1.3-contributor` | Chat Completions, strict JSON | `META_EXTRACTION_MODEL` |
+| Search for sources | same | Responses + `web_search` | `META_SEARCH_MODEL` |
+| Compare fields | same | Chat Completions, strict JSON | `META_COMPARISON_MODEL` |
+| Locate a notice, optional | `sam-3.1` | Responses, concept prompt | `SAM_MODEL` |
+
+Spark model resolution is **step variable → META_MODEL → default**, and reasoning defaults to `minimal`. Production builds check the model catalog read-only. Changing a model requires redeployment and review of the privacy notice in all ten languages. Under Meta's terms, inputs to the default contributor model may be used to improve Meta's models.
+
+### How the verdict is assembled
+
+1. Check that quotations occur in the notice and source and include their respective values.
+2. Require a registered official domain for confirmation; resident-content paths such as public boards and Q&A are not treated as issuer notices. A registered domain alone does not establish identity.
+3. Compare institution, title, edition and the quoted section. A different event/edition section or page-level archive/withdrawal marker can block verification.
+4. Do not fill in ambiguous dates or missing years, times or time zones. Cancellation must be an explicit current assertion about the same event.
+5. With no readable source the result is unavailable; unverified fields, missing coverage, source conflict or other blockers can require review. If the checks pass, statuses are considered in cancellation, deadline passed, changed and matched order.
+
+Section detection relies on page structure and text. When different notices share an unlabelled section, model interpretation can still affect scope. See the [validation record](docs/validation.md) for counterexamples and regression coverage.
+
+### Security and recovery design
+
+- Source fetches allow credential-free HTTPS on port 443, block private/reserved addresses and internal hosts, pin connections to DNS results and recheck every redirect. A generic forward proxy fails closed.
+- Writes require same-origin requests and an HTTP-only anonymous session. CSP and frame restrictions are in [configuration](next.config.ts). Hosted runs use shared Redis; a single server can use SQLite.
+- The **global** work limit is three concurrent jobs and ten starts per minute; session-hour and network-hour limits are separate. A work lease is released when execution ends, not merely when its result is deleted.
+- Check responses stream NDJSON with a heartbeat every ten seconds. The browser stops after 45 seconds without bytes. A received result survives later stream errors, and a saved result can be recovered without another model call.
+
+### Historical observations and outstanding work
+
+These are small observations on earlier production versions using **reconstructed public notices**. The photo-like inputs were rendered images, not physical iPhone camera photos. They were not measured after the latest request-efficiency changes and cannot establish general accuracy or current latency. [Original record](docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b).
+
+| Observation | Result | Scope |
+|---|---|---|
+| Contributor model with official links, Seoul and Smithsonian twice each | Median 24.3 s across four runs | Seoul `changed` 2/2; Smithsonian `review` 2/2 |
+| Earlier Spark 1.3 at minimal reasoning, same cases | Median 26.8 s across four runs | Reading through result on an older version; not current latency |
+| Earlier model default reasoning, same cases | Median 45.6 s across four runs | Seoul `review` 2/2; historical experiment setting |
+| Earlier model `low` reasoning, same cases | Median 34.6 s across four runs | Seoul `changed` 1/2; historical experiment setting |
+| Background check, Seoul text once | 3.9 s after click, 19.4 s total | Includes 10 s of user review; it does not mean the model itself ran faster |
+| Background check, Smithsonian text without a link once | 7.9 s after click, 26.3 s total, `review` | Includes 15 s review and automatic search |
+| Other reading models | Spark 1.2: 2.0–4.5 s; 1.1: 2.4–7.9 s | Four runs each; Seoul title errors helped inform the current choice. Search/comparison were not measured for these models. |
+
+Separately, a user-reported iPhone camera flow took roughly three minutes and returned `review` with a missing retrieved date. That same case has not been remeasured after the later improvements. The completed ten-case accuracy evaluation, representative latency distribution, Android, HEIC and maps hand-off tests remain outstanding.
+
 
 ## Run and develop
 

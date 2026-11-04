@@ -23,3 +23,12 @@ private image, session identifier, cookie or credential is included.
 한국어: 실제 운영 UI를 직접 캡처했습니다. 결과·근거 카드는 앱 내 합성 예제이며,
 입력한 글을 모델로 처리한 결과가 아닙니다. iPhone 실기기 사진이나 실제 공고
 정확도 검증 자료로 사용하지 않습니다. 모델 호출은 0회입니다.
+
+## Historical production captures
+
+The `en-3-review.png`, `en-4-result.png`, `ko-3-review.png` and
+`ko-4-result.png` files are restored from the earlier README. They show an
+earlier production run using reconstructed public Seoul notice text and an
+official source. The input's earlier deadline was deliberately altered for
+comparison. They are historical observations, not a current result, an actual
+historical deadline change, or a physical camera test.

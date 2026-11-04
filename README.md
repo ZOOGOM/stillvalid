@@ -25,6 +25,7 @@ Actual production UI captured on **5 November 2026 (KST)**. The result is a labe
 | [Current features](README.en.md#what-is-available-today) | [현재 기능](README.ko.md#현재-사용할-수-있는-기능) |
 | [Understand the result](README.en.md#understand-the-result) | [결과 읽는 방법](README.ko.md#결과를-읽는-방법) |
 | [Evidence checks](README.en.md#how-the-evidence-is-checked) | [근거 검증 원리](README.ko.md#근거를-확인하는-원리) |
+| [Developer notes and measurements](README.en.md#developer-notes-the-processing-pipeline) | [개발자 노트와 실측 기록](README.ko.md#개발자-노트-실제-처리-과정) |
 | [Speed and its limits](README.en.md#speed-what-improved-and-what-is-unproven) | [속도 개선과 한계](README.ko.md#속도-개선과-아직-확인하지-못한-점) |
 | [Privacy and validation](README.en.md#privacy-limits-and-current-validation) | [개인정보·한도·검증 현황](README.ko.md#개인정보한도검증-현황) |
 | [Run and develop](README.en.md#run-and-develop) | [실행·개발 안내](README.ko.md#직접-실행하고-개발하기) |
