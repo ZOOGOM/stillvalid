@@ -6,7 +6,67 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
     image.src = src;
   });
 }
-function encodeImage(canvas: HTMLCanvasElement): string {
+// Only near-white blank edge pixels are removed. All ink, including faint
+// marks, dates at an edge, and the spacing between separate notices is kept.
+// This is not document detection and does not make an extra model request.
+export function blankMarginBox(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+) {
+  let left = width,
+    top = height,
+    right = -1,
+    bottom = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      if (data[i] >= 252 && data[i + 1] >= 252 && data[i + 2] >= 252) continue;
+      left = Math.min(left, x);
+      right = Math.max(right, x);
+      top = Math.min(top, y);
+      bottom = Math.max(bottom, y);
+    }
+  }
+  if (right - left < 64 || bottom - top < 64) return null;
+  const margin = Math.max(12, Math.ceil(Math.max(width, height) * 0.02));
+  const x = Math.max(0, left - margin),
+    y = Math.max(0, top - margin);
+  const w = Math.min(width, right + margin + 1) - x;
+  const h = Math.min(height, bottom + margin + 1) - y;
+  return w * h <= width * height * 0.9 ? { x, y, width: w, height: h } : null;
+}
+function trimBlankMargins(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  // Bound temporary ImageData memory on rotated phone photos.
+  if (canvas.width * canvas.height > 6_000_000) return canvas;
+  const context = canvas.getContext("2d");
+  if (!context) return canvas;
+  const box = blankMarginBox(
+    context.getImageData(0, 0, canvas.width, canvas.height).data,
+    canvas.width,
+    canvas.height,
+  );
+  if (!box) return canvas;
+  const cropped = document.createElement("canvas");
+  cropped.width = box.width;
+  cropped.height = box.height;
+  const output = cropped.getContext("2d");
+  if (!output) return canvas;
+  output.drawImage(
+    canvas,
+    box.x,
+    box.y,
+    box.width,
+    box.height,
+    0,
+    0,
+    box.width,
+    box.height,
+  );
+  return cropped;
+}
+function encodeImage(input: HTMLCanvasElement): string {
+  const canvas = trimBlankMargins(input);
   for (const quality of [0.92, 0.8, 0.68, 0.55]) {
     const encoded = canvas.toDataURL("image/jpeg", quality);
     if (encoded.length <= 3800000) return encoded;

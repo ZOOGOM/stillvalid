@@ -109,6 +109,8 @@ HTTP fixtures do not constitute live provider testing. Automated viewport/access
 
 The [opt-in live evaluation harness](docs/evaluation.md) runs extraction, checking, anonymous-session isolation and individual deletion against a permitted deployment. It defaults to a dry run and keeps fixture checks separate from human-reviewed real-notice accuracy.
 
+Model-preserving latency improvements and their limits are described in [performance](docs/performance.md). All three Spark steps default to minimal reasoning; accepted source comparisons overlap later fetches, and blank photo margins and explicit page chrome are reduced without discarding notice text.
+
 ## Privacy and limits
 
 - Original image files are not saved by StillValid. Necessary result quotes are session-owned and available for 24 hours.

@@ -186,9 +186,10 @@ Because the rule is "anything uncertain becomes review", the app prefers to say 
 
 What was done about it:
 
-- **Minimal reasoning effort** for reading and comparison (`reasoning_effort: minimal`). Search keeps the model default.
+- **Minimal reasoning effort** for reading, comparison and search. The search request uses `reasoning: { effort: "minimal" }` on Responses.
 - **Background check.** After reading, the check starts while you review the fields: with the link when it is known (typed, or printed on the notice), otherwise including the source search. It is used only if the notice, region, language and link are unchanged when you tap; otherwise it is dropped and a normal check runs. It does not start when the reading is uncertain or the notice country differs from the chosen region, and starts at most once per reading. It moves model time into your review time; it does not make the model faster.
-- **Parallel fetching and comparing**, and the 30 s grace for slower sources after an official one has succeeded.
+- **Overlapping fetching and comparing**: an accepted source starts comparison while later candidates still load, with the same priority, maximum two related sources and 30 s grace. Fetch and comparison timing can overlap and must not be added.
+- Blank white photo margins and explicitly marked page chrome are reduced; printed text and notice sections are retained. Stable per-step cache keys and numeric cached/reasoning-token metrics help measure prompt reuse. See [performance](docs/performance.md).
 - A lower-priced model variant for all steps (see [section 8](#8-meta-models-used)).
 
 **Reliability**
@@ -203,7 +204,7 @@ What was done about it:
 | Step | Model | API | Notes |
 |---|---|---|---|
 | Read a photo or text | `muse-spark-1.3-contributor` | Chat Completions, strict `json_schema` | `reasoning_effort: minimal` |
-| Find official sources | `muse-spark-1.3-contributor` | Responses with built-in `web_search` | Only returned or cited URLs are used |
+| Find official sources | `muse-spark-1.3-contributor` | Responses with built-in `web_search` | Minimal reasoning; only returned or cited URLs are used |
 | Compare with the source | `muse-spark-1.3-contributor` | Chat Completions, strict `json_schema` | `reasoning_effort: minimal`, output budget 12,000 tokens |
 | Locate the notice (opt-in) | `sam-3.1` | Responses, concept prompt | Boxes parsed from tokens |
 
@@ -283,7 +284,8 @@ npm run verify:meta  # read-only model availability check (needs a key)
 | `META_API_KEY` (alias `MODEL_API_KEY`) | Server-only Meta key |
 | `META_MODEL` | Model for all three Spark steps; default `muse-spark-1.3-contributor` |
 | `META_EXTRACTION_MODEL`, `META_SEARCH_MODEL`, `META_COMPARISON_MODEL` | Optional per-step overrides (higher priority than `META_MODEL`); leave unset for a single switch. `SAM_MODEL` controls the notice locator separately |
-| `META_REASONING_EFFORT_EXTRACTION`, `_COMPARISON`, `_SEARCH` | `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, or `none`; unset means minimal for reading and comparison, model default for search |
+| `META_REASONING_EFFORT_EXTRACTION`, `_COMPARISON`, `_SEARCH` | `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, or `none`; unset means minimal for all three steps |
+| `META_SEARCH_MAX_TOOL_CALLS` | Optional 1..5 built-in search-tool call cap; unset by default to preserve amendment/cancellation discovery |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_URL`, `KV_REST_API_TOKEN`) | Hosted storage; use a writable token, never mix pairs |
 | `APP_URL` | Exact external HTTPS origin in production |
 | `DAILY_MODEL_CALL_LIMIT` | Global model calls per UTC day (default 300) |

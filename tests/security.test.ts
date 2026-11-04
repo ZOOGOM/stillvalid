@@ -87,6 +87,35 @@ test("HTML instructions are extracted as text, scripts and page chrome are not",
   assert.ok(!r.text.includes("alert(1)"));
   assert.ok(!r.text.includes("Menu"));
 });
+test("source chrome is reduced while every notice section, warning and table remains", () => {
+  const text = htmlText(`<main>
+    <div class="breadcrumb">site directory</div>
+    <div class="share-buttons">share everywhere</div>
+    <div class="related-posts">unrelated event${" x".repeat(12000)}</div>
+    <h1>Library Workshop</h1><article><p>Deadline: 10 November.</p>
+    <table><tr><th>Location</th><td>Library Hall</td></tr></table></article>
+    <aside>Updated: this workshop is cancelled.</aside>
+    <section>Eligibility: residents only.</section>
+    <div class="pagination" role="alert">Amendment: deadline extended.</div>
+    <div class="social-share"><p role="status">Registration suspended.</p></div>
+  </main>`).text;
+  for (const kept of [
+    "Library Workshop",
+    "Deadline: 10 November.",
+    "Location | Library Hall",
+    "this workshop is cancelled",
+    "residents only",
+    "deadline extended",
+    "Registration suspended",
+  ])
+    assert.ok(text.includes(kept), kept);
+  for (const removed of [
+    "site directory",
+    "share everywhere",
+    "unrelated event",
+  ])
+    assert.equal(text.includes(removed), false);
+});
 test("an image MIME label cannot disguise an arbitrary file", () => {
   assert.throws(() =>
     validateImage(

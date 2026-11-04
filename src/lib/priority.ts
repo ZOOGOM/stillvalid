@@ -8,6 +8,36 @@ export function settle<T>(operation: Promise<T>): Promise<Outcome<T>> {
   );
 }
 
+/** Start useful work while more sources load, retaining cancellation and errors. */
+export function startSettled<T>(
+  operation: (signal: AbortSignal) => Promise<T>,
+) {
+  const controller = new AbortController();
+  const started = Date.now();
+  let finished: number | undefined;
+  const pending = settle(
+    Promise.resolve().then(() => operation(controller.signal)),
+  ).then((outcome) => {
+    finished = Date.now();
+    return outcome;
+  });
+  return {
+    elapsedMs: () => (finished ?? Date.now()) - started,
+    async run(signal: AbortSignal): Promise<T> {
+      const cancel = () => controller.abort(signal.reason);
+      signal.addEventListener("abort", cancel, { once: true });
+      if (signal.aborted) cancel();
+      try {
+        const outcome = await pending;
+        if (!outcome.ok) throw outcome.error;
+        return outcome.value;
+      } finally {
+        signal.removeEventListener("abort", cancel);
+      }
+    },
+  };
+}
+
 /**
  * Consumes already-started operations in priority order, exactly as a
  * sequential loop would decide: it keeps the first `limit` successes and

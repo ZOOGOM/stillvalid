@@ -92,6 +92,18 @@ const cellMarker = "\u001f";
 export function htmlText(html: string): { title: string; text: string } {
   const $ = cheerio.load(html);
   $("script,style,noscript,svg,nav,footer,header,iframe,form").remove();
+  // Remove explicitly labelled page chrome, never generic asides/sections or
+  // text selected by keywords: an amendment/cancellation can appear anywhere.
+  // Keep alert/status containers even if the site also gives them a chrome class.
+  $(
+    "[role='navigation'],.breadcrumb,.breadcrumbs,.pagination,.share-buttons,.social-share,.related-posts,.related-articles,.post-navigation",
+  )
+    .filter(
+      (_i, element) =>
+        !$(element).is("[role='alert'],[role='status']") &&
+        !$(element).find("[role='alert'],[role='status']").length,
+    )
+    .remove();
   const title = $("title").first().text().trim();
   $("br").replaceWith("\n");
   // Table cells and term/definition pairs keep a visible boundary, so a label
