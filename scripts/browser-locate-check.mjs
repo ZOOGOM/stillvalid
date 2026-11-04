@@ -233,6 +233,86 @@ const preview = (page) =>
   await context.close();
 }
 
+// Small photos get a hint before reading; a large one does not. A reading the
+// model marked "uncertain" is flagged on the review screen.
+{
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+  page.on("pageerror", (e) => pageErrors.push(e.message));
+  await page.route("**/api/status", (route) =>
+    route.fulfill({ json: { liveAvailable: true, demoAvailable: true } }),
+  );
+  await page.route("**/api/extract", (route) =>
+    route.fulfill({
+      json: {
+        notice: {
+          title: "A series of monthly lectures",
+          institution: "",
+          edition: null,
+          country: null,
+          originalText: "A series of monthly lectures has been arranged",
+          fields: [],
+        },
+        readability: "uncertain",
+        timing: { extractMs: 1000, modelCalls: 1 },
+      },
+    }),
+  );
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem("sv_display_lang", "en");
+    } catch {}
+  });
+  await page.goto(origin, { waitUntil: "networkidle" });
+  const sized = (w, h) =>
+    page.evaluate(
+      ([w, h]) => {
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        const x = c.getContext("2d");
+        x.fillStyle = "#f4f1ea";
+        x.fillRect(0, 0, w, h);
+        return c.toDataURL("image/png").split(",")[1];
+      },
+      [w, h],
+    );
+  const upload = async (w, h) =>
+    page
+      .locator('input[type="file"]')
+      .first()
+      .setInputFiles({
+        name: `photo-${w}.png`,
+        mimeType: "image/png",
+        buffer: Buffer.from(await sized(w, h), "base64"),
+      });
+  await upload(1600, 1200);
+  await page.locator(".image-preview > img").waitFor();
+  await page.waitForTimeout(300);
+  assert.equal(await page.locator(".photo-hint").count(), 0, "large photo");
+  await page
+    .getByRole("button", { name: "Remove" })
+    .click()
+    .catch(() => {});
+  await upload(260, 185);
+  await page.getByText("This photo is small", { exact: false }).waitFor();
+  await page.locator(".start-button").click();
+  await page.locator(".review-card").waitFor();
+  await page
+    .getByText("The photo looked cropped or blurry", { exact: false })
+    .waitFor();
+  await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+    .analyze()
+    .then((r) => violations.push(...r.violations.map((v) => v.id)));
+  results.push(
+    "small-photo hint (not for 1600x1200); uncertain reading flagged on review",
+  );
+  await context.close();
+}
+
 assert.deepEqual(violations, []);
 assert.deepEqual(pageErrors, []);
 await browser.close();

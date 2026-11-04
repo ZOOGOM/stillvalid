@@ -214,6 +214,10 @@ export const deUiCopy: UiCopy = {
   autoFindClose: "Ohne Auswahl schließen",
   error_image_heic:
     "Dieser Browser kann keine HEIC-Fotos lesen. Teilen Sie das Foto als JPEG oder wählen Sie „Maximale Kompatibilität“ unter iPhone-Einstellungen > Kamera > Formate.",
+  photoSmall:
+    "Das Foto ist klein, daher wird möglicherweise nicht der ganze Text gelesen. Ein näheres Foto der Bekanntmachung wird genauer gelesen.",
+  readUncertain:
+    "Das Foto wirkte abgeschnitten oder unscharf, daher kann Text fehlen. Vergleichen Sie den erkannten Text unten mit dem Foto und korrigieren Sie ihn.",
 };
 
 export const ptUiCopy: UiCopy = {
@@ -425,4 +429,8 @@ export const ptUiCopy: UiCopy = {
   autoFindClose: "Fechar sem escolher",
   error_image_heic:
     "Este navegador não consegue ler fotos HEIC. Envie a foto em JPEG ou escolha “Mais Compatível” em Ajustes > Câmera > Formatos no iPhone.",
+  photoSmall:
+    "A foto é pequena e parte do texto pode não ser lida. Uma foto mais próxima do aviso é lida com mais precisão.",
+  readUncertain:
+    "A foto parecia cortada ou desfocada, então pode faltar texto. Compare o texto reconhecido abaixo com a foto e corrija-o.",
 };

@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     );
     const started = Date.now();
     let modelCalls = 0;
+    let contentKind: string | null = null;
     try {
       const notice = await new MetaClient(undefined, async () => {
         await reserveModelCall();
@@ -48,11 +49,19 @@ export async function POST(request: NextRequest) {
         image,
         country,
         AbortSignal.any([request.signal, AbortSignal.timeout(130000)]),
+        (info) => {
+          contentKind = info.contentKind;
+        },
       );
       if (notice.country && !isCountry(notice.country)) notice.country = null;
       // Server-side duration and reserved calls only; no notice content.
       return NextResponse.json(
-        { notice, timing: { extractMs: Date.now() - started, modelCalls } },
+        {
+          notice,
+          // Cropped, blurry or sparse photos: the transcript may be partial.
+          readability: contentKind === "uncertain" ? "uncertain" : "clear",
+          timing: { extractMs: Date.now() - started, modelCalls },
+        },
         { headers: { "Cache-Control": "no-store" } },
       );
     } finally {

@@ -129,6 +129,10 @@ const ko = {
   autoFindChoose: "공고가 여러 장 보여요. 확인할 공고를 고르세요.",
   autoFindPick: "{n}번 공고 선택",
   autoFindClose: "고르지 않고 닫기",
+  photoSmall:
+    "사진이 작아 글자를 다 읽지 못할 수 있어요. 공고에 더 가까이 다가가 다시 찍으면 더 정확해요.",
+  readUncertain:
+    "사진이 흐리거나 잘려 일부를 읽지 못했을 수 있어요. 아래 인식한 원문을 사진과 비교해 고쳐 주세요.",
   resultEyebrow: "안내 확인 결과",
   status_changed: "달라진 내용을 찾았어요",
   status_matched: "확인한 자료와 일치해요",
@@ -443,6 +447,10 @@ const en: Copy = {
   autoFindChoose: "Several notices were found. Choose the one to check.",
   autoFindPick: "Choose notice {n}",
   autoFindClose: "Close without choosing",
+  photoSmall:
+    "This photo is small, so some text may not be read. A closer photo of the notice reads more accurately.",
+  readUncertain:
+    "The photo looked cropped or blurry, so some text may be missing. Compare the recognised text below with the photo and correct it.",
   resultEyebrow: "Your notice check",
   status_changed: "We found a few changes",
   status_matched: "The checked details match",

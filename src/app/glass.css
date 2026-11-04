@@ -1229,3 +1229,12 @@ h2 {
   margin-top: 6px;
   min-height: 44px;
 }
+
+.photo-hint {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+  color: #6a3a00;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
