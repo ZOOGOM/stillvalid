@@ -57,7 +57,7 @@
 | 영역 | 상태 |
 |---|---|
 | 웹앱, 10개 표시 언어, 실제 Meta 모델 호출, 호스팅 저장소 | 운영에서 동작 중(`stillvalid-beta.vercel.app`) |
-| 자동 시험 | 단위·동작 시험 188개와 브라우저 시험 6종이 로컬에서 통과 |
+| 자동 시험 | 단위·동작 시험 192개와 브라우저 시험 6종이 로컬에서 통과 |
 | 운영에서 확인한 것 | 세션 격리와 삭제, 같은 요청의 결과 재사용, 취소, 동시 처리 한도(동시에 4번째 확인은 거부) |
 | 속도 목표(중앙값 15초, 90번째 백분위 30초) | **달성하지 못함.** 공식 링크가 있을 때 중앙값은 24~27초(4회 측정). [10장](#10-측정-결과) 참고 |
 | 사람이 정답을 확인한 실제 공고 정확도 | **측정하지 못함.** 10건 평가는 준비되어 있으나 실행하지 않음 |
@@ -197,7 +197,7 @@ flowchart TD
 | 출처와 비교 | `muse-spark-1.3-contributor` | Chat Completions, 엄격한 `json_schema` | `reasoning_effort: minimal`, 출력 한도 12,000토큰 |
 | 공고 위치 찾기(선택) | `sam-3.1` | Responses, 개념 프롬프트 | 토큰에서 상자 해석 |
 
-더 저렴한 `muse-spark-1.3-contributor` 변형은 비용 때문에 소유자가 선택했습니다. **이 변형에 대한 Meta의 조건에 따라 사용자가 제출한 내용이 Meta의 모델 개선에 쓰일 수 있습니다.** 앱의 개인정보 안내가 10개 언어로 이를 알립니다. 각 단계는 `META_EXTRACTION_MODEL`, `META_COMPARISON_MODEL`, `META_SEARCH_MODEL`로 되돌릴 수 있습니다(예: `muse-spark-1.3`).
+더 저렴한 `muse-spark-1.3-contributor` 변형은 비용 때문에 소유자가 선택했습니다. **이 변형에 대한 Meta의 조건에 따라 사용자가 제출한 내용이 Meta의 모델 개선에 쓰일 수 있습니다.** 앱의 개인정보 안내가 10개 언어로 이를 알립니다. 서버 전용 `META_MODEL`이 세 Spark 단계를 한꺼번에 바꾸고, `META_EXTRACTION_MODEL`, `META_SEARCH_MODEL`, `META_COMPARISON_MODEL`은 단계 하나만 덮어씁니다. 우선순위는 단계별 변수, `META_MODEL`, `muse-spark-1.3-contributor` 순이며 값은 앞뒤 공백을 제거하고, 변수를 바꾸면 새로 배포해야 적용됩니다. 운영 빌드는 먼저 읽기 전용 모델 목록 점검(공개 모델 ID만 확인, 추론 없음)을 하고, 선택한 ID를 쓸 수 없으면 빌드가 실패해서 이전 배포가 계속 서비스됩니다. 모델을 바꾸기 전에는 개인정보 안내가 contributor 구성을 설명하고 있으므로 10개 언어의 안내를 다시 검토하세요.
 
 읽기 단계만 다른 모델로 측정했습니다. `muse-spark-1.2`는 2.0~4.5초, `muse-spark-1.1`은 2.4~7.9초에 읽었지만, 둘 다 한국어 제목의 글자 하나를 대부분의 실행에서 잘못 읽어 동일성 검사를 깨뜨릴 수 있었습니다. 그래서 쓰지 않습니다. 배포가 볼 수 있는 모델 목록에는 더 빠른 모드로 이름 붙은 모델이 없습니다.
 
@@ -271,7 +271,8 @@ npm run verify:meta  # 읽기 전용 모델 사용 가능 확인(키 필요)
 | 변수 | 용도 |
 |---|---|
 | `META_API_KEY` (별칭 `MODEL_API_KEY`) | 서버 전용 Meta 키 |
-| `META_EXTRACTION_MODEL`, `META_COMPARISON_MODEL`, `META_SEARCH_MODEL` | 단계별 모델. 기본값은 `muse-spark-1.3-contributor` |
+| `META_MODEL` | 세 Spark 단계 전체의 모델. 기본값은 `muse-spark-1.3-contributor` |
+| `META_EXTRACTION_MODEL`, `META_SEARCH_MODEL`, `META_COMPARISON_MODEL` | 단계별 선택 덮어쓰기(`META_MODEL`보다 우선). 하나로 바꾸려면 비워 두세요. 공고 위치 찾기는 `SAM_MODEL`이 따로 정합니다 |
 | `META_REASONING_EFFORT_EXTRACTION`, `_COMPARISON`, `_SEARCH` | `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, `none`. 비우면 읽기와 비교는 minimal, 검색은 모델 기본값 |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (또는 `KV_REST_API_URL`, `KV_REST_API_TOKEN`) | 호스팅 저장소. 쓰기 가능한 토큰을 쓰고 쌍을 섞지 마세요 |
 | `APP_URL` | 운영의 정확한 외부 HTTPS 주소 |
@@ -287,7 +288,7 @@ npm run verify:meta  # 읽기 전용 모델 사용 가능 확인(키 필요)
 
 | 경로 | 용도 |
 |---|---|
-| `GET /api/status` | 준비 상태, 배포된 커밋, 모델 이름 |
+| `GET /api/status` | 준비 상태, 배포된 커밋, `model`(비교 단계 모델), `models`(읽기·검색·비교). 설정을 보여 줄 뿐 추론이 끝났다는 뜻은 아닙니다 |
 | `POST /api/extract` | 사진이나 글 읽기. 공고, 읽기 가능 여부, 시간을 반환 |
 | `POST /api/locate` | SAM 3.1 공고 영역(선택) |
 | `POST /api/checks` | 확인 실행. NDJSON으로 `created`, `phase`, `ping`, `result`, `error`를 스트리밍 |
@@ -299,7 +300,7 @@ npm run verify:meta  # 읽기 전용 모델 사용 가능 확인(키 필요)
 ## 14. 시험
 
 ```bash
-npm test                 # 단위·동작 시험 188개
+npm test                 # 단위·동작 시험 192개
 npm run test:live-harness
 # 앱이 실행 중이고 Chromium이 설치되어 있을 때:
 CHROMIUM_PATH=/usr/bin/chromium npm run test:browser
