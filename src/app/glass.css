@@ -1065,12 +1065,59 @@ h2 {
   max-height: 260px;
 }
 
-/* Elapsed time on the progress screen and per-check stage timing */
+/* Progress screen: space below the header, a centred step group whose items
+   stay aligned with each other, the elapsed time as a small chip, and short
+   hint lines that keep the cancel button in view on a phone. */
+.progress-screen {
+  margin-top: 16px;
+}
+.progress-steps {
+  width: fit-content;
+  max-width: 100%;
+  margin: 28px auto 22px;
+}
 .progress-elapsed {
-  margin: 6px 0 0;
-  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--glass-strong);
+  border: 1px solid var(--edge2);
+  color: var(--ink2);
+  font-size: 0.86rem;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
+}
+.progress-screen .progress-hint {
+  max-width: 340px;
+  margin: 0 auto 4px;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--muted);
+  text-wrap: balance;
+  word-break: keep-all;
+}
+.progress-screen .progress-hint + .progress-hint {
+  margin-top: 4px;
+}
+.progress-screen > button.secondary {
+  margin-top: 18px;
+}
+@media (max-width: 640px) {
+  .progress-screen {
+    margin-top: 12px;
+    padding-top: 36px;
+    padding-bottom: 28px;
+  }
+  .progress-orbit {
+    margin-bottom: 26px;
+  }
+  .progress-steps {
+    gap: 16px;
+    margin: 22px auto 18px;
+  }
 }
 .timing-details {
   margin: 18px 0 0;

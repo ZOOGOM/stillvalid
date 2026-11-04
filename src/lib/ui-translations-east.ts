@@ -171,7 +171,7 @@ export const zhUiCopy: UiCopy = {
   checkImage: "请确认照片中的文字清晰可读。",
   progressElapsed: "已用时 {s}",
   progressTypical:
-    "在我们的测量中，填写官方链接的核查约需 45–90 秒，经过搜索则更久。不保证完成时间。",
+    "到目前为止，填写官方链接的核查约需 45–90 秒，搜索可能更久。",
   autoFind: "自动查找公告区域",
   autoFindDone: "已裁剪到看起来像公告的区域，可以撤销。",
   autoFindNone: "未找到公告区域，请手动裁剪。",
@@ -385,7 +385,7 @@ export const jaUiCopy: UiCopy = {
   checkImage: "写真の文字が鮮明か確認してください。",
   progressElapsed: "経過 {s}",
   progressTypical:
-    "これまでの計測では、公式リンクありの確認で約45〜90秒、検索を経るとさらに長くかかりました。完了時間は保証されません。",
+    "公式リンクありの確認はこれまで約45〜90秒でした。検索するともっとかかることがあります。",
   autoFind: "お知らせの範囲を自動で探す",
   autoFindDone: "お知らせらしい範囲に合わせて切り抜きました。元に戻せます。",
   autoFindNone:

@@ -120,7 +120,7 @@ const ko = {
   takesTime: "자료의 양과 연결 상태에 따라 시간이 걸릴 수 있어요.",
   progressElapsed: "경과 시간 {s}",
   progressTypical:
-    "지금까지 측정에서는 공식 주소를 넣은 확인이 약 45초~1분 30초 걸렸고, 검색을 거치면 더 오래 걸렸어요. 완료 시간을 보장하지는 않아요.",
+    "공식 주소를 넣은 확인은 지금까지 약 45~90초 걸렸고, 검색하면 더 걸릴 수 있어요.",
   autoFind: "공고 영역 자동 찾기",
   autoFindDone:
     "공고로 보이는 영역에 맞춰 잘랐어요. 원래대로 되돌릴 수 있어요.",
@@ -441,7 +441,7 @@ const en: Copy = {
     "This can take a little time, depending on the sources and connection.",
   progressElapsed: "Elapsed {s}",
   progressTypical:
-    "In our measurements, checks with an official link took about 45–90 seconds, and longer with search. Completion time is not guaranteed.",
+    "Checks with an official link have taken about 45–90 seconds so far; search can take longer.",
   autoFind: "Find the notice automatically",
   autoFindDone:
     "Cropped to the area that looks like the notice. You can undo this.",
