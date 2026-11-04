@@ -14,6 +14,16 @@
 
 > Meta Global AI Developer Hackathon 출품작입니다(개인 Indie 부문, 주제 "Build for Your World").
 
+## 화면
+
+실제 운영 중인 앱([stillvalid-beta.vercel.app](https://stillvalid-beta.vercel.app))을 2026-11-04에 휴대폰 너비로 한국어 화면에서 찍은 사진입니다. 예시는 서울특별시 공고(이전에 공개된 공고 글을 재구성)를 공식 페이지와 비교한 것이며, 공식 페이지에서는 3월 31일이던 마감이 더 늦은 날짜로 바뀌어 있었습니다. 값은 공고와 공식 페이지에 적힌 그대로이고, 앱의 화면 문구만 선택한 언어로 보입니다.
+
+| 1. 시작 | 2. 공고 넣기 | 3. 읽은 내용 확인 | 4. 결과 |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/readme/ko-1-home.png" width="200" alt="시작 화면: 사진이나 텍스트 선택"> | <img src="docs/screenshots/readme/ko-2-input.png" width="200" alt="공고 글을 넣고 읽을 준비가 된 화면"> | <img src="docs/screenshots/readme/ko-3-review.png" width="200" alt="공고에서 찾은 공식 링크가 채워진 검토 화면"> | <img src="docs/screenshots/readme/ko-4-result.png" width="200" alt="결과: 신청 마감이 바뀜, 이전과 이후 값"> |
+
+3단계에는 공고 글에서 찾아 확인하라고 미리 채워 준 공식 링크와, 확인을 이미 백그라운드에서 시작했다는 안내가 보입니다. 4단계에는 저장해 둔 값(취소선)과 가져온 값을 비교하고 검증된 "바뀜" 표시가 붙은 모습이 보이며, "이 내용의 근거 보기"를 열면 양쪽 인용문이 나옵니다.
+
 ---
 
 ## 목차
