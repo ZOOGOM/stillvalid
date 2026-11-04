@@ -112,6 +112,12 @@ export async function POST(request: NextRequest) {
           if (signal.aborted) throw new AppError("cancelled", 499);
         };
         send("created", { id: job.id });
+        // Heartbeat so the browser can tell a slow step from a stuck
+        // connection (comparisons can send nothing for up to 100 s).
+        const heartbeat = setInterval(
+          () => send("ping", { elapsedMs: Date.now() - started }),
+          10000,
+        );
         try {
           await ensureActive();
           const meta = new MetaClient(undefined, async () => {
@@ -290,6 +296,7 @@ export async function POST(request: NextRequest) {
           );
           send("error", { code });
         } finally {
+          clearInterval(heartbeat);
           // Aggregate durations and reserved calls only: no notices, sources or IPs.
           console.info(
             JSON.stringify({

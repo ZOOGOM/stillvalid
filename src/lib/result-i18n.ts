@@ -88,6 +88,7 @@ const resultKeys = [
   "timing_total",
   "attemptsNote",
   "timing_prepare",
+  "timing_locate",
   "timing_extract",
   "timing_extractServer",
   "timing_review",
@@ -206,6 +207,7 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_total: "服务器合计",
     attemptsNote: "各来源的具体问题已在“各来源的核查情况”中分别列出。",
     timing_prepare: "照片准备",
+    timing_locate: "查找公告区域",
     timing_extract: "读取（整个请求）",
     timing_extractServer: "读取（服务器）",
     timing_review: "您的核对",
@@ -328,6 +330,7 @@ const translations: Record<ResultLang, ResultCopy> = {
     attemptsNote:
       "Los problemas de cada fuente se muestran por separado en «Qué pasó con cada fuente».",
     timing_prepare: "Preparación de la foto",
+    timing_locate: "Búsqueda del aviso",
     timing_extract: "Lectura (solicitud completa)",
     timing_extractServer: "Lectura (servidor)",
     timing_review: "Tu revisión",
@@ -452,6 +455,7 @@ const translations: Record<ResultLang, ResultCopy> = {
     attemptsNote:
       "Les problèmes propres à chaque source sont indiqués séparément dans « Ce qui s'est passé pour chaque source ».",
     timing_prepare: "Préparation de la photo",
+    timing_locate: "Repérage de l'avis",
     timing_extract: "Lecture (requête complète)",
     timing_extractServer: "Lecture (serveur)",
     timing_review: "Votre relecture",
@@ -580,6 +584,7 @@ const translations: Record<ResultLang, ResultCopy> = {
     attemptsNote:
       "Probleme einzelner Quellen stehen separat unter „Was mit jeder Quelle geschah“.",
     timing_prepare: "Fotovorbereitung",
+    timing_locate: "Bekanntmachung finden",
     timing_extract: "Lesen (gesamte Anfrage)",
     timing_extractServer: "Lesen (Server)",
     timing_review: "Ihre Prüfung",
@@ -696,6 +701,7 @@ const translations: Record<ResultLang, ResultCopy> = {
     attemptsNote:
       "出典ごとの問題は「出典ごとの確認結果」に分けて表示しています。",
     timing_prepare: "写真の準備",
+    timing_locate: "お知らせの範囲を探す",
     timing_extract: "読み取り（リクエスト全体）",
     timing_extractServer: "読み取り（サーバー）",
     timing_review: "内容の確認（ユーザー）",
@@ -820,6 +826,7 @@ const translations: Record<ResultLang, ResultCopy> = {
     attemptsNote:
       "Os problemas de cada fonte aparecem separadamente em “O que aconteceu com cada fonte”.",
     timing_prepare: "Preparação da foto",
+    timing_locate: "Localização do aviso",
     timing_extract: "Leitura (solicitação inteira)",
     timing_extractServer: "Leitura (servidor)",
     timing_review: "Sua revisão",
@@ -931,6 +938,7 @@ const translations: Record<ResultLang, ResultCopy> = {
     timing_total: "إجمالي الخادم",
     attemptsNote: "تظهر مشكلات كل مصدر بشكل منفصل في «ما حدث لكل مصدر».",
     timing_prepare: "تجهيز الصورة",
+    timing_locate: "تحديد موقع الإعلان",
     timing_extract: "القراءة (الطلب كاملًا)",
     timing_extractServer: "القراءة (الخادم)",
     timing_review: "مراجعتك",
@@ -1053,6 +1061,7 @@ const translations: Record<ResultLang, ResultCopy> = {
     attemptsNote:
       "Проблемы отдельных источников показаны в разделе «Что произошло с каждым источником».",
     timing_prepare: "Подготовка фото",
+    timing_locate: "Поиск объявления на фото",
     timing_extract: "Чтение (весь запрос)",
     timing_extractServer: "Чтение (сервер)",
     timing_review: "Ваша проверка",

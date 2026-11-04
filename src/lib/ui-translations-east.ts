@@ -186,6 +186,8 @@ export const zhUiCopy: UiCopy = {
   photoSmall: "照片较小，部分文字可能无法读取。靠近公告重新拍摄会更准确。",
   readUncertain:
     "照片可能被裁切或模糊，部分文字可能缺失。请将下方识别出的原文与照片对照并修改。",
+  error_client_timeout:
+    "响应时间过长，已停止等待。您输入的内容仍保留，请重试。",
 };
 
 export const jaUiCopy: UiCopy = {
@@ -401,4 +403,6 @@ export const jaUiCopy: UiCopy = {
     "写真が小さいため、一部の文字を読み取れない可能性があります。お知らせに近づいて撮り直すとより正確です。",
   readUncertain:
     "写真が切れているかぼやけているため、一部を読み取れていない可能性があります。下の認識した原文を写真と見比べて直してください。",
+  error_client_timeout:
+    "応答に時間がかかりすぎたため待機を止めました。入力内容はそのままなので、もう一度お試しください。",
 };

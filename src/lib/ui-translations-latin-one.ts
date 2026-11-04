@@ -212,6 +212,8 @@ export const esUiCopy: UiCopy = {
     "La foto es pequeña y puede que no se lea todo el texto. Una foto más cercana del aviso se lee con más precisión.",
   readUncertain:
     "La foto parecía recortada o borrosa, así que puede faltar texto. Compara el texto reconocido con la foto y corrígelo.",
+  error_client_timeout:
+    "Tardó demasiado, así que dejamos de esperar. Lo que introdujiste sigue aquí; vuelve a intentarlo.",
 };
 
 export const frUiCopy: UiCopy = {
@@ -430,4 +432,6 @@ export const frUiCopy: UiCopy = {
     "La photo est petite : une partie du texte risque de ne pas être lue. Une photo plus rapprochée de l'avis est lue plus précisément.",
   readUncertain:
     "La photo semblait coupée ou floue : du texte peut manquer. Comparez le texte reconnu ci-dessous avec la photo et corrigez-le.",
+  error_client_timeout:
+    "C'était trop long, nous avons cessé d'attendre. Votre saisie est conservée ; réessayez.",
 };
