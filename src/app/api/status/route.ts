@@ -16,6 +16,11 @@ export async function GET(request: NextRequest) {
       demoAvailable: true,
       deploymentSha: process.env.VERCEL_GIT_COMMIT_SHA || null,
       model: stepModel("comparison"),
+      models: {
+        extraction: stepModel("extraction"),
+        search: stepModel("search"),
+        comparison: stepModel("comparison"),
+      },
     },
     { headers: { "Cache-Control": "no-store" } },
   );

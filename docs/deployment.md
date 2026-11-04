@@ -8,7 +8,7 @@ The existing `stillvalid` Vercel project is connected to `ZOOGOM/stillvalid` thr
 
 The known production URL is [https://stillvalid-beta.vercel.app](https://stillvalid-beta.vercel.app). The `main` branch contains the application. Feature-branch pushes create previews through Git integration. Verify the branch, commit and deployment status for each review; do not assume a branch setting was changed or a merge occurred. An explicitly deployed production revision can be ahead of `main`; record its exact source commit. Git integration needs no `VERCEL_TOKEN`, `VERCEL_ORG_ID`, or `VERCEL_PROJECT_ID`; CLI alternatives are described in the [Korean setup guide](deployment.ko.md).
 
-The UI, location control and synthetic examples can be reviewed without application secrets. `META_API_KEY` and `META_MODEL=muse-spark-1.3` are registered for Production only; Preview needs its own Meta configuration to perform live checks. Upstash was connected through Vercel Marketplace, which provided `KV_REST_API_URL` and `KV_REST_API_TOKEN` for Production and Preview. The app accepts that pair automatically, or the canonical `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` pair. Use the full, writable REST token, not `KV_REST_API_READ_ONLY_TOKEN`; raw `REDIS_URL` and `KV_URL` are not used. If both complete pairs are configured, the canonical pair takes precedence and should point to the same database. An incomplete selected pair fails closed; URL and token are never mixed across pairs. Meta or shared storage configuration is required for live checks. Environment changes require a new deployment to take effect.
+The UI, location control and synthetic examples can be reviewed without application secrets. `META_API_KEY` is registered for Production only; set `META_MODEL=muse-spark-1.3-contributor` for the owner-selected contributor configuration, with the three per-step model variables unset; Preview needs its own Meta configuration to perform live checks. Upstash was connected through Vercel Marketplace, which provided `KV_REST_API_URL` and `KV_REST_API_TOKEN` for Production and Preview. The app accepts that pair automatically, or the canonical `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` pair. Use the full, writable REST token, not `KV_REST_API_READ_ONLY_TOKEN`; raw `REDIS_URL` and `KV_URL` are not used. If both complete pairs are configured, the canonical pair takes precedence and should point to the same database. An incomplete selected pair fails closed; URL and token are never mixed across pairs. Meta or shared storage configuration is required for live checks. Environment changes require a new deployment to take effect.
 
 Set production `APP_URL` to the exact external origin and redeploy; leave it unset for independent preview domains or set their own exact origin. Configure Deployment Protection so the intended review URL is accessible externally and test it in a separate browser before giving it to Claude. Do not put keys, tokens, passwords or bypass tokens in chat or documentation.
 
@@ -34,16 +34,17 @@ The interface and three synthetic examples work without a key. Live input is nev
 
 ## Configuration
 
-| Variable | Purpose |
-| --- | --- |
-| `META_API_KEY` | Server secret; `MODEL_API_KEY` is an accepted alias. |
-| `META_MODEL` | Default `muse-spark-1.3`, Standard mode. |
-| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Canonical shared Redis REST endpoint and writable server-only token, required together. |
-| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | Marketplace aliases accepted together when the canonical pair is absent. |
-| `APP_URL` | Exact external origin, such as `https://your-domain.example`; controls origin checks and secure cookies. |
-| `DATABASE_PATH` | Persistent writable SQLite file. Compose sets `/app/data/stillvalid.sqlite`. |
-| `DAILY_MODEL_CALL_LIMIT` | Global paid model requests per UTC day, default 300 (raised from 100 for testing on 2026-11-04; set this variable to lower it); not a monetary cap. |
-| `VERIFIED_SOURCE_HOSTS` | Additional independently verified institution domains, comma-separated without wildcards. |
+| Variable                                                              | Purpose                                                                                                                                                                                     |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `META_API_KEY`                                                        | Server secret; `MODEL_API_KEY` is an accepted alias.                                                                                                                                        |
+| `META_MODEL`                                                          | Common Spark model for reading, search and comparison. Fallback when unset/blank: `muse-spark-1.3-contributor`. Redeploy after changing it; check the privacy notice before a model change. |
+| `META_EXTRACTION_MODEL`, `META_SEARCH_MODEL`, `META_COMPARISON_MODEL` | Optional per-step overrides, higher priority than `META_MODEL`. Leave unset for a single switch; blank values fall back to the common setting.                                              |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`                  | Canonical shared Redis REST endpoint and writable server-only token, required together.                                                                                                     |
+| `KV_REST_API_URL`, `KV_REST_API_TOKEN`                                | Marketplace aliases accepted together when the canonical pair is absent.                                                                                                                    |
+| `APP_URL`                                                             | Exact external origin, such as `https://your-domain.example`; controls origin checks and secure cookies.                                                                                    |
+| `DATABASE_PATH`                                                       | Persistent writable SQLite file. Compose sets `/app/data/stillvalid.sqlite`.                                                                                                                |
+| `DAILY_MODEL_CALL_LIMIT`                                              | Global paid model requests per UTC day, default 300 (raised from 100 for testing on 2026-11-04; set this variable to lower it); not a monetary cap.                                         |
+| `VERIFIED_SOURCE_HOSTS`                                               | Additional independently verified institution domains, comma-separated without wildcards.                                                                                                   |
 
 Meta's built-in web search is used through Responses; a separate search key is not needed. Registered domains still undergo notice identity and quote checks. Unknown authority remains a review result.
 
@@ -83,3 +84,11 @@ Use the opt-in [live evaluation harness](evaluation.md) to record real public-no
 - [Image understanding](https://dev.meta.ai/docs/image-understanding)
 - [Structured output](https://dev.meta.ai/docs/structured-output)
 - [Search grounding](https://dev.meta.ai/docs/search-grounding)
+
+## Change the production Spark model
+
+Inspect Production model variables first. Keep the selected privacy notice consistent with all effective steps, especially contributor data use. Set `META_MODEL` to an ID returned by the production key’s `GET https://api.meta.ai/v1/models`; leave per-step overrides unset unless intentionally mixing models. Never expose the key or an authenticated response body. SAM remains independently controlled by `SAM_MODEL`.
+
+Every Production hosting build runs a read-only model-catalog check before activation, using the Production key already in Vercel. It checks all three effective step IDs and prints only public model IDs and access flags, with no inference or model-call reservation. An inaccessible catalog or missing selected ID fails the build so the previous deployment keeps serving. Preview builds skip this Production-only check; the existing paid hosting probe remains opt-in via `STILLVALID_VERIFY_DEPLOYMENT`. `npm run verify:meta` uses the same resolution locally when a permitted key is available.
+
+After deploying, verify both public aliases: `/api/status.deploymentSha` must match the released commit; `model` is the effective comparison model and `models` lists extraction/search/comparison. These fields show configuration, not completed inference. Confirm actual requests with a bounded production smoke run. Future model changes require a new deployment and a privacy-copy review; no inference fallback silently chooses another model.

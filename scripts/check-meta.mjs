@@ -11,7 +11,12 @@ if (!key) {
   );
   process.exit(2);
 }
-const model = process.env.META_MODEL || "muse-spark-1.3";
+// Resolve the same settings as the actual requests, including step overrides.
+const { stepModel } = await import("../src/lib/meta.ts");
+const models = Object.fromEntries(
+  ["extraction", "search", "comparison"].map((step) => [step, stepModel(step)]),
+);
+const model = models.comparison;
 let proxy;
 try {
   proxy =
@@ -30,13 +35,24 @@ try {
     process.exitCode = 1;
   } else {
     const data = await response.json();
-    const enabled =
-      Array.isArray(data.data) && data.data.some((m) => m.id === model);
+    const availableModelIds = Array.isArray(data.data)
+      ? data.data
+          .map((m) => m.id)
+          .filter(
+            (id) =>
+              typeof id === "string" && /^[a-z0-9][a-z0-9._-]{0,99}$/.test(id),
+          )
+      : [];
+    const enabled = Object.values(models).every((id) =>
+      availableModelIds.includes(id),
+    );
     console.log(
       JSON.stringify({
         apiReachable: true,
         selectedModel: model,
+        selectedModels: models,
         selectedModelEnabled: enabled,
+        availableModelIds,
         inferenceTested: false,
       }),
     );

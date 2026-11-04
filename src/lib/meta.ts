@@ -55,14 +55,15 @@ export function configured(): boolean {
   return !!(process.env.META_API_KEY || process.env.MODEL_API_KEY);
 }
 export function modelId(): string {
-  return process.env.META_MODEL || "muse-spark-1.3";
+  return (process.env.META_MODEL || "").trim() || lowCostModel;
 }
 /**
  * Model for each Meta Spark step. Cost decision by the owner (2026-11-04): the
  * lower-priced "contributor" variant is the default. Meta's terms for it may
  * allow inputs to be used to improve Meta's models; the in-app privacy notice
  * says so. META_EXTRACTION_MODEL, META_COMPARISON_MODEL and META_SEARCH_MODEL
- * override a step (for example with "muse-spark-1.3").
+ * override a step (for example with "muse-spark-1.3"); otherwise META_MODEL
+ * controls every Spark step, falling back to the owner's low-cost default.
  */
 export const lowCostModel = "muse-spark-1.3-contributor";
 export function stepModel(
@@ -70,7 +71,7 @@ export function stepModel(
 ): string {
   return (
     (process.env["META_" + step.toUpperCase() + "_MODEL"] || "").trim() ||
-    lowCostModel
+    modelId()
   );
 }
 export function validateImage(data: string): void {
