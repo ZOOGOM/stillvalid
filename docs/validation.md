@@ -93,3 +93,19 @@ Two other official GOV.UK notices were tested using newly rendered synthetic pos
 The Bremen source did not state a time zone for the deadline; none was inferred. Each notice used one model call for extraction and one per comparison. The four results and both sessions were deleted; the session DELETE requests returned HTTP 204. These are four controlled operational comparisons, not four historical deadline changes or evidence of population accuracy.
 
 An offline counterfactual used each actually returned `- GOV.UK` source title and an exact source excerpt containing the notice title and issuing institution. `verifyComparison` rejected identity for both; replacing only the heading in that fixture with the exact notice title made both verify. Thus the existing specific-heading equality check is independently sufficient to prevent confirmation for these returned headings. This does not reveal what identity quote or `same_notice` value the live model actually returned. No identity rule or test expectation was changed.
+
+## 2026-11-04 section scope, page-level archive and heading fixes (`9c9e77d`)
+
+An independent review reproduced two false confirmations on `f13fe9a` with synthetic model outputs: a date quoted from a sibling programme's section on the same official page ("Music" for a "Garden" notice), and a page that began "This page is an archive." while the quote itself contained the title, institution and edition. Both now yield `review`, with new regression tests that fail on the previous code. A changed value is rejected when its inline lead-in or nearest heading names a sibling programme; neutral headings ("Timeline", "Applications Due") keep scope, and a quote naming the title is always in scope. Page-level archived, superseded or withdrawn statements now veto identity on every path; menu links such as "News archive" do not. Where several programmes share one section without distinguishing labels, scope still depends on the model.
+
+The same review found that `- GOV.UK` page titles blocked identity. The site's own label, generic labels and "recruitment" are now neutral, and a heading that only wraps lead-in words around the complete title still names it; "Local History" still does not match "History". An unrelated fetched page no longer uses one of the two comparison slots. `check_timing` logs now include fixed identity/scope rejection codes, without notice or source text.
+
+Offline, the real NASM, Seoul and two GOV.UK pages were checked with constructed model outputs: NASM L1/L2 and the Seoul notice still verify, both GOV.UK notices verify, and an Engen notice quoting the page's general date is rejected for scope. Live on `9c9e77d`, with notices sent directly to the check endpoint (three comparison calls, no extraction):
+
+| Case | Result | Check |
+| --- | --- | ---: |
+| GOV.UK Honorary Consul Bremen, artificially earlier deadline | `changed` 15 → 22 November, verified | 22.1 s |
+| GOV.UK Consul General For a Day, same deadline | `matched`, verified | 18.8 s |
+| Seoul internship notice, poster with an earlier end date | `changed` 3/31 → 4/3, verified | 34.7 s |
+
+Each is a single run; the GOV.UK date change was artificial and the inputs were not photographed. Local checks passed TypeScript, 159 tests, seven harness tests, the build and 21 browser-flow groups with no page errors or accessibility violations. A reconnecting client still starts a new check, because the server cancels work when the stream disconnects. The session was deleted with HTTP 204.
