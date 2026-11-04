@@ -14,6 +14,16 @@ App: [stillvalid-beta.vercel.app](https://stillvalid-beta.vercel.app) · Alias: 
 
 > Korean working name: **지금도 맞나요**. Built for the Meta Global AI Developer Hackathon, Indie developer track, theme "Build for Your World".
 
+## Screenshots
+
+Real screens of the running app ([stillvalid-beta.vercel.app](https://stillvalid-beta.vercel.app)), captured at phone width on 2026-11-04 with the English display language. The example is a Seoul Metropolitan Government notice (text reconstructed from the earlier public notice) checked against the official page, which gave a 31 March deadline a later date. The notice's own Korean text and the official values are kept as written; only the interface is translated.
+
+| 1. Start | 2. Paste or add the notice | 3. Review what was read | 4. Result |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/readme/en-1-home.png" width="200" alt="Start screen: choose a photo or text"> | <img src="docs/screenshots/readme/en-2-input.png" width="200" alt="Notice text entered, ready to read"> | <img src="docs/screenshots/readme/en-3-review.png" width="200" alt="Review screen with the official link filled in from the notice"> | <img src="docs/screenshots/readme/en-4-result.png" width="200" alt="Result: application deadline changed, with before and after values"> |
+
+Step 3 shows the official link that was found in the notice text and filled in for you to check, and the note that the check has already started in the background. Step 4 shows the saved value (struck through) against the retrieved value, with the verified "Changed" label; "See the supporting text" opens the quotes from both sides.
+
 ---
 
 ## Contents
