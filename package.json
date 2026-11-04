@@ -20,7 +20,8 @@
     "verify:meta": "node scripts/check-meta.mjs",
     "verify:hosted": "node --import tsx scripts/check-hosted.mjs",
     "test:browser": "node scripts/browser-check.mjs",
-    "format": "prettier --write src tests scripts next.config.ts tsconfig.json"
+    "format": "prettier --write src tests scripts next.config.ts tsconfig.json",
+    "test:browser-maps": "node scripts/browser-maps-check.mjs"
   },
   "dependencies": {
     "@rapideditor/country-coder": "5.6.1",
