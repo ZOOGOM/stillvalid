@@ -1,3 +1,4 @@
+import { rankCandidates, sourceEvidenceKey } from "@/lib/source-planning";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { MetaClient, configured, type CallRecord } from "@/lib/meta";
@@ -9,7 +10,7 @@ import {
   type Source,
   type SourceAttempt,
 } from "@/lib/schema";
-import { authorityFor, fetchSource, publicUrl } from "@/lib/source";
+import { fetchSource, publicUrl } from "@/lib/source";
 import {
   createCheck,
   failCheck,
@@ -24,7 +25,11 @@ import { assembleResult } from "@/lib/compare";
 import { errorResponse, readJson } from "@/lib/http";
 import { abuseKey, abuseSecret } from "@/lib/abuse";
 import { sourceRelevant } from "@/lib/relevance";
-import { settle, settleWithGrace, startSettled } from "@/lib/priority";
+import {
+  prefetchEligible,
+  settleWithGrace,
+  startSettled,
+} from "@/lib/priority";
 export const runtime = "nodejs";
 export const maxDuration = 180;
 const compareGraceMs = 30000;
@@ -164,17 +169,7 @@ export async function POST(request: NextRequest) {
               }
             }
           }
-          candidates.sort(
-            (a, b) =>
-              Number(
-                authorityFor(new URL(b.url).hostname, new URL(b.url).pathname)
-                  .authority === "registered",
-              ) -
-              Number(
-                authorityFor(new URL(a.url).hostname, new URL(a.url).pathname)
-                  .authority === "registered",
-              ),
-          );
+          candidates = rankCandidates(candidates, notice).slice(0, 3);
           const sources: Source[] = [];
           const analyses: ModelComparison[] = [];
           const attempts: SourceAttempt[] = [];
@@ -192,11 +187,45 @@ export async function POST(request: NextRequest) {
           const fetchAbort = new AbortController();
           const fetchSignal = AbortSignal.any([signal, fetchAbort.signal]);
           const fetchStarted = Date.now();
-          const fetches = candidates
-            .slice(0, 3)
-            .map((candidate) =>
-              settle(fetchSource(candidate.url, "pending", fetchSignal)),
-            );
+          // The first two candidates, when relevant, are always eligible. Start
+          // their comparisons on arrival without waiting for the earlier fetch.
+          // Later candidates are admitted only after the priority loop finds room.
+          const comparisonByEvidence = new Map<
+            string,
+            ReturnType<typeof startSettled<ModelComparison>>
+          >();
+          const beginComparison = (source: Source) => {
+            const key = sourceEvidenceKey(source);
+            let task = comparisonByEvidence.get(key);
+            if (!task) {
+              task = startSettled(async (cutOff) => {
+                await ensureActive();
+                if (comparisonStarted === undefined) {
+                  comparisonStarted = Date.now();
+                  send("phase", {
+                    step: "compare",
+                    elapsedMs: Date.now() - started,
+                  });
+                }
+                return meta.compare(
+                  notice,
+                  source,
+                  lang,
+                  AbortSignal.any([signal, cutOff]),
+                );
+              });
+              comparisonByEvidence.set(key, task);
+            }
+            return task;
+          };
+          const fetches = prefetchEligible(
+            candidates.map((candidate, index) =>
+              fetchSource(candidate.url, "source-" + index, fetchSignal),
+            ),
+            (source) => sourceRelevant(notice, source),
+            beginComparison,
+          );
+          const acceptedEvidence = new Set<string>();
           try {
             let relatedFound = 0;
             for (const [index, fetch] of fetches.entries()) {
@@ -212,8 +241,12 @@ export async function POST(request: NextRequest) {
                 });
                 continue;
               }
-              const id = "source-" + sources.length;
-              sources.push({ ...outcome.value, id });
+              const key = sourceEvidenceKey(outcome.value);
+              // Redirect aliases of the exact same page are one piece of evidence.
+              if (acceptedEvidence.has(key)) continue;
+              acceptedEvidence.add(key);
+              const id = outcome.value.id;
+              sources.push(outcome.value);
               const relevant = sourceRelevant(notice, outcome.value);
               attempts.push({
                 url: outcome.value.url,
@@ -222,28 +255,7 @@ export async function POST(request: NextRequest) {
               });
               if (relevant) {
                 relatedFound++;
-                // Begin accepted sources in the same priority order as before,
-                // while later candidate fetches are still pending. No extra
-                // candidates or model calls are introduced by this overlap.
-                await ensureActive();
-                if (comparisonStarted === undefined) {
-                  comparisonStarted = Date.now();
-                  send("phase", {
-                    step: "compare",
-                    elapsedMs: Date.now() - started,
-                  });
-                }
-                const source = sources[sources.length - 1];
-                comparisons.push(
-                  startSettled((cutOff) =>
-                    meta.compare(
-                      notice,
-                      source,
-                      lang,
-                      AbortSignal.any([signal, cutOff]),
-                    ),
-                  ),
-                );
+                comparisons.push(beginComparison(outcome.value));
               }
             }
           } finally {

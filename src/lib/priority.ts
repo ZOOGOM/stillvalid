@@ -8,6 +8,24 @@ export function settle<T>(operation: Promise<T>): Promise<Outcome<T>> {
   );
 }
 
+/** Work on the first eligible slots cannot be displaced by an earlier fetch.
+ * Later slots remain lazy so a slow first candidate never causes extra calls. */
+export function prefetchEligible<T>(
+  loads: Promise<T>[],
+  eligible: (value: T) => boolean,
+  start: (value: T) => unknown,
+  limit = 2,
+): Promise<Outcome<T>>[] {
+  return loads.map((load, index) =>
+    settle(
+      load.then((value) => {
+        if (index < limit && eligible(value)) start(value);
+        return value;
+      }),
+    ),
+  );
+}
+
 /** Start useful work while more sources load, retaining cancellation and errors. */
 export function startSettled<T>(
   operation: (signal: AbortSignal) => Promise<T>,

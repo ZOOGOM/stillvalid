@@ -98,3 +98,23 @@ After deploying, verify both public aliases: `/api/status.deploymentSha` must ma
 ## Model-preserving latency settings
 
 Production uses `META_REASONING_EFFORT_SEARCH=minimal`, with the contributor model retained. Per-step cache keys contain only fixed application/version names, never user identifiers or notice data; retention remains provider default. `/api/status.reasoning` reports effective effort settings and `searchMaxToolCalls` is null when unrestricted. Read [performance](performance.md) for preserved evidence, timing overlap and optional tool limits.
+
+### Request efficiency and evidence freshness
+
+Search candidates are ranked for registered authority and notice relevance before
+selecting three pages. Each page has a 15-second aggregate budget covering DNS,
+redirects and body retrieval (individual network requests still cap at 12 seconds).
+A timeout remains an explicit missing-source warning; it is not evidence that a
+notice is unchanged. The first two eligible candidates can begin comparison as
+soon as their pages arrive, with at most two distinct comparisons. Redirect aliases
+with exactly matching final URL, title, body and authority share one comparison.
+Different URLs or changed content are not deduplicated.
+
+The browser delays speculative checking by 350 ms and aborts it when the notice,
+region or source link changes. Display-language changes reuse the same untranslated
+evidence. One clear extraction can be reused for identical input and country for
+10 minutes in tab memory; it is cleared on reset/unmount and never persisted.
+Uncertain readings are not cached. Source fetching and final validity checks are
+never cached by this optimization. Model, daily budget and evidence rules are
+unchanged. Local regression checks use fixtures and make no model calls; production
+latency and provider cancellation billing still require separate measurement.
