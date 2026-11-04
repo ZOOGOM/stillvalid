@@ -667,8 +667,14 @@ test("identity matching never drops distinctive words or uses title token substr
     [
       "Fellowships",
       "Example Library",
-      "Fellowships | Example Library",
+      "Fellowships | Example Library Foundation",
       "Fellowships. Example Library.",
+    ],
+    [
+      "Events",
+      "Example Library",
+      "Events | Example Library",
+      "Events. Example Library.",
     ],
     [
       "Research Fellowships",
@@ -742,7 +748,7 @@ test("institution affixes cannot be removed to manufacture title agreement", () 
   }
 });
 
-test("a title-only quote cannot borrow institution evidence from a heading", () => {
+test("a title-only quote borrows institution evidence only from a registered dedicated heading", () => {
   for (const [title, institution] of [
     ["2026 Garden workshop", "Example Library"],
     ["2026 정원 교실", "시립도서관"],
@@ -755,7 +761,14 @@ test("a title-only quote cannot borrow institution evidence from a heading", () 
       text: `${title}. Apply by 10 November 2026.`,
     };
     const a = { ...analysis, identity_quote: `${title}.` };
-    assert.equal(run(n, s, a).status, "review", title);
+    // A registered page titled exactly "<title> | <institution>" may supply
+    // the issuer; the same heading on an unregistered site may not.
+    assert.equal(run(n, s, a).status, "changed", title);
+    assert.equal(
+      run(n, { ...s, authority: "unverified" as const }, a).status,
+      "review",
+      title,
+    );
     for (const heading of [
       `${title} | Another Library`,
       `${title} | ${institution} Foundation`,
@@ -927,4 +940,129 @@ test("a matching institution segment does not excuse another conflicting heading
     assert.equal(result.status, "review");
     assert.equal(result.comparisons[0].verified, false);
   }
+});
+
+// Registered-domain identity: evidence may come from the issuer's own page,
+// never from an unregistered site, and nearby conflicts always win.
+const nasmNotice: Notice = {
+  title: "Fellowships",
+  institution: "National Air and Space Museum",
+  edition: null,
+  country: null,
+  originalText:
+    "National Air and Space Museum\nFellowships\nApplications Due: December 11, 2026",
+  fields: [
+    {
+      key: "deadline",
+      value: "December 11, 2026",
+      quote: "Applications Due: December 11, 2026",
+    },
+  ],
+};
+const nasmQuote =
+  "The National Air and Space Museum's prestigious fellowships give experts and researchers an opportunity to work with the collection.";
+const nasmSource: Source = {
+  id: "source-0",
+  url: "https://airandspace.si.edu/get-involved/fellowships",
+  title: "Fellowships | National Air and Space Museum",
+  text: `${nasmQuote}\nTimeline\nApplications Due\nDecember 18, 2026\nHow to Apply`,
+  authority: "registered",
+  institution: "Smithsonian Institution",
+  fetchedAt: "2026-11-03T00:00:00Z",
+};
+const nasmAnalysis: ModelComparison = {
+  same_notice: true,
+  identity_quote: nasmQuote,
+  country: null,
+  source_role: "original",
+  comparisons: [
+    {
+      key: "deadline",
+      before: "December 11, 2026",
+      after: "December 18, 2026",
+      before_quote: "Applications Due: December 11, 2026",
+      after_quote: "December 18, 2026",
+      relation: "changed",
+    },
+  ],
+  summary: "",
+  next_action: "",
+};
+
+test("a registered issuer's dedicated page confirms a category-titled notice", () => {
+  const result = run(nasmNotice, nasmSource, nasmAnalysis);
+  assert.equal(result.status, "changed");
+  assert.equal(result.comparisons[0].verified, true);
+  assert.equal(result.comparisons[0].after, "December 18, 2026");
+});
+
+test("dedicated-page identity still rejects every borrowed-evidence conflict", () => {
+  const cases: [string, Partial<Source>, Partial<ModelComparison>?][] = [
+    ["unregistered site", { authority: "unverified" }],
+    [
+      "another issuer heading",
+      { title: "Fellowships | Smithsonian Libraries" },
+    ],
+    [
+      "three-part heading",
+      { title: "Fellowships | Archive | National Air and Space Museum" },
+    ],
+    [
+      "hosted by another issuer",
+      {
+        text: `${nasmQuote} Hosted by Smithsonian Libraries.\nApplications Due\nDecember 18, 2026`,
+      },
+    ],
+    [
+      "archived page",
+      {
+        text: `${nasmQuote} This is an archived page.\nApplications Due\nDecember 18, 2026`,
+      },
+    ],
+    ["model says different notice", {}, { same_notice: false }],
+    ["quote missing the title", {}, { identity_quote: "Timeline" }],
+  ];
+  for (const [label, sourceChange, analysisChange] of cases) {
+    const result = run(
+      nasmNotice,
+      { ...nasmSource, ...sourceChange },
+      { ...nasmAnalysis, ...(analysisChange || {}) },
+    );
+    assert.equal(result.status, "review", label);
+    assert.equal(result.comparisons[0].verified, false, label);
+  }
+});
+
+test("borrowed institution or edition near the quote is checked for nearby edition conflicts", () => {
+  const n: Notice = {
+    ...notice,
+    title: "Garden workshop",
+    edition: "2026",
+  };
+  const quote = "Garden workshop applications are open.";
+  const base: Source = {
+    ...source,
+    title: "Garden workshop | Example Library",
+    text: `Example Library. ${quote} 2026 season. Apply by 10 November 2026.`,
+  };
+  const a: ModelComparison = { ...analysis, identity_quote: quote };
+  assert.equal(run(n, base, a).status, "changed");
+  for (const text of [
+    `Example Library. ${quote} 2025 season. Apply by 10 November 2026.`,
+    `${quote} Organised by Another Library. Apply by 10 November 2026.`,
+  ])
+    assert.equal(run(n, { ...base, text }, a).status, "review", text);
+  // Without the dedicated heading, the issuer must appear near the quote.
+  assert.equal(
+    run(
+      n,
+      {
+        ...base,
+        title: "Garden workshop",
+        text: `${quote} 2026 season. Apply by 10 November 2026.`,
+      },
+      a,
+    ).status,
+    "review",
+  );
 });
