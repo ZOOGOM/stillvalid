@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { settleWithGrace } from "../src/lib/priority";
+import { settleWithGrace, startSettled } from "../src/lib/priority";
 
 // A task that resolves (or rejects) after `ms` unless its signal aborts first.
 function task(ms: number, fail = false) {
@@ -16,6 +16,50 @@ function task(ms: number, fail = false) {
       });
     });
 }
+
+test("an accepted source compares while later fetches wait, without duplicating work", async () => {
+  let complete!: (value: string) => void;
+  let started = 0;
+  const comparison = startSettled(async () => {
+    started++;
+    return new Promise<string>((resolve) => {
+      complete = resolve;
+    });
+  });
+  await Promise.resolve();
+  assert.equal(started, 1, "comparison starts before the collection barrier");
+  complete("verified");
+  const result = await settleWithGrace(
+    [{ decisive: true, run: comparison.run }],
+    30,
+  );
+  assert.deepEqual(result.outcomes, [{ ok: true, value: "verified" }]);
+  assert.equal(started, 1);
+});
+
+test("already started comparisons retain grace cancellation and early failures", async () => {
+  const fast = startSettled(task(10));
+  const slow = startSettled(task(2000));
+  const result = await settleWithGrace(
+    [
+      { decisive: true, run: fast.run },
+      { decisive: false, run: slow.run },
+    ],
+    30,
+  );
+  assert.deepEqual(result.cutOff, [false, true]);
+  assert.equal(result.outcomes[0].ok, true);
+  assert.equal(result.outcomes[1].ok, false);
+  const failure = new Error("early failure");
+  const failed = startSettled(async () => {
+    throw failure;
+  });
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  await assert.rejects(
+    () => failed.run(new AbortController().signal),
+    (error) => error === failure,
+  );
+});
 
 test("after an official comparison succeeds, a slow one gets only the grace period", async () => {
   const started = Date.now();

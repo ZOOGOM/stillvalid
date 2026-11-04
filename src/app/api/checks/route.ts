@@ -24,7 +24,7 @@ import { assembleResult } from "@/lib/compare";
 import { errorResponse, readJson } from "@/lib/http";
 import { abuseKey, abuseSecret } from "@/lib/abuse";
 import { sourceRelevant } from "@/lib/relevance";
-import { settle, settleWithGrace } from "@/lib/priority";
+import { settle, settleWithGrace, startSettled } from "@/lib/priority";
 export const runtime = "nodejs";
 export const maxDuration = 180;
 const compareGraceMs = 30000;
@@ -178,6 +178,10 @@ export async function POST(request: NextRequest) {
           const sources: Source[] = [];
           const analyses: ModelComparison[] = [];
           const attempts: SourceAttempt[] = [];
+          const comparisons: ReturnType<
+            typeof startSettled<ModelComparison>
+          >[] = [];
+          let comparisonStarted: number | undefined;
           send("phase", { step: "sources", elapsedMs: Date.now() - started });
           await ensureActive();
           // Fetch candidates concurrently but decide in priority order, exactly
@@ -216,13 +220,38 @@ export async function POST(request: NextRequest) {
                 outcome: relevant ? "compared" : "unrelated",
                 sourceId: id,
               });
-              if (relevant) relatedFound++;
+              if (relevant) {
+                relatedFound++;
+                // Begin accepted sources in the same priority order as before,
+                // while later candidate fetches are still pending. No extra
+                // candidates or model calls are introduced by this overlap.
+                await ensureActive();
+                if (comparisonStarted === undefined) {
+                  comparisonStarted = Date.now();
+                  send("phase", {
+                    step: "compare",
+                    elapsedMs: Date.now() - started,
+                  });
+                }
+                const source = sources[sources.length - 1];
+                comparisons.push(
+                  startSettled((cutOff) =>
+                    meta.compare(
+                      notice,
+                      source,
+                      lang,
+                      AbortSignal.any([signal, cutOff]),
+                    ),
+                  ),
+                );
+              }
             }
           } finally {
             fetchAbort.abort();
             timing.fetchMs += Date.now() - fetchStarted;
           }
-          send("phase", { step: "compare", elapsedMs: Date.now() - started });
+          if (comparisonStarted === undefined)
+            send("phase", { step: "compare", elapsedMs: Date.now() - started });
           // A page sharing nothing with the notice cannot yield verified
           // evidence; skip its model call and say so instead.
           const related = sources.filter((source) =>
@@ -237,26 +266,23 @@ export async function POST(request: NextRequest) {
           // has succeeded, slower ones get 30 s more and are then reported as
           // not finished, so one long tail no longer holds the whole result.
           // An unfinished source still keeps the result in review.
-          const graced = await measure("compareMs", () =>
-            settleWithGrace(
-              related.map((source) => ({
-                decisive: source.authority === "registered",
-                run: (cutOff: AbortSignal) =>
-                  meta.compare(
-                    notice,
-                    source,
-                    lang,
-                    AbortSignal.any([signal, cutOff]),
-                  ),
-              })),
-              compareGraceMs,
-            ),
+          const graced = await settleWithGrace(
+            related.map((source, i) => ({
+              decisive: source.authority === "registered",
+              run: comparisons[i].run,
+            })),
+            compareGraceMs,
           );
+          // Fetch and comparison durations overlap; they must not be summed.
+          timing.compareMs =
+            comparisonStarted === undefined
+              ? 0
+              : Date.now() - comparisonStarted;
           const settled = graced.outcomes;
           compareTimes.push(
             ...related.map((source, i) => ({
               registered: source.authority === "registered",
-              ms: graced.ms[i],
+              ms: comparisons[i].elapsedMs(),
               ok: settled[i].ok,
               cutOff: graced.cutOff[i],
             })),
@@ -327,6 +353,7 @@ export async function POST(request: NextRequest) {
           );
           send("error", { code });
         } finally {
+          abort.abort();
           clearInterval(heartbeat);
           // Aggregate durations and reserved calls only: no notices, sources or IPs.
           console.info(

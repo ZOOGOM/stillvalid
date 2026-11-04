@@ -186,9 +186,10 @@ flowchart TD
 
 대응한 것:
 
-- 읽기와 비교에 **최소 추론 강도**(`reasoning_effort: minimal`)를 씁니다. 검색은 모델 기본값을 유지합니다.
+- 읽기·비교·검색 모두 **최소 추론 강도**를 기본으로 씁니다. 검색은 Responses에 `reasoning: { effort: "minimal" }`을 보냅니다.
 - **백그라운드 확인.** 읽기가 끝나면 사용자가 항목을 확인하는 동안 확인을 시작합니다. 링크를 알면 그 링크로(직접 입력했거나 공고에 인쇄된 경우), 모르면 출처 검색까지 포함해서 합니다. 버튼을 눌렀을 때 공고, 지역, 언어, 링크가 그대로일 때만 그 결과를 쓰고, 아니면 버리고 평소처럼 새로 확인합니다. 읽기가 불확실하거나 공고 국가가 선택한 지역과 다르면 시작하지 않고, 읽기 한 번에 최대 한 번만 시작합니다. 모델이 일하는 시간을 사용자의 확인 시간으로 옮기는 것이며, 모델 자체를 빠르게 하지는 않습니다.
-- **병렬 가져오기와 비교**, 그리고 공식 출처가 성공한 뒤 느린 출처에 주는 30초 유예
+- **가져오기와 비교의 겹쳐 실행**: 우선순위에 따라 채택한 출처부터 비교하고 뒤 후보를 기다립니다. 관련 출처 최대2개와 30초 유예는 유지합니다. 가져오기·비교 시간은 겹칠 수 있어 합산하지 않습니다.
+- 빈 흰 사진 여백과 명시적인 메뉴·공유·관련 글을 줄이고 글자와 본문은 보존합니다. 단계별 캐시 키와 캐시·추론 토큰 계측도 추가했습니다([성능 설명](docs/performance.md)).
 - 모든 단계에 더 저렴한 모델 변형 사용([8장](#8-사용하는-meta-모델))
 
 **안정성**
@@ -283,7 +284,8 @@ npm run verify:meta  # 읽기 전용 모델 사용 가능 확인(키 필요)
 | `META_API_KEY` (별칭 `MODEL_API_KEY`) | 서버 전용 Meta 키 |
 | `META_MODEL` | 세 Spark 단계 전체의 모델. 기본값은 `muse-spark-1.3-contributor` |
 | `META_EXTRACTION_MODEL`, `META_SEARCH_MODEL`, `META_COMPARISON_MODEL` | 단계별 선택 덮어쓰기(`META_MODEL`보다 우선). 하나로 바꾸려면 비워 두세요. 공고 위치 찾기는 `SAM_MODEL`이 따로 정합니다 |
-| `META_REASONING_EFFORT_EXTRACTION`, `_COMPARISON`, `_SEARCH` | `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, `none`. 비우면 읽기와 비교는 minimal, 검색은 모델 기본값 |
+| `META_REASONING_EFFORT_EXTRACTION`, `_COMPARISON`, `_SEARCH` | `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, `none`. 비우면 세 단계 모두 minimal |
+| `META_SEARCH_MAX_TOOL_CALLS` | 내장 검색 도구 호출 횟수 제한(1..5). 수정·취소 공고 탐색을 보존하도록 기본은 미설정 |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (또는 `KV_REST_API_URL`, `KV_REST_API_TOKEN`) | 호스팅 저장소. 쓰기 가능한 토큰을 쓰고 쌍을 섞지 마세요 |
 | `APP_URL` | 운영의 정확한 외부 HTTPS 주소 |
 | `DAILY_MODEL_CALL_LIMIT` | UTC 하루 전체 모델 호출 수(기본 300) |

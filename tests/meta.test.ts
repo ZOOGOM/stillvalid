@@ -1011,11 +1011,13 @@ test("a long stall is not retried, a body timeout is a stall, and each call is r
       assert.equal(ok.calls[0].inputTokens, 120);
       assert.equal(ok.calls[0].outputTokens, 30);
       assert.deepEqual(Object.keys(ok.calls[0]).sort(), [
+        "cachedInputTokens",
         "inputTokens",
         "ms",
         "outcome",
         "outputTokens",
         "path",
+        "reasoningTokens",
       ]);
     } finally {
       clearInterval(keepAlive);
@@ -1163,4 +1165,90 @@ test("all request steps use step override > shared META_MODEL > contributor defa
         else process.env[key] = value;
       }
     }
+  }));
+
+test("search uses minimal reasoning and a stable cache key while tool limiting stays opt-in", () =>
+  withTestKey(async () => {
+    const keys = ["META_REASONING_EFFORT_SEARCH", "META_SEARCH_MAX_TOOL_CALLS"];
+    const saved = keys.map((key) => process.env[key]);
+    const bodies: Record<string, any>[] = [];
+    const client = new MetaClient(
+      async (_url, init) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        return Response.json({ output: [] });
+      },
+      () => {},
+    );
+    try {
+      keys.forEach((key) => delete process.env[key]);
+      await client.discover(notice, null);
+      process.env.META_REASONING_EFFORT_SEARCH = "high";
+      process.env.META_SEARCH_MAX_TOOL_CALLS = "1";
+      await client.discover(notice, null);
+      process.env.META_REASONING_EFFORT_SEARCH = "none";
+      process.env.META_SEARCH_MAX_TOOL_CALLS = "0";
+      await client.discover(notice, null);
+      process.env.META_REASONING_EFFORT_SEARCH = "fast";
+      process.env.META_SEARCH_MAX_TOOL_CALLS = "99";
+      await client.discover(notice, null);
+    } finally {
+      keys.forEach((key, i) =>
+        saved[i] === undefined
+          ? delete process.env[key]
+          : (process.env[key] = saved[i]),
+      );
+    }
+    assert.deepEqual(
+      bodies.map((b) => b.reasoning?.effort),
+      ["minimal", "high", undefined, "minimal"],
+    );
+    assert.deepEqual(
+      bodies.map((b) => b.max_tool_calls),
+      [undefined, 1, undefined, undefined],
+    );
+    for (const body of bodies) {
+      assert.equal(body.prompt_cache_key, "stillvalid-search-v1");
+      assert.equal(body.tools[0].search_context_size, "low");
+      assert.equal(body.max_output_tokens, 1500);
+    }
+  }));
+
+test("cache and reasoning metrics are numeric only on both provider protocols", () =>
+  withTestKey(async () => {
+    for (const [path, usage] of [
+      [
+        "/chat/completions",
+        {
+          prompt_tokens_details: { cached_tokens: 128 },
+          completion_tokens_details: { reasoning_tokens: 22 },
+        },
+      ],
+      [
+        "/responses",
+        {
+          input_tokens_details: { cached_tokens: 128 },
+          output_tokens_details: { reasoning_tokens: 22 },
+        },
+      ],
+    ] as const) {
+      const client = new MetaClient(
+        async () => Response.json({ usage }),
+        () => {},
+      );
+      await client.call(path, {});
+      assert.equal(client.calls[0].cachedInputTokens, 128);
+      assert.equal(client.calls[0].reasoningTokens, 22);
+      assert.equal(JSON.stringify(client.calls).includes("Workshop"), false);
+    }
+    const client = new MetaClient(
+      async () =>
+        Response.json({
+          usage: {
+            prompt_tokens_details: { cached_tokens: "sensitive response text" },
+          },
+        }),
+      () => {},
+    );
+    await client.call("/chat/completions", {});
+    assert.equal(client.calls[0].cachedInputTokens, undefined);
   }));

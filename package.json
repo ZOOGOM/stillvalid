@@ -25,7 +25,8 @@
     "test:browser-locate": "node scripts/browser-locate-check.mjs",
     "test:browser-stream": "node scripts/browser-stream-check.mjs",
     "test:browser-prefill": "node scripts/browser-prefill-check.mjs",
-    "test:browser-early": "node scripts/browser-early-check.mjs"
+    "test:browser-early": "node scripts/browser-early-check.mjs",
+    "test:browser-image": "node scripts/browser-image-check.mjs"
   },
   "dependencies": {
     "@rapideditor/country-coder": "5.6.1",
