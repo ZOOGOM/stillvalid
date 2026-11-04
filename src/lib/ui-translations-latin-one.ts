@@ -202,6 +202,10 @@ export const esUiCopy: UiCopy = {
   autoFindUndo: "Deshacer recorte automático",
   privacyMaps:
     "Solo cuando tocas una búsqueda en el mapa se envía el texto del lugar elegido a Google Maps, y se aplican las políticas de Google. Antes de tocarla no se hace ninguna solicitud al mapa.",
+  autoFindChoose:
+    "Se encontraron varios avisos. Elige el que quieres comprobar.",
+  autoFindPick: "Elegir el aviso {n}",
+  autoFindClose: "Cerrar sin elegir",
 };
 
 export const frUiCopy: UiCopy = {
@@ -410,4 +414,8 @@ export const frUiCopy: UiCopy = {
   autoFindUndo: "Annuler le recadrage automatique",
   privacyMaps:
     "Ce n'est que lorsque vous touchez une recherche sur la carte que le texte du lieu choisi est envoyé à Google Maps, sous les règles de Google. Aucune requête cartographique n'est faite avant.",
+  autoFindChoose:
+    "Plusieurs avis ont été trouvés. Choisissez celui à vérifier.",
+  autoFindPick: "Choisir l'avis {n}",
+  autoFindClose: "Fermer sans choisir",
 };

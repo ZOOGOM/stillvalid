@@ -304,33 +304,51 @@ export class MetaClient {
   async locate(
     image: string,
     signal?: AbortSignal,
-    prompt: LocatePrompt = defaultLocatePrompt(),
-  ): Promise<{ box: NoticeBox | null; diagnostic: LocateDiagnostic }> {
+    prompt?: LocatePrompt,
+  ): Promise<{
+    box: NoticeBox | null;
+    boxes: NoticeBox[];
+    diagnostic: LocateDiagnostic;
+  }> {
     validateImage(image);
-    const response = await this.call(
-      "/responses",
-      {
-        model: process.env.SAM_MODEL || "sam-3.1",
-        input: [
-          {
-            type: "message",
-            role: "user",
-            content: [
-              { type: "input_text", text: prompt },
-              { type: "input_image", image_url: image },
-            ],
-          },
-        ],
-        metadata: { include_confidence: "true", mask_encoding: "one_bit" },
-      },
-      signal,
-      30000,
-    );
-    const text = responseText(response);
-    return {
-      box: bestNoticeBox(text),
-      diagnostic: locateDiagnostic(response, text, prompt),
-    };
+    // A printed sheet matches "document"; a colourful poster may only match
+    // "poster". Without an explicit prompt, try the default and then the other
+    // phrase only when nothing qualifying was found (at most two calls).
+    const prompts: LocatePrompt[] = prompt
+      ? [prompt]
+      : [...new Set([defaultLocatePrompt(), "poster" as const])];
+    const tried: LocatePrompt[] = [];
+    let last: { boxes: NoticeBox[]; diagnostic: LocateDiagnostic } | null =
+      null;
+    for (const phrase of prompts) {
+      const response = await this.call(
+        "/responses",
+        {
+          model: process.env.SAM_MODEL || "sam-3.1",
+          input: [
+            {
+              type: "message",
+              role: "user",
+              content: [
+                { type: "input_text", text: phrase },
+                { type: "input_image", image_url: image },
+              ],
+            },
+          ],
+          metadata: { include_confidence: "true", mask_encoding: "one_bit" },
+        },
+        signal,
+        30000,
+      );
+      tried.push(phrase);
+      const text = responseText(response);
+      last = {
+        boxes: noticeBoxes(text),
+        diagnostic: { ...locateDiagnostic(response, text, phrase), tried },
+      };
+      if (last.boxes.length) break;
+    }
+    return { box: last!.boxes[0] || null, ...last! };
   }
   async discover(
     notice: Notice,
@@ -459,7 +477,7 @@ function responseText(response: Record<string, unknown>): string {
  * keeps the most confident box covering at least 8% of the frame, so a small
  * label or a sticker is not offered as "the notice".
  */
-export function bestNoticeBox(text: string): NoticeBox | null {
+export function noticeBoxes(text: string): NoticeBox[] {
   const boxes: NoticeBox[] = [];
   for (const match of text.matchAll(/<\|box;([^|]*)\|>/g)) {
     const fields = Object.fromEntries(
@@ -489,7 +507,25 @@ export function bestNoticeBox(text: string): NoticeBox | null {
       (b.c ?? 0) - (a.c ?? 0) ||
       (b.x2 - b.x1) * (b.y2 - b.y1) - (a.x2 - a.x1) * (a.y2 - a.y1),
   );
-  return boxes[0] || null;
+  // Near-duplicate boxes (mostly the same area) are offered once.
+  const distinct: NoticeBox[] = [];
+  for (const box of boxes)
+    if (!distinct.some((kept) => overlap(kept, box) > 0.8)) distinct.push(box);
+  return distinct.slice(0, 6);
+}
+
+function overlap(a: NoticeBox, b: NoticeBox): number {
+  const w = Math.min(a.x2, b.x2) - Math.max(a.x1, b.x1);
+  const h = Math.min(a.y2, b.y2) - Math.max(a.y1, b.y1);
+  if (w <= 0 || h <= 0) return 0;
+  const inter = w * h;
+  const union =
+    (a.x2 - a.x1) * (a.y2 - a.y1) + (b.x2 - b.x1) * (b.y2 - b.y1) - inter;
+  return inter / union;
+}
+
+export function bestNoticeBox(text: string): NoticeBox | null {
+  return noticeBoxes(text)[0] || null;
 }
 
 // SAM concept prompts are short noun phrases. Only these fixed phrases can be
@@ -518,6 +554,7 @@ function defaultLocatePrompt(): LocatePrompt {
  */
 export type LocateDiagnostic = {
   prompt: LocatePrompt;
+  tried?: LocatePrompt[];
   status: string | null;
   incomplete: string | null;
   topKeys: string[];

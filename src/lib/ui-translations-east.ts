@@ -178,6 +178,9 @@ export const zhUiCopy: UiCopy = {
   autoFindUndo: "撤销自动裁剪",
   privacyMaps:
     "只有在您点击地图搜索时，所选地点文字才会发送到 Google 地图，并适用 Google 的政策。点击之前不会发送任何地图请求。",
+  autoFindChoose: "找到了多张公告，请选择要核查的那一张。",
+  autoFindPick: "选择第 {n} 张公告",
+  autoFindClose: "不选择并关闭",
 };
 
 export const jaUiCopy: UiCopy = {
@@ -383,4 +386,8 @@ export const jaUiCopy: UiCopy = {
   autoFindUndo: "自動切り抜きを元に戻す",
   privacyMaps:
     "地図検索を押したときにだけ、選んだ場所の文言が Google マップに送られ、Google のポリシーが適用されます。押す前に地図へのリクエストは送りません。",
+  autoFindChoose:
+    "お知らせが複数見つかりました。確認するものを選んでください。",
+  autoFindPick: "{n}番目のお知らせを選ぶ",
+  autoFindClose: "選ばずに閉じる",
 };

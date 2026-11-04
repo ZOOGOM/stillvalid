@@ -208,6 +208,10 @@ export const deUiCopy: UiCopy = {
   autoFindUndo: "Automatischen Zuschnitt rückgängig machen",
   privacyMaps:
     "Nur wenn Sie auf eine Kartensuche tippen, wird der gewählte Ortstext an Google Maps übermittelt; dann gelten Googles Richtlinien. Vorher wird keine Kartenanfrage gesendet.",
+  autoFindChoose:
+    "Mehrere Bekanntmachungen gefunden. Wählen Sie die zu prüfende aus.",
+  autoFindPick: "Bekanntmachung {n} wählen",
+  autoFindClose: "Ohne Auswahl schließen",
 };
 
 export const ptUiCopy: UiCopy = {
@@ -413,4 +417,8 @@ export const ptUiCopy: UiCopy = {
   autoFindUndo: "Desfazer recorte automático",
   privacyMaps:
     "Somente quando você toca em uma busca no mapa o texto do local escolhido é enviado ao Google Maps, sob as políticas do Google. Nenhuma solicitação ao mapa é feita antes disso.",
+  autoFindChoose:
+    "Vários avisos foram encontrados. Escolha o que deseja verificar.",
+  autoFindPick: "Escolher o aviso {n}",
+  autoFindClose: "Fechar sem escolher",
 };

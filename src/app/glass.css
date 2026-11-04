@@ -1179,3 +1179,53 @@ h2 {
     margin-top: 0;
   }
 }
+
+/* Choosing one of several notices found in a photo */
+.notice-choice {
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--line);
+}
+.notice-choice > p {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-weight: 650;
+}
+.notice-choice-image {
+  position: relative;
+}
+.notice-choice-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.notice-choice-image button {
+  position: absolute;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 3px solid var(--green);
+  border-radius: 6px;
+  background: rgba(10, 99, 255, 0.12);
+  cursor: pointer;
+}
+.notice-choice-image button span {
+  position: absolute;
+  top: 4px;
+  inset-inline-start: 4px;
+  min-width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font-weight: 750;
+}
+.notice-choice-image button:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+.notice-choice .text-button {
+  margin-top: 6px;
+  min-height: 44px;
+}

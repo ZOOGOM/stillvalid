@@ -19,14 +19,15 @@ import {
 import { errorResponse, readJson } from "@/lib/http";
 import { abuseKey, abuseSecret } from "@/lib/abuse";
 export const runtime = "nodejs";
-export const maxDuration = 45;
+export const maxDuration = 75;
 const schema = z.object({
   image: z.string().max(3900000),
   // Diagnosis only: one of a fixed list of short noun phrases.
   prompt: z.enum(locatePrompts).optional(),
 });
 
-// Opt-in crop suggestion: one SAM 3.1 call per user tap. It shares the
+// Opt-in crop suggestion: one SAM 3.1 call per user tap, or two when the
+// first concept phrase finds nothing. It shares the
 // extraction slots, per-session and IP limits and the daily model allowance.
 export async function POST(request: NextRequest) {
   try {
@@ -48,12 +49,15 @@ export async function POST(request: NextRequest) {
     let found = false;
     let shape: LocateDiagnostic | null = null;
     try {
-      const { box, diagnostic } = await new MetaClient(undefined, async () => {
-        await reserveModelCall();
-        modelCalls++;
-      }).locate(
+      const { box, boxes, diagnostic } = await new MetaClient(
+        undefined,
+        async () => {
+          await reserveModelCall();
+          modelCalls++;
+        },
+      ).locate(
         parsed.data.image,
-        AbortSignal.any([request.signal, AbortSignal.timeout(35000)]),
+        AbortSignal.any([request.signal, AbortSignal.timeout(65000)]),
         parsed.data.prompt,
       );
       found = !!box;
@@ -61,6 +65,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           box,
+          boxes,
           diagnostic,
           timing: { locateMs: Date.now() - started, modelCalls },
         },
