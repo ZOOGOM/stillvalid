@@ -75,16 +75,27 @@ export function authorityFor(hostname: string): {
     : { authority: "unverified" };
 }
 
+const cellMarker = "\u001f";
+
 export function htmlText(html: string): { title: string; text: string } {
   const $ = cheerio.load(html);
   $("script,style,noscript,svg,nav,footer,header,iframe,form").remove();
   const title = $("title").first().text().trim();
   $("br").replaceWith("\n");
-  $("p,div,li,tr,h1,h2,h3,h4,section").append("\n");
+  // Table cells and term/definition pairs keep a visible boundary, so a label
+  // and its value ("장소" and "수산제역사공원 일원") are never glued into one
+  // word that no exact quote or title check can separate again. The marker is
+  // replaced below; no cell text is changed.
+  $("th,td,dt").append(cellMarker);
+  $("p,div,li,tr,h1,h2,h3,h4,h5,h6,section,dd,caption,blockquote").append("\n");
   const article =
     $("main").first().text() || $("article").first().text() || $("body").text();
   const text = article
     .replace(/[ \t]+/g, " ")
+    // A cell boundary at a line end or next to another one adds nothing.
+    .replace(new RegExp(`(?:\\s*${cellMarker})+\\s*(?=\\n|$)`, "g"), "")
+    .replace(new RegExp(`(^|\\n)(?:\\s*${cellMarker})+\\s*`, "g"), "$1")
+    .replace(new RegExp(`(?:\\s*${cellMarker})+\\s*`, "g"), " | ")
     .replace(/\n\s*\n/g, "\n")
     .trim();
   if (text.length > 22000) throw new AppError("source_too_large", 422);
