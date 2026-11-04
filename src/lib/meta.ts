@@ -98,10 +98,22 @@ export type CallRecord = {
   outputTokens?: number;
 };
 
-// Optional reasoning effort per step, for measured speed experiments. Unset
-// (the default) sends nothing, so the model's own default applies. Accepted
-// values follow the Meta API: minimal, low, medium, high, xhigh, max.
+// Reasoning effort per step. Reading and comparison default to "minimal":
+// in a 2026-11-04 production measurement (2 photos x 2 runs per setting) the
+// median end-to-end time fell from 45.6 s (model default) to 26.8 s with the
+// same verified outcomes; the deterministic verifier is unchanged. Search keeps
+// the model default. META_REASONING_EFFORT_<STEP> overrides a step with one of
+// the API's values (minimal, low, medium, high, xhigh, max), or "none" to send
+// nothing. Unknown values fall back to the step default.
 const efforts = new Set(["minimal", "low", "medium", "high", "xhigh", "max"]);
+const defaultEffort: Record<
+  "extraction" | "comparison" | "search",
+  string | undefined
+> = {
+  extraction: "minimal",
+  comparison: "minimal",
+  search: undefined,
+};
 export function reasoningEffort(
   step: "extraction" | "comparison" | "search",
 ): string | undefined {
@@ -110,9 +122,8 @@ export function reasoningEffort(
   )
     .trim()
     .toLowerCase();
-  if (efforts.has(value)) return value;
-  // TEMPORARY speed experiment (approved 2026-11-04); reverted after measuring.
-  return step === "search" ? undefined : "minimal";
+  if (value === "none") return undefined;
+  return efforts.has(value) ? value : defaultEffort[step];
 }
 
 export class MetaClient {

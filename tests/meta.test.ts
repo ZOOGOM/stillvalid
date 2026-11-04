@@ -1021,7 +1021,7 @@ test("a long stall is not retried, a body timeout is a stall, and each call is r
       clearInterval(keepAlive);
     }
   }));
-test("reasoning effort is sent only when configured with a known value", () =>
+test("reading defaults to minimal reasoning effort; a known value or none overrides it", () =>
   withTestKey(async () => {
     const { originalText: _ignored, ...extracted } = notice;
     const sent: unknown[] = [];
@@ -1047,10 +1047,12 @@ test("reasoning effort is sent only when configured with a known value", () =>
       await client.extract("Workshop. Open.", undefined, null);
       process.env.META_REASONING_EFFORT_EXTRACTION = "fastest";
       await client.extract("Workshop. Open.", undefined, null);
+      process.env.META_REASONING_EFFORT_EXTRACTION = "none";
+      await client.extract("Workshop. Open.", undefined, null);
     } finally {
       if (previous === undefined)
         delete process.env.META_REASONING_EFFORT_EXTRACTION;
       else process.env.META_REASONING_EFFORT_EXTRACTION = previous;
     }
-    assert.deepEqual(sent, [undefined, "low", undefined]);
+    assert.deepEqual(sent, ["minimal", "low", "minimal", undefined]);
   }));
