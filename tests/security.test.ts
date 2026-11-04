@@ -232,6 +232,15 @@ test("technical files are rejected while actual plain-text notices retain their 
         "text/html",
         new URL("https://nypl.org/notice"),
       ),
-    { code: "source_unavailable" },
+    { code: "source_script_only" },
   );
+  // Short plain text or script-free HTML remains a generic unavailable page.
+  for (const [raw, type] of [
+    ["Too short.", "text/plain"],
+    ["<html><body><p>Too short.</p></body></html>", "text/html"],
+  ])
+    assert.throws(
+      () => parseSourceDocument(raw, type, new URL("https://nypl.org/notice")),
+      { code: "source_unavailable" },
+    );
 });
