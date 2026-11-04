@@ -110,7 +110,9 @@ export function reasoningEffort(
   )
     .trim()
     .toLowerCase();
-  return efforts.has(value) ? value : undefined;
+  if (efforts.has(value)) return value;
+  // TEMPORARY speed experiment (approved 2026-11-04); reverted after measuring.
+  return step === "search" ? undefined : "low";
 }
 
 export class MetaClient {
