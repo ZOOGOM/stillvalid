@@ -1011,6 +1011,7 @@ export default function StillValidApp() {
       setError("input");
       return;
     }
+    dropEarly();
     const generation = ++operation.current;
     busy.current = true;
     setError(null);
@@ -1072,8 +1073,10 @@ export default function StillValidApp() {
         setSourcePrefilled(Boolean(printed));
       }
       dropEarly();
+      // With a link the check compares that page; without one it also runs the
+      // official-source search, which is the slower case and gains the most.
       if (
-        /^https:\/\//i.test(linkNow.trim()) &&
+        (!linkNow.trim() || /^https:\/\//i.test(linkNow.trim())) &&
         data.readability !== "uncertain" &&
         data.notice?.title?.trim() &&
         !(data.notice.country && country && data.notice.country !== country)
@@ -1103,8 +1106,8 @@ export default function StillValidApp() {
       if (operation.current === generation) busy.current = false;
     }
   };
-  // Time saving: when the official link is already known (typed, or printed on
-  // the notice) the check starts right after reading, while the user reviews
+  // Time saving: the check starts right after reading (with the official link
+  // when it is known, otherwise including the source search), while the user reviews
   // the fields. It is used only if the notice, region, language and link are
   // unchanged when the button is tapped; otherwise it is dropped and a normal
   // check runs. At most one background check is started per reading.
