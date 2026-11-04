@@ -183,6 +183,9 @@ export const zhUiCopy: UiCopy = {
   autoFindClose: "不选择并关闭",
   error_image_heic:
     "此浏览器无法读取 HEIC 照片。请以 JPEG 发送照片，或在 iPhone 设置 > 相机 > 格式中选择“兼容性最佳”。",
+  photoSmall: "照片较小，部分文字可能无法读取。靠近公告重新拍摄会更准确。",
+  readUncertain:
+    "照片可能被裁切或模糊，部分文字可能缺失。请将下方识别出的原文与照片对照并修改。",
 };
 
 export const jaUiCopy: UiCopy = {
@@ -394,4 +397,8 @@ export const jaUiCopy: UiCopy = {
   autoFindClose: "選ばずに閉じる",
   error_image_heic:
     "このブラウザーは HEIC 写真を読み込めません。JPEG で共有するか、iPhone の設定 > カメラ > フォーマットで「互換性優先」を選んでください。",
+  photoSmall:
+    "写真が小さいため、一部の文字を読み取れない可能性があります。お知らせに近づいて撮り直すとより正確です。",
+  readUncertain:
+    "写真が切れているかぼやけているため、一部を読み取れていない可能性があります。下の認識した原文を写真と見比べて直してください。",
 };

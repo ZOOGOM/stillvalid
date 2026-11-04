@@ -612,6 +612,29 @@ export default function StillValidApp() {
     [result, setResult] = useState<Result | null>(null);
   // The photo before an automatic notice crop, so it can be restored.
   const [beforeAutoCrop, setBeforeAutoCrop] = useState<string | null>(null);
+  // The reader said the photo was cropped, blurry or sparse.
+  const [readUncertain, setReadUncertain] = useState(false);
+  // The photo to read is small enough that text may be lost.
+  const [smallPhoto, setSmallPhoto] = useState(false);
+  useEffect(() => {
+    let current = true;
+    if (!image) {
+      setSmallPhoto(false);
+      return;
+    }
+    loadImage(image)
+      .then((img) => {
+        if (!current) return;
+        const shortSide = Math.min(img.naturalWidth, img.naturalHeight);
+        setSmallPhoto(
+          shortSide < 500 || img.naturalWidth * img.naturalHeight < 300000,
+        );
+      })
+      .catch(() => current && setSmallPhoto(false));
+    return () => {
+      current = false;
+    };
+  }, [image]);
   // Several detected notices waiting for the user's choice.
   const [boxChoice, setBoxChoice] = useState<{
     image: string;
@@ -767,6 +790,7 @@ export default function StillValidApp() {
     setCountryConfirmed(false);
   };
   const reset = () => {
+    setReadUncertain(false);
     setClientTiming({});
     timings.current = {};
     controller.current?.abort();
@@ -873,6 +897,14 @@ export default function StillValidApp() {
       };
       if (generation !== uploadGeneration.current) return;
       found = data.boxes?.length ? data.boxes : data.box ? [data.box] : [];
+      // Number choices in reading order (rows top to bottom, then left to
+      // right), not by model confidence.
+      if (found.length > 1)
+        found = [...found].sort((a, b) =>
+          Math.abs(a.y1 / a.h - b.y1 / b.h) > 0.05
+            ? a.y1 / a.h - b.y1 / b.h
+            : a.x1 / a.w - b.x1 / b.w,
+        );
       if (!found.length) setToast({ text: t.autoFindNone, lang });
       else if (found.length > 1) setBoxChoice({ image, boxes: found });
     } catch (e) {
@@ -902,6 +934,7 @@ export default function StillValidApp() {
     const abort = new AbortController();
     controller.current = abort;
     const extractStart = performance.now();
+    setReadUncertain(false);
     if (mode === "text") timings.current = {};
     try {
       const response = await fetch("/api/extract", {
@@ -925,6 +958,7 @@ export default function StillValidApp() {
         extractCalls: data.timing?.modelCalls,
         extractedAt: performance.now(),
       };
+      setReadUncertain(data.readability === "uncertain");
       setNotice(data.notice);
       setCountryConfirmed(false);
       setStage("review");
@@ -1415,6 +1449,11 @@ export default function StillValidApp() {
                             <Trash2 size={17} />
                           </button>
                         </div>
+                        {smallPhoto && (
+                          <p className="photo-hint" role="status">
+                            {t.photoSmall}
+                          </p>
+                        )}
                         {boxChoice && boxChoice.image === image && (
                           <div
                             className="notice-choice"
@@ -1692,6 +1731,11 @@ export default function StillValidApp() {
             <div className="review-card">
               {mode === "photo" && image && (
                 <div className="image-review">
+                  {readUncertain && (
+                    <p className="notice-warning" role="status">
+                      {t.readUncertain}
+                    </p>
+                  )}
                   <p className="notice-warning">{t.imageReviewWarning}</p>
                   <details className="transcript" open>
                     <summary>

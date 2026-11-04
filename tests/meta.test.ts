@@ -912,3 +912,39 @@ test("several notices are offered once each, and a second phrase is tried only a
     assert.deepEqual(prompts, ["paper"]);
     assert.equal(found.box, null);
   }));
+
+test("the image reader's own classification is reported without changing the notice", () =>
+  withTestKey(async () => {
+    const image =
+      "data:image/png;base64," +
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0]).toString("base64");
+    const extracted = {
+      title: "Workshop",
+      institution: "Library",
+      edition: null,
+      country: null,
+      originalText: "Workshop. Library. Open.",
+      fields: [],
+    };
+    for (const kind of ["uncertain", "notice"]) {
+      const reports: string[] = [];
+      const result = await new MetaClient(
+        async () =>
+          Response.json({
+            choices: [
+              {
+                finish_reason: "stop",
+                message: {
+                  content: JSON.stringify({ ...extracted, content_kind: kind }),
+                },
+              },
+            ],
+          }),
+        () => {},
+      ).extract("", image, null, undefined, (info) =>
+        reports.push(info.contentKind),
+      );
+      assert.deepEqual(reports, [kind]);
+      assert.equal("content_kind" in result, false);
+    }
+  }));

@@ -230,6 +230,9 @@ export class MetaClient {
     image: string | undefined,
     country: string | null,
     signal?: AbortSignal,
+    // Receives the model's image classification (e.g. "uncertain" for a
+    // cropped, blurry or sparse notice) without changing the notice itself.
+    report?: (info: { contentKind: string }) => void,
   ): Promise<Notice> {
     const instructions =
       'Identify the notice title, issuing institution, explicit edition/year, and country if explicit. The institution is the issuing organisation as printed (for example 서울특별시 from "서울특별시 공고" or a letterhead), never only a signing official\'s title such as 서울특별시장, Director or Mayor. Keep a separately printed issuing institution out of the title; preserve the actual printed title when it includes the institution or is itself the institution name. Country is a two-letter ISO code or null. A user country is only a hint and must NOT override the notice. Extract only explicitly written deadline, event date, location, cancellation/status, cost and eligibility. Field values must be EXACT excerpts, not translated, normalized dates or inferred end-of-day times. Each quote must occur verbatim in the original text and include its field value. Keep ambiguous dates exactly as written. If no readable title/text exists, do not invent an event; use readable text as the title. At most one field per key.';
@@ -249,6 +252,7 @@ export class MetaClient {
           ),
         signal,
       );
+      report?.({ contentKind: extracted.content_kind });
       if (
         extracted.content_kind === "not_notice" &&
         !text.trim() &&
