@@ -48,6 +48,7 @@ Agent 도구(서브에이전트)를 쓸 수 있으면 아래 작업 꾸러미를
 | C | 앱 구간 합성 | 성공 테이크의 capture.mp4, take.json, 6-1절 | segments/shotXX.mp4 (SHOT 02~06, 08~10, 3840x2160 60fps, 무음) | 3-2절 녹화 완료. 그 전에는 모델 호출 없는 드라이런 영상으로 합성 스크립트만 만들어 둔다 |
 | D | 결과 카드 연출 | 성공 테이크의 stills/ 정지 이미지, 6-2절 | cards/shot07.mp4 (44초, 무음), 잘라낸 카드 PNG | 3-2절 녹화 완료. 그 전에는 카드 연출 코드만 만들어 둔다 |
 | E | 자막 | 문서 5절 표, N 대본 | subs/captions.ass (정직성 주석 포함) | audio/durations.json 이 있으면 반영, 없으면 콘티 시간 사용 |
+| G | 장면 모션그래픽(콜아웃·전환) | 6-6절, 성공 테이크의 take.json(실측값) | overlays/Mxx_*.mov 또는 투명 PNG 시퀀스 (3840x2160 60fps, 알파) | 값이 들어가는 항목은 성공 테이크 후. 나머지는 바로 시작 |
 | F | 독립 검수 | 완성 mp4, 문서 9절 | qa/review.md | 합성 끝난 뒤(8절 직전) |
 
 - 메인(너)의 일: 0) 3-2절 녹화를 직접 맡는다(서브에이전트에 맡기지 마: 모델 호출 한도와 세션 삭제 금지 규칙 때문). Demo card PNG 가 나오면 곧바로 A·B·E 를 서브에이전트로 시작하고 녹화와 병행한다. C·D 는 성공 테이크가 나온 뒤 시작. 1) 꾸러미를 가능한 한 한 메시지에서 동시에 실행. 2) 산출물이 모이면 SHOT 순서대로 이어 붙이고(concat, 무손실 구간 단위), 자막 번인, 오디오 믹스(6-5절), 7절 출력 A→B 를 직접 수행. 3) 꾸러미 F 는 완성본을 처음 보는 눈으로 8절 검수를 하게 시키고, 그 결과로 고친다.
@@ -152,9 +153,29 @@ R8 (맨 마지막) 홈 → "When it's a different edition" 예제 → 결과(합
 ## 6-5. 소리
 - 각 WAV 를 해당 SHOT 시작 시각에 adelay 로 놓고 합쳐. 전체 loudnorm 으로 -14 LUFS, 피크 -1 dBTP. 효과음/음악은 쓰지 않거나, 만든다면 직접 합성한 짧은 톤만(저작권 문제 없게).
 
+## 6-6. 장면 모션그래픽 (콜아웃 · 전환) — 꾸러미 G
+앱 화면 옆(오른쪽 2/3, x 1280~3648)과 장면 사이를 채우는 모션그래픽이다. 안전판(A)에는 필요 없고, 완성본(B)에만 얹는다. 시간이 모자라면 M6, M4, M7 순으로만 만들고 나머지는 버려.
+공통: 투명 배경 알파 영상(Playwright 프레임 렌더, `omitBackground`, 1920x1080 뷰포트 + deviceScaleFactor 2 → PNG 시퀀스 → ffmpeg `prores_ks -profile:v 4444 -pix_fmt yuva444p10le` 또는 PNG 시퀀스 그대로 overlay). 등장/퇴장은 0.3초 이내 ease-out 이동+페이드, 한 번에 화면에 2개 이하. 색·글꼴은 6-3절과 같다.
+규칙: 앱 화면 위를 덮지 말고, **글자·숫자는 녹화에서 실제로 나온 값을 그대로 옮겨 적는다**(날짜, 지역, 판정 문구, 실측 시간). 앱에 없는 기능이나 수치를 말하지 마. 강조 박스(M7)는 앱 글자 위에 선만 그리고 글자를 가리지 않는다.
+| 번호 | 장면 | 내용 | 길이 |
+| --- | --- | --- | --- |
+| M1 | SHOT 02~10 공통 | 오른쪽 위 진행 점 8개와 단계 이름: Set up · Read · Review · Check · Evidence · Safety · Language · Share (지금 단계만 켜짐) | 장면 내내 |
+| M2 | SHOT 02 | 칩 두 개 "Display: English" "Region: United States". 두 칩 사이에 "independent" 표시 | 5초 |
+| M3 | SHOT 03·06 | 배속 배지: 스톱워치 링이 빠르게 돌고 "Reading N s · sped up", "Check N s · sped up" (실측값) | 배속 구간 |
+| M4 | SHOT 04 | "Region: US ≠ Notice: Korea" 알약이 뒤집히며 나타나고 "flagged, not mixed up" | 6초 |
+| M5 | SHOT 06 | 4단계 레일 Reading → Finding → Retrieving → Checking 이 차례로 켜짐 (앱 진행 표시의 단계 이름과 같게) | 8초 |
+| M6 | SHOT 07 | 핵심 값 대형 표시: "Application deadline" 아래에 녹화 결과의 `3. 31.(화) 18:00 → 4. 3.(금) 15:00` (220px, 화살표가 그려짐) | 6초 |
+| M7 | SHOT 07 | 인용 두 개 연결선: 카드 ③ Your notice 와 ④ Retrieved source 의 같은 줄을 선으로 잇고 "Same line, both sides" | 5초 |
+| M8 | SHOT 08 | "Looks similar · different year → not confirmed" 두 줄 비교 | 6초 |
+| M9 | SHOT 09 | 언어 칩 EN → KO → AR 이 전환될 때 "Same verdict" 체크가 유지됨 | 8초 |
+| M10 | SHOT 10 | 칩 3개 "24 h" "Delete anytime" "No original photo kept" | 5초 |
+| M11 | SHOT 사이 | 전환 효과: 0.25초 크로스 디졸브 또는 좌우 슬라이드 (한 종류만 일관되게) | 각 0.25초 |
+- 내레이션과 어긋나지 않게: M6 은 N07 의 "March 31st → April 3rd" 와 같은 값이어야 한다.
+- 이 꾸러미 때문에 안전판이나 4K 체크포인트가 늦어지면 G 는 버리고 진행해. G 없이도 완성본으로 제출 가능해야 한다.
+
 # 7. 출력 단계 (이 순서로, 각 단계가 끝날 때마다 파일을 남겨)
 A. 안전판 `final/safe_1080p60.mp4`: 1920x1080 60fps, SHOT 02~10 + 제목 카드, 자막, 내레이션. 0절의 안전판 체크포인트까지.
-B. 완성본 `final/stillvalid_demo_4k60.mp4`: 3840x2160 60fps, H.264 High, yuv420p, BT.709(`-color_primaries bt709 -color_trc bt709 -colorspace bt709`), 약 60Mbps(`-b:v 60M -maxrate 70M -bufsize 120M`), AAC 48kHz 320kbps, `-movflags +faststart`. 입력의 JPEG 전체 범위 색은 먼저 scale 필터에서 `in_range=pc:out_range=tv` 로 변환.
+B. 완성본 `final/stillvalid_demo_4k60.mp4` (가능하면 6-6절 모션그래픽 얹기): 3840x2160 60fps, H.264 High, yuv420p, BT.709(`-color_primaries bt709 -color_trc bt709 -colorspace bt709`), 약 60Mbps(`-b:v 60M -maxrate 70M -bufsize 120M`), AAC 48kHz 320kbps, `-movflags +faststart`. 입력의 JPEG 전체 범위 색은 먼저 scale 필터에서 `in_range=pc:out_range=tv` 로 변환.
    4K 인코딩이 0절의 4K 체크포인트까지 끝나지 않거나 메모리/속도가 안 되면 `final/stillvalid_demo_1080p60.mp4` 로 확정(같은 파이프라인, 해상도만 낮춤).
 C. 마스터(여유가 있을 때만): ProRes 422 HQ.
 
