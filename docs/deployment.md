@@ -37,7 +37,8 @@ The interface and three synthetic examples work without a key. Live input is nev
 | Variable | Purpose |
 | --- | --- |
 | `META_API_KEY` | Server secret; `MODEL_API_KEY` is an accepted alias. |
-| `META_MODEL` | Default `muse-spark-1.3`, Standard mode. |
+| `META_EXTRACTION_MODEL`, `META_COMPARISON_MODEL`, `META_SEARCH_MODEL` | Model per step; default `muse-spark-1.3-contributor` (lower price; Meta's terms for it may allow inputs to be used to improve Meta's models). Set `muse-spark-1.3` to opt out. |
+| `META_MODEL` | Used only by the check scripts (`verify:meta`, hosting probe); it does not choose the model for requests. |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Canonical shared Redis REST endpoint and writable server-only token, required together. |
 | `KV_REST_API_URL`, `KV_REST_API_TOKEN` | Marketplace aliases accepted together when the canonical pair is absent. |
 | `APP_URL` | Exact external origin, such as `https://your-domain.example`; controls origin checks and secure cookies. |
