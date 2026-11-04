@@ -18,8 +18,8 @@ export async function reserve(key: string, maximum: number, windowMs: number) {
 export async function reserveModelCall() {
   await backend().reserveModelCall();
 }
-export async function createCheck(actor: string, key: string) {
-  return await backend().createCheck(actor, key);
+export async function createCheck(actor: string, key: string, abuse?: string) {
+  return await backend().createCheck(actor, key, abuse);
 }
 export async function finishCheck(id: string, actor: string, result: Result) {
   await backend().finishCheck(id, actor, result);
@@ -35,4 +35,11 @@ export async function deleteCheck(id: string, actor: string) {
 }
 export async function deleteAllChecks(actor: string) {
   await backend().deleteAllChecks(actor);
+}
+
+export async function acquireExtraction(actor: string, abuse?: string) {
+  return await backend().acquireExtraction(actor, abuse);
+}
+export async function releaseWork(id: string, actor: string) {
+  await backend().releaseWork(id, actor);
 }

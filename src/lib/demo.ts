@@ -47,8 +47,8 @@ export function demoResult(id: DemoId, lang: ResultLang): Result {
     id: "demo-source",
     url: "https://example.org/synthetic/library-notice",
     title: ko
-      ? "2026 책 모임 수정 안내 · 합성 예시"
-      : "2026 reading group update · synthetic example",
+      ? `${notice.title} · 2026 수정 안내 · 합성 예시`
+      : `${notice.title} · 2026 update · synthetic example`,
     text: `${identityQuote}\n${ko ? "신청 마감" : "Apply by"}: ${afterDeadline}\n${ko ? "장소" : "Location"}: ${afterRoom}\n${ko ? "상태" : "Status"}: ${afterStatus}`,
     authority: "registered",
     fetchedAt: "2026-11-03T00:00:00.000Z",

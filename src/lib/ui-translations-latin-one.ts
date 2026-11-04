@@ -97,6 +97,8 @@ export const esUiCopy: UiCopy = {
   institution: "Institución emisora",
   edition: "Año o edición",
   noticeCountry: "País leído en el aviso",
+  imageReviewWarning:
+    "Pueden faltar tablas o letra pequeña, o haberse leído mal. Compara la imagen con el texto extraído. Si falta algo o hay errores, edita el texto y vuelve a leerlo.",
   original: "Ver texto extraído",
   editText: "Editar el texto y leer de nuevo",
   sourceLabel: "URL del aviso oficial",
@@ -125,6 +127,9 @@ export const esUiCopy: UiCopy = {
   error_default:
     "No pudimos terminar la consulta. Inténtalo de nuevo más tarde.",
   error_input: "Revisa el contenido del aviso.",
+  error_not_a_notice: "No se pudo leer un aviso. Prueba con otra foto o texto.",
+  error_upload_too_large:
+    "El archivo enviado es demasiado grande. Elige una foto más pequeña.",
   error_not_configured:
     "Las consultas en vivo aún no están disponibles aquí. Prueba un ejemplo abajo.",
   error_session: "La sesión de consulta ha caducado. Recarga la página.",
@@ -174,6 +179,8 @@ export const esUiCopy: UiCopy = {
   aboutMeta:
     "La consulta en vivo está implementada en el servidor con comprensión de imágenes, búsqueda web y salida estructurada de Meta Model API. La disponibilidad se muestra en la pantalla de consulta. No es un servicio oficial de Meta.",
   privacyTitle: "Solo lo necesario, durante el tiempo necesario.",
+  privacyAbuse:
+    "Para limitar abusos, el servicio puede usar un identificador protegido derivado de tu IP. Los registros de límite caducan al final de cada franja horaria y se eliminan durante la limpieza del almacenamiento. Una misma red puede compartir el límite.",
   privacyBody:
     "Al iniciar una consulta en vivo, tus datos se envían a Meta Model API. Las fotos se recodifican en el navegador para reducir los metadatos; StillValid no guarda los archivos de imagen originales. Los resultados y las citas necesarias se vinculan a una sesión anónima, están disponibles durante 24 horas y puedes eliminarlos. Los registros caducados se eliminan mediante limpieza periódica o al iniciar el servidor o recibir la siguiente solicitud. Las condiciones de tratamiento de datos de proveedores externos se aplican por separado.",
   privacyMore:
@@ -285,6 +292,8 @@ export const frUiCopy: UiCopy = {
   institution: "Organisme émetteur",
   edition: "Année ou édition",
   noticeCountry: "Pays lu dans l'annonce",
+  imageReviewWarning:
+    "Des tableaux ou des petits caractères peuvent manquer ou être mal lus. Comparez l’image ci-dessous au texte extrait. En cas d’omission ou d’erreur, modifiez le texte et relancez la lecture.",
   original: "Voir le texte extrait",
   editText: "Modifier le texte et relire",
   sourceLabel: "URL de l'annonce officielle",
@@ -315,6 +324,10 @@ export const frUiCopy: UiCopy = {
   error_default:
     "Nous n'avons pas pu terminer la vérification. Réessayez dans un moment.",
   error_input: "Vérifiez le contenu de l'annonce.",
+  error_not_a_notice:
+    "Aucune annonce n’a pu être lue. Essayez une autre photo ou du texte.",
+  error_upload_too_large:
+    "Le fichier envoyé est trop volumineux. Choisissez une photo plus petite.",
   error_not_configured:
     "Les vérifications en direct ne sont pas encore disponibles ici. Essayez un exemple ci-dessous.",
   error_session: "Votre session de vérification a expiré. Rechargez la page.",
@@ -364,6 +377,8 @@ export const frUiCopy: UiCopy = {
   aboutMeta:
     "La vérification en direct est implémentée sur le serveur avec la compréhension d'images, la recherche web et les sorties structurées de Meta Model API. La disponibilité est indiquée sur l'écran de vérification. Ce n'est pas un service officiel de Meta.",
   privacyTitle: "Seulement le nécessaire, le temps nécessaire.",
+  privacyAbuse:
+    "Pour limiter les abus, le service peut utiliser un identifiant protégé dérivé de votre adresse IP. Les compteurs expirent à la fin de la fenêtre horaire et sont supprimés lors du nettoyage du stockage. Les personnes d’un même réseau peuvent partager une limite.",
   privacyBody:
     "Le lancement d'une vérification en direct envoie votre saisie à Meta Model API. Les photos sont réencodées dans votre navigateur pour réduire les métadonnées ; StillValid ne conserve pas les fichiers image d'origine. Les résultats et les citations nécessaires sont liés à une session anonyme, disponibles pendant 24 heures et peuvent être supprimés par vous. Les données expirées sont supprimées lors d'un nettoyage périodique ou au prochain démarrage du serveur ou à la prochaine demande. Les conditions de traitement des données des prestataires externes s'appliquent séparément.",
   privacyMore:
