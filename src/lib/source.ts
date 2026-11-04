@@ -202,6 +202,34 @@ export function parseSourceDocument(
 const pdfByteLimit = 5_000_000;
 const pdfPageLimit = 20;
 
+// Government sites often send PDF attachments as a generic download
+// (application/octet-stream) with a .pdf file name. Those count as PDF only by
+// name here; pdfText still requires the %PDF- signature, so a renamed file of
+// another kind is rejected.
+const genericDownload = new Set([
+  "application/octet-stream",
+  "binary/octet-stream",
+  "application/x-download",
+  "application/force-download",
+  "application/download",
+]);
+export function isPdfResponse(
+  contentType: string,
+  disposition: string,
+  pathname: string,
+): boolean {
+  const type = contentType.split(";", 1)[0].trim().toLowerCase();
+  if (type === "application/pdf") return true;
+  if (!genericDownload.has(type)) return false;
+  let name = disposition;
+  try {
+    name = decodeURIComponent(disposition);
+  } catch {
+    /* keep the raw header */
+  }
+  return /\.pdf(?:["';\s]|$)/i.test(name) || /\.pdf$/i.test(pathname);
+}
+
 export async function pdfText(
   bytes: Uint8Array,
   url: URL,
@@ -299,8 +327,11 @@ export async function fetchSource(
         throw sourceHttpError(response.status);
       }
       const type = response.headers.get("content-type") || "";
-      const pdf =
-        type.split(";", 1)[0].trim().toLowerCase() === "application/pdf";
+      const pdf = isPdfResponse(
+        type,
+        response.headers.get("content-disposition") || "",
+        url.pathname,
+      );
       try {
         if (!pdf) sourceMediaType(type);
       } catch (error) {

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { pdfText, sourceMediaType } from "../src/lib/source";
+import { isPdfResponse, pdfText, sourceMediaType } from "../src/lib/source";
 import { assembleResult } from "../src/lib/compare";
 import type { ModelComparison, Notice } from "../src/lib/schema";
 
@@ -122,4 +122,35 @@ test("PDF-derived evidence passes the same exact-quote and identity checks", asy
   const fabricated = run("Applications Due: 18 December 2026, extended.");
   assert.equal(fabricated.status, "review");
   assert.equal(fabricated.comparisons[0].verified, false);
+});
+
+test("generic downloads count as PDF only when named .pdf; the signature is still required", async () => {
+  const seoulStyle =
+    "attachment; filename=\"2026%EB%85%84%20%EA%B3%B5%EA%B3%A0%EB%AC%B8.pdf\";filename*= UTF-8''2026%EB%85%84%20%EA%B3%B5%EA%B3%A0%EB%AC%B8.pdf";
+  assert.equal(isPdfResponse("application/pdf", "", "/x"), true);
+  assert.equal(
+    isPdfResponse("application/octet-stream", seoulStyle, "/comm/getFile"),
+    true,
+  );
+  assert.equal(
+    isPdfResponse("application/octet-stream", "", "/files/notice.pdf"),
+    true,
+  );
+  for (const [type, disposition, path] of [
+    [
+      "application/octet-stream",
+      'attachment; filename="notice.hwp"',
+      "/comm/getFile",
+    ],
+    ["application/octet-stream", "", "/comm/getFile"],
+    ["application/zip", 'attachment; filename="notice.pdf"', "/x"],
+    ["text/html", 'attachment; filename="notice.pdf"', "/x"],
+    ["application/octet-stream", 'attachment; filename="notice.pdf.exe"', "/x"],
+  ])
+    assert.equal(isPdfResponse(type, disposition, path), false, disposition);
+  // A file named .pdf that is not a PDF is rejected by the signature check.
+  await assert.rejects(
+    pdfText(new TextEncoder().encode("HWP Document File"), url),
+    { code: "source_format" },
+  );
 });
