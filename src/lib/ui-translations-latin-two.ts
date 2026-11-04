@@ -110,6 +110,8 @@ export const deUiCopy: UiCopy = {
   sourcePlaceholder: "https://offizielle-institution/mitteilung",
   sourcePrefilled:
     "Wir haben den Link aus der Mitteilung eingetragen. Prüfen Sie, ob es die offizielle Website ist.",
+  earlyCheckNote:
+    "Um Zeit zu sparen, hat der Abgleich mit der offiziellen Seite bereits begonnen. Wenn Sie etwas ändern, startet er beim Tippen auf die Schaltfläche neu.",
   mismatch:
     "Ihre Nutzungsregion unterscheidet sich vom Land in der Mitteilung.",
   useNoticeCountry: "Land der Mitteilung verwenden",
@@ -332,6 +334,8 @@ export const ptUiCopy: UiCopy = {
   sourcePlaceholder: "https://instituicao-oficial/aviso",
   sourcePrefilled:
     "Inserimos o link impresso no aviso. Confira se é o site oficial.",
+  earlyCheckNote:
+    "Para economizar tempo, a verificação com a página oficial já começou. Se você alterar algo, ela recomeça ao tocar no botão.",
   mismatch: "Sua região de uso é diferente do país identificado no aviso.",
   useNoticeCountry: "Usar o país do aviso",
   keepCountry: "Manter minha seleção",

@@ -98,6 +98,8 @@ export const zhUiCopy: UiCopy = {
     "填写官方页面链接可跳过搜索步骤，直接与该页面比较，速度更快。没有链接？我们会查找可能的官方来源。",
   sourcePlaceholder: "https://official-institution/notice",
   sourcePrefilled: "已填入公告上印的链接，请确认它是官方网站。",
+  earlyCheckNote:
+    "为节省时间，已开始与官方页面比对。若您修改内容，点击按钮时将重新比对。",
   mismatch: "使用地区与公告中读取的国家不同。",
   useNoticeCountry: "使用公告中的国家",
   keepCountry: "保留所选国家",
@@ -299,6 +301,8 @@ export const jaUiCopy: UiCopy = {
   sourcePlaceholder: "https://official-institution/notice",
   sourcePrefilled:
     "お知らせに記載されたリンクを入れました。公式サイトかどうか確認してください。",
+  earlyCheckNote:
+    "時間短縮のため、公式ページとの照合を先に始めています。内容を変更した場合は、ボタンを押したときにやり直します。",
   mismatch: "利用地域とお知らせから読み取った国が異なります。",
   useNoticeCountry: "お知らせの国に変更",
   keepCountry: "選択した国を維持",

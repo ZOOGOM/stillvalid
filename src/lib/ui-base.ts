@@ -105,6 +105,8 @@ const ko = {
   sourcePlaceholder: "https://기관의-공식-사이트/공지",
   sourcePrefilled:
     "안내문에 적힌 주소를 넣었어요. 공식 사이트가 맞는지 확인해 주세요.",
+  earlyCheckNote:
+    "시간을 아끼려고 공식 자료 확인을 미리 시작했어요. 내용을 고치면 버튼을 누를 때 다시 확인해요.",
   mismatch: "사용 지역과 안내에서 읽은 국가가 달라요.",
   useNoticeCountry: "안내의 국가로 변경",
   keepCountry: "선택한 국가 유지",
@@ -427,6 +429,8 @@ const en: Copy = {
   sourcePlaceholder: "https://official-institution/notice",
   sourcePrefilled:
     "We filled in the link printed on the notice. Check that it is the official site.",
+  earlyCheckNote:
+    "To save time, checking against the official page has already started. If you change anything, it restarts when you tap the button.",
   mismatch: "Your region of use differs from the country read in this notice.",
   useNoticeCountry: "Use the notice country",
   keepCountry: "Keep my selection",

@@ -108,6 +108,8 @@ export const esUiCopy: UiCopy = {
   sourcePlaceholder: "https://institucion-oficial/aviso",
   sourcePrefilled:
     "Hemos puesto el enlace impreso en el aviso. Comprueba que sea el sitio oficial.",
+  earlyCheckNote:
+    "Para ahorrar tiempo, ya empezó la comprobación con la página oficial. Si cambias algo, se reinicia al pulsar el botón.",
   mismatch: "Tu región de uso no coincide con el país leído en el aviso.",
   useNoticeCountry: "Usar el país del aviso",
   keepCountry: "Mantener mi selección",
@@ -327,6 +329,8 @@ export const frUiCopy: UiCopy = {
   sourcePlaceholder: "https://organisme-officiel/annonce",
   sourcePrefilled:
     "Nous avons ajouté le lien imprimé sur l’annonce. Vérifiez qu’il s’agit du site officiel.",
+  earlyCheckNote:
+    "Pour gagner du temps, la vérification avec la page officielle a déjà commencé. Si vous modifiez quelque chose, elle repart au clic sur le bouton.",
   mismatch: "Votre région d'utilisation diffère du pays lu dans l'annonce.",
   useNoticeCountry: "Utiliser le pays de l'annonce",
   keepCountry: "Garder ma sélection",

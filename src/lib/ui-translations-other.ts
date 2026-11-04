@@ -104,6 +104,8 @@ export const arUiCopy: UiCopy = {
   sourcePlaceholder: "https://official-institution/notice",
   sourcePrefilled:
     "أضفنا الرابط المطبوع في الإعلان. تحقق من أنه الموقع الرسمي.",
+  earlyCheckNote:
+    "لتوفير الوقت بدأت المقارنة مع الصفحة الرسمية بالفعل. إذا غيّرت أي شيء فستبدأ من جديد عند الضغط على الزر.",
   mismatch: "تختلف منطقة الاستخدام عن البلد المقروء من الإعلان.",
   useNoticeCountry: "استخدام بلد الإعلان",
   keepCountry: "الإبقاء على اختياري",
@@ -312,6 +314,8 @@ export const ruUiCopy: UiCopy = {
   sourcePlaceholder: "https://official-institution/notice",
   sourcePrefilled:
     "Мы подставили ссылку из объявления. Проверьте, что это официальный сайт.",
+  earlyCheckNote:
+    "Чтобы сэкономить время, сверка с официальной страницей уже началась. Если вы что-то измените, она начнётся заново при нажатии кнопки.",
   mismatch:
     "Регион использования отличается от страны, указанной в объявлении.",
   useNoticeCountry: "Использовать страну объявления",
