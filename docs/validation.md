@@ -281,3 +281,33 @@ Concurrency (3) and the 10-starts-per-minute burst are unchanged. The Meta Billi
 - HEIC decoding on Safari;
 - photographs taken with the app's own camera input;
 - human-labelled accuracy.
+
+## 2026-11-04 fixes for the code review's waiting and stream findings (`6d8fce7`)
+
+A code review on `ae54a88` reproduced the following with fixed responses and a controlled browser clock: endless waits on a stalled read or check, a received result discarded by a later transport error, a blocked "Run a fresh check" while the stream stayed open, and a provider body timeout classified as a model output error. Production logs showed a 96.9 s extraction with two calls and a 100 s comparison holding a 121 s check.
+
+**Browser (P1-1/2/3)**
+- Reading, checking and notice location now have browser deadlines above the server's own: 150 s, 200 s and 80 s.
+- A check stream has a 45 s silence watchdog, and the server now sends a heartbeat every 10 s.
+- On a deadline the input is kept and a "took too long" message is shown.
+- A received result is final: reading stops and the busy lock is released, so a later error or an unclosed stream cannot undo it.
+- After a broken or timed-out stream, the page asks once (owner-scoped GET, no model call) whether the check was saved and shows that result if so.
+- `scripts/browser-stream-check.mjs` replays the review's four scenarios, a 100 s check kept alive by heartbeats, and recovery of a saved result. It failed on the previous build and passes now.
+
+**Server (P1-4, P1-5, P2-8, P2-9)**
+- Extraction retries a provider stall only when the first attempt failed within 20 s.
+- Once an official source's comparison succeeds, slower comparisons get 30 s more and are then reported as not finished. That keeps the result in review, as before.
+- A body timeout after headers is a stall, not a model output error.
+- PDF document proxies are destroyed on every path.
+- Logs now carry, per call, the duration, outcome and token counts, and per source, the comparison time and whether it was cut off. No text, URLs or images are logged.
+- The processing-time panel now includes notice location.
+
+**Not changed:** the source-fetch/compare overlap and DNS cancellation (P2-6); comparison of unregistered candidates (P2-7, a product decision); request-key reuse (P2-10, the recovery above is used instead); verification rules; limits.
+
+**Checks**
+- Local: TypeScript, 183 tests, 7 harness tests and the build passed. All four browser suites passed (flows, maps, locate, stream) with no page errors or axe violations. `npm audit --omit=dev` found 0 vulnerabilities.
+- Production on `6d8fce7` used **3 model calls**:
+  - Seoul notice with an official link: `changed`, verified. The result arrived at 33.8 s, the stream closed at once, and 3 heartbeats were received.
+  - NASM search: `review` (other candidates blocked or too large) at 39.2 s. With only one comparable source, the grace period was not exercised.
+- The session was deleted with HTTP 204.
+- The user-reported 200-second wait was not matched to a request, so whether these changes remove that particular wait is not established.
