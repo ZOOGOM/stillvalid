@@ -91,7 +91,7 @@ function editionMarkers(text: string): Map<string, Set<string>> {
 // ignored; every letter, digit and mark must still match.
 function tight(value: string): string {
   return value.replace(
-    /\s*([()[\]{}「」『』《》〈〉<>,.:;·/~\-–—])\s*/gu,
+    /\s*([()[\]{}「」『』《》〈〉<>,.:;·/~|\-–—])\s*/gu,
     "$1",
   );
 }
@@ -194,7 +194,321 @@ function otherEditionScope(
   return false;
 }
 
-function sameIdentity(notice: Notice, source: Source, quote: string): boolean {
+// Statements that the whole page is no longer current. Unlike the nearby
+// archiveContext words, these are checked on every identity path, so a page
+// headed "This page is an archive" never confirms a change even when the quote
+// itself names the title, institution and edition.
+const pageArchive =
+  /\b(?:this (?:page|event|notice|announcement|programme|program|competition|content|information|news (?:article|story)|article|guidance) (?:is|has been|was) (?:an? )?(?:archived?|no longer (?:current|valid|available|being updated|updated)|superseded|replaced|withdrawn|out of date)|this is an archived? (?:page|version|copy)|(?:has been|was) (?:superseded|withdrawn)(?: on| by|[.:])|no longer (?:current|valid|being updated))\b|(?:이 (?:페이지|공고|게시물|행사|안내)는 )(?:보관|종료|지난)|보관(?:된)? (?:자료|페이지|게시물)입니다|종료된 (?:행사|공고|사업|모집)입니다/iu;
+
+// Site and label words that never name a programme.
+const generalLabel =
+  /(?<![\p{L}\p{N}])(?:official|notices?|updates?|amendments?|cancellations?|workshops?|events?|announcements?|pages?|home|news|calendar|list|category|categories|programmes?|programs?|actualités|événements|agenda|accueil|avis|noticias|eventos|inicio|aviso|veranstaltungen|nachrichten|startseite|termine|novidades|início|мероприятия|новости|главная)(?![\p{L}\p{N}])/gu;
+const generalLabelCjk =
+  /공지사항|공지|서울소식|새소식|소식|고시·공고|고시공고|행사안내|행사|프로그램|홈|목록|お知らせ|イベント|ニュース|一覧|ホーム|通知|公告|活动|首頁|首页|الأخبار|الفعاليات|الرئيسية/gu;
+const updateLabel =
+  /^(?:(?:19|20)\d{2}\s+)?(?:updates?|amendments?|notices?|recruitment|vacanc(?:y|ies)|수정 안내|모집|채용|synthetic example|합성 예시)$/u;
+
+function labelResidue(text: string, institution: string): string {
+  return text
+    .replace(institution || "\0", "")
+    .replace(/\b(?:19|20)\d{2}\b/g, "")
+    .replace(generalLabel, "")
+    .replace(generalLabelCjk, "")
+    .replace(/[\s:·.,!()|/—–-]/g, "");
+}
+
+// The site's own name in a heading ("… - GOV.UK", "… | Smithsonian
+// Institution") is neutral, like a generic label.
+function siteLabel(part: string, source: Source): boolean {
+  let host = "";
+  try {
+    host = new URL(source.url).hostname.toLowerCase();
+  } catch {
+    /* unparsable URLs have no site label */
+  }
+  const label = part.trim();
+  if (source.institution && label === normalize(source.institution))
+    return true;
+  return (
+    !!host &&
+    /^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(label) &&
+    (host === label || host.endsWith("." + label))
+  );
+}
+
+/**
+ * The other parts of a page heading once the complete notice title is removed
+ * as one segment ("Title | Institution", "Title - GOV.UK", "Events | Title"),
+ * or null when the title is not a whole segment ("History" in "Local History").
+ */
+function headingRest(sourceTitle: string, title: string): string[] | null {
+  const heading = tight(sourceTitle);
+  const wanted = tight(title);
+  if (!wanted) return null;
+  const separator = /[|—–·:-]/u;
+  for (
+    let at = heading.indexOf(wanted);
+    at >= 0;
+    at = heading.indexOf(wanted, at + 1)
+  ) {
+    const before = heading.slice(0, at);
+    const after = heading.slice(at + wanted.length);
+    if (before && !separator.test(before.slice(-1))) continue;
+    if (after && !separator.test(after[0])) continue;
+    return `${before}|${after}`
+      .split(/[|—–·:-]+/u)
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  return null;
+}
+
+// Words that describe a section or an action, never a programme's name.
+const sectionWords = new Set([
+  "the",
+  "a",
+  "an",
+  "of",
+  "for",
+  "to",
+  "in",
+  "on",
+  "and",
+  "or",
+  "at",
+  "by",
+  "with",
+  "from",
+  "our",
+  "your",
+  "you",
+  "we",
+  "this",
+  "that",
+  "these",
+  "is",
+  "are",
+  "be",
+  "will",
+  "can",
+  "must",
+  "should",
+  "why",
+  "how",
+  "what",
+  "when",
+  "where",
+  "who",
+  "more",
+  "about",
+  "all",
+  "new",
+  "now",
+  "open",
+  "opens",
+  "close",
+  "closes",
+  "closing",
+  "closed",
+  "due",
+  "until",
+  "date",
+  "dates",
+  "deadline",
+  "deadlines",
+  "time",
+  "timeline",
+  "schedule",
+  "key",
+  "important",
+  "overview",
+  "detail",
+  "details",
+  "information",
+  "info",
+  "apply",
+  "applying",
+  "application",
+  "applications",
+  "entry",
+  "entries",
+  "enter",
+  "submit",
+  "submission",
+  "how",
+  "eligibility",
+  "eligible",
+  "requirement",
+  "requirements",
+  "contact",
+  "note",
+  "notes",
+  "terms",
+  "conditions",
+  "general",
+  "process",
+  "fee",
+  "fees",
+  "cost",
+  "costs",
+  "location",
+  "venue",
+  "register",
+  "registration",
+  "notice",
+  "notices",
+  "update",
+  "updates",
+  "announcement",
+  "additional",
+  "other",
+  "further",
+  "see",
+  "read",
+  "find",
+  "out",
+  "learn",
+  "모집",
+  "공고",
+  "공고문",
+  "안내",
+  "개요",
+  "일정",
+  "신청",
+  "접수",
+  "대상",
+  "방법",
+  "내용",
+  "기간",
+  "문의",
+  "참고",
+  "기타",
+  "제출",
+  "서류",
+  "선발",
+  "결과",
+  "발표",
+  "마감",
+  "자격",
+  "장소",
+  "시간",
+  "비용",
+  "유의사항",
+]);
+
+// Lead-in words a page heading may wrap around a complete notice title.
+const leadInWords = new Set([
+  "competition",
+  "contest",
+  "call",
+  "join",
+  "become",
+  "win",
+  "announcing",
+  "introducing",
+  "take",
+  "part",
+  "recruiting",
+  "recruitment",
+  "vacancy",
+  "launch",
+  "launches",
+  "launched",
+  "invite",
+  "invites",
+  "invitation",
+]);
+
+function nameTokens(text: string, institution: string): Set<string> {
+  const skip = new Set(
+    normalize(institution)
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter(Boolean),
+  );
+  const tokens = new Set<string>();
+  for (let token of normalize(text).split(/[^\p{L}\p{N}]+/u)) {
+    if (!token || /\p{N}/u.test(token)) continue;
+    if (/^\p{Script=Hangul}{3,}$/u.test(token))
+      token = token.replace(
+        /(?:에서|으로|은|는|이|가|을|를|의|에|로|과|와|도)$/u,
+        "",
+      );
+    else if (/^[a-z]{4,}s$/.test(token)) token = token.slice(0, -1);
+    if (token.length < 2 || sectionWords.has(token) || skip.has(token))
+      continue;
+    tokens.add(token);
+  }
+  return tokens;
+}
+
+/**
+ * The text that labels a quoted value: its own inline lead-in ("Music
+ * Workshop: apply by …"), else the nearest short heading-like lines above it.
+ * A label that shares part of the notice's name but adds a different name
+ * ("Music Workshop" for "Garden Workshop") marks another programme's section.
+ */
+function otherSectionScope(
+  notice: Notice,
+  sourceText: string,
+  afterQuote: string,
+): boolean {
+  const at = sourceText.indexOf(afterQuote);
+  if (at < 0) return false;
+  const title = normalize(notice.title);
+  if (identifierIn(normalize(afterQuote), title)) return false;
+  const wanted = nameTokens(notice.title, notice.institution);
+  if (!wanted.size) return false;
+  const verdict = (label: string): "same" | "other" | "neutral" => {
+    if (identifierIn(normalize(label), title)) return "same";
+    const found = nameTokens(label, notice.institution);
+    const shared = [...found].some((token) => wanted.has(token));
+    if (!shared) return "neutral";
+    const extra = [...found].some((token) => !wanted.has(token));
+    const missing = [...wanted].some((token) => !found.has(token));
+    return extra && missing ? "other" : "same";
+  };
+  const lineStart = sourceText.lastIndexOf("\n", at - 1) + 1;
+  const lead =
+    sourceText
+      .slice(lineStart, at)
+      .split(/[.!?。;]\s/u)
+      .pop() || "";
+  if (lead.trim()) {
+    const result = verdict(lead);
+    if (result !== "neutral") return result === "other";
+  }
+  const above = sourceText.slice(Math.max(0, lineStart - 600), lineStart);
+  const lines = above.split("\n").slice(0, -1).reverse().slice(0, 10);
+  for (const line of lines) {
+    const text = line.trim();
+    if (text.length < 2 || text.length > 90 || /[.!?。]$/u.test(text)) continue;
+    const result = verdict(text);
+    if (result !== "neutral") return result === "other";
+  }
+  return false;
+}
+
+// Fixed reason codes (no notice or source text) for operational diagnostics.
+export type IdentityReason =
+  | "model_different"
+  | "quote_not_exact"
+  | "country"
+  | "title_generic"
+  | "title_not_in_quote"
+  | "institution_generic"
+  | "institution_missing"
+  | "edition_missing"
+  | "context_conflict"
+  | "page_archived"
+  | "heading_other"
+  | "edition_marker";
+
+function sameIdentity(
+  notice: Notice,
+  source: Source,
+  quote: string,
+): IdentityReason | null {
   const identity = normalize(quote);
   // Compare the complete supplied title; never infer a shorter event name.
   const title = normalize(notice.title);
@@ -211,28 +525,44 @@ function sameIdentity(notice: Notice, source: Source, quote: string): boolean {
     )
     .replace(/공지사항|공지|お知らせ|通知|公告/gu, "")
     .replace(/[\s:·.,!()|/—–-]/g, "");
-  const headingParts = sourceTitle.split(/\s*[|—–·]\s*/u);
+  let rest = headingRest(sourceTitle, title);
+  if (rest === null) {
+    // A sentence-style heading that only adds lead-in words around the
+    // complete title ("Enter our competition to be a <title>") still names it.
+    const parts = sourceTitle.split(/\s*[|—–·]\s*|\s+-\s+/u);
+    const index = parts.findIndex(
+      (part) =>
+        identifierIn(part, title) &&
+        [...nameTokens(part, notice.institution)].every(
+          (token) =>
+            leadInWords.has(token) ||
+            nameTokens(notice.title, notice.institution).has(token),
+        ),
+    );
+    if (index >= 0)
+      rest = parts.filter((_part, i) => i !== index).map((part) => tight(part));
+  }
   // ...except an issuer's own registered page titled exactly
   // "<title> | <institution>" (e.g. "Fellowships | National Air and Space
   // Museum"), unless the title merely names a listing such as "Events".
+  const restNames = rest?.filter((part) => !siteLabel(part, source)) || [];
   const dedicatedPage =
     registered &&
     !!institution &&
     !listingTitle.test(title) &&
-    headingParts.length === 2 &&
-    headingParts.includes(title) &&
-    headingParts.includes(institution);
-  if ((!specificTitle && !dedicatedPage) || !identifierIn(identity, title))
-    return false;
+    restNames.length === 1 &&
+    restNames[0] === tight(institution);
+  if (!specificTitle && !dedicatedPage) return "title_generic";
+  if (!identifierIn(identity, title)) return "title_not_in_quote";
   if (/^(?:library|museum|university|도서관|図書館)$/u.test(institution))
-    return false;
+    return "institution_generic";
   const window = normalize(quoteWindow(source.text, quote));
   // Institution and edition belong in the quoted excerpt. A registered page may
   // supply them from its dedicated heading or the text around the quote.
   let borrowed = !specificTitle;
   if (institution && !identifierIn(identity, institution)) {
     if (!registered || !(dedicatedPage || identifierIn(window, institution)))
-      return false;
+      return "institution_missing";
     borrowed = true;
   }
   if (notice.edition && !identifierIn(identity, normalize(notice.edition))) {
@@ -241,55 +571,51 @@ function sameIdentity(notice: Notice, source: Source, quote: string): boolean {
       !registered ||
       !(identifierIn(window, edition) || identifierIn(sourceTitle, edition))
     )
-      return false;
+      return "edition_missing";
     borrowed = true;
   }
-  if (borrowed && contextConflicts(notice, institution, window)) return false;
-  // A dedicated heading vouches for the whole page, so a page-level archive
-  // notice anywhere on it (typically at the top) also vetoes the borrowing.
-  if (borrowed && dedicatedPage && archiveContext.test(normalize(source.text)))
-    return false;
+  if (borrowed && contextConflicts(notice, institution, window))
+    return "context_conflict";
+  // A page that says it is archived, superseded or withdrawn is never current,
+  // whatever the quote contains. Borrowed dedicated-page identity also yields
+  // to the looser archive words anywhere on the page.
+  const page = normalize(source.text);
+  if (pageArchive.test(page)) return "page_archived";
+  if (borrowed && dedicatedPage && archiveContext.test(page))
+    return "page_archived";
   // A generic page label can add no identity evidence. A specific, different
   // heading must not be overridden by an unrelated matching paragraph below it.
-  const genericTitle = sourceTitle
-    .replace(normalize(notice.institution) || "\0", "")
-    .replace(/\b(?:19|20)\d{2}\b/g, "")
-    .replace(
-      /(?<![\p{L}\p{N}])(?:official|notices?|updates?|amendments?|cancellations?|workshops?|events?|announcements?|pages?|home|news|calendar|list|category|categories|programmes?|programs?|actualités|événements|agenda|accueil|avis|noticias|eventos|inicio|aviso|veranstaltungen|nachrichten|startseite|termine|novidades|início|мероприятия|новости|главная)(?![\p{L}\p{N}])/gu,
-      "",
-    )
-    .replace(
-      /공지사항|공지|서울소식|새소식|소식|고시·공고|고시공고|행사안내|행사|홈|목록|お知らせ|イベント|ニュース|一覧|ホーム|通知|公告|活动|首頁|首页|الأخبار|الفعاليات|الرئيسية/gu,
-      "",
-    )
-    .replace(/[\s:·.,!()|/—–-]/g, "");
-  if (genericTitle && !identifierIn(sourceTitle, title)) return false;
-  // A specific heading segment names the event, not just a bag of keywords.
-  // "History" must not match "Local History | Library". Generic site labels
-  // above remain neutral and cannot provide this identity evidence themselves.
-  if (genericTitle && !headingParts.includes(title)) return false;
+  // "History" must not match "Local History | Library"; site names such as
+  // "GOV.UK" and generic labels such as "Events" stay neutral.
+  const genericTitle = labelResidue(
+    sourceTitle
+      .split(/\s*[|—–·]\s*|\s+-\s+/u)
+      .filter((part) => !siteLabel(part, source))
+      .join(" "),
+    institution,
+  );
   if (
     genericTitle &&
-    headingParts.some(
-      (part) =>
-        part !== title &&
-        part !== institution &&
-        !/^(?:(?:19|20)\d{2}\s+)?(?:updates?|amendments?|notices?|수정 안내|synthetic example|합성 예시)$/u.test(
-          part,
-        ),
-    )
+    (rest === null ||
+      rest.some(
+        (part) =>
+          !siteLabel(part, source) &&
+          part !== tight(institution) &&
+          !updateLabel.test(part) &&
+          !!labelResidue(part, institution),
+      ))
   )
-    return false;
+    return "heading_other";
 
   const expected = editionMarkers(`${notice.title} ${notice.edition || ""}`);
   for (const text of [quote, source.title]) {
     for (const [kind, values] of editionMarkers(text)) {
       const wanted = expected.get(kind);
       if (wanted && [...values].some((value) => !wanted.has(value)))
-        return false;
+        return "edition_marker";
     }
   }
-  return true;
+  return null;
 }
 
 function ambiguousNumericDate(value: string | null): boolean {
@@ -313,20 +639,30 @@ export function verifyComparison(
   notice: Notice,
   source: Source,
   model: ModelComparison,
-): { fields: FieldComparison[]; identity: boolean; warnings: string[] } {
+): {
+  fields: FieldComparison[];
+  identity: boolean;
+  identityReason: IdentityReason | null;
+  scopeRejected: boolean;
+  warnings: string[];
+} {
   const warnings: string[] = [];
-  const identity =
-    model.same_notice &&
-    sameIdentity(notice, source, model.identity_quote) &&
-    exactExcerpt(source.text, model.identity_quote) &&
-    (!notice.country ||
-      !model.country ||
-      notice.country.toUpperCase() === model.country.toUpperCase());
+  const identityReason: IdentityReason | null = !model.same_notice
+    ? "model_different"
+    : !exactExcerpt(source.text, model.identity_quote)
+      ? "quote_not_exact"
+      : notice.country &&
+          model.country &&
+          notice.country.toUpperCase() !== model.country.toUpperCase()
+        ? "country"
+        : sameIdentity(notice, source, model.identity_quote);
+  const identity = identityReason === null;
   if (!identity) warnings.push("identity");
   if (source.authority === "unverified") warnings.push("authority");
   const cancellation = cancellationEvidence(notice, source.text);
   const cancellationConcern =
     model.source_role === "cancellation" || cancellationWord.test(source.text);
+  let scopeRejected = false;
   const fields = model.comparisons.map((f): FieldComparison => {
     const original = notice.fields.find(
       (x) =>
@@ -373,7 +709,10 @@ export function verifyComparison(
       ["deadline", "date"].includes(f.key) &&
       [f.before, f.after].some(ambiguousNumericDate);
     const otherEdition =
-      !!afterQuote && otherEditionScope(notice, source.text, afterQuote);
+      !!afterQuote &&
+      (otherEditionScope(notice, source.text, afterQuote) ||
+        otherSectionScope(notice, source.text, afterQuote));
+    if (otherEdition) scopeRejected = true;
     const verified =
       quoteSupported &&
       !otherEdition &&
@@ -408,7 +747,13 @@ export function verifyComparison(
     )
   )
     warnings.push("evidence");
-  return { fields, identity, warnings: [...new Set(warnings)] };
+  return {
+    fields,
+    identity,
+    identityReason,
+    scopeRejected,
+    warnings: [...new Set(warnings)],
+  };
 }
 
 export function assembleResult(args: {
@@ -421,6 +766,8 @@ export function assembleResult(args: {
   warnings?: string[];
   checkedAt?: string;
   elapsedMs?: number;
+  /** Receives fixed reason codes only, for server logs. */
+  diagnostics?: string[];
 }): Result {
   const { notice, sources, analyses } = args;
   const comparisons: FieldComparison[] = [];
@@ -429,6 +776,9 @@ export function assembleResult(args: {
   analyses.forEach((m, i) => {
     if (!sources[i]) return;
     const verified = verifyComparison(notice, sources[i], m);
+    if (verified.identityReason)
+      args.diagnostics?.push(verified.identityReason);
+    if (verified.scopeRejected) args.diagnostics?.push("field_scope");
     comparisons.push(...verified.fields);
     warnings.push(...verified.warnings);
     if (!verified.identity) identityFailed = true;
