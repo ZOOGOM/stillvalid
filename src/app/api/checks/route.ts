@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { MetaClient, configured } from "@/lib/meta";
+import { MetaClient, configured, type CallRecord } from "@/lib/meta";
 import {
   AppError,
   checkRequestSchema,
@@ -24,9 +24,10 @@ import { assembleResult } from "@/lib/compare";
 import { errorResponse, readJson } from "@/lib/http";
 import { abuseKey, abuseSecret } from "@/lib/abuse";
 import { sourceRelevant } from "@/lib/relevance";
-import { settle } from "@/lib/priority";
+import { settle, settleWithGrace } from "@/lib/priority";
 export const runtime = "nodejs";
 export const maxDuration = 180;
+const compareGraceMs = 30000;
 const sourceWarningCodes = new Set([
   "source_format",
   "source_encoding",
@@ -77,6 +78,14 @@ export async function POST(request: NextRequest) {
     const diagnostics: string[] = [];
     // Per-candidate outcome codes (no URLs) for the same log line.
     const attemptCodes: string[] = [];
+    // Per-source comparison durations (no URLs or text).
+    const compareTimes: {
+      registered: boolean;
+      ms: number;
+      ok: boolean;
+      cutOff: boolean;
+    }[] = [];
+    let modelCallLog: CallRecord[] = [];
     const measure = async <T>(
       key: "discoverMs" | "fetchMs" | "compareMs",
       operation: () => Promise<T>,
@@ -124,6 +133,7 @@ export async function POST(request: NextRequest) {
             await reserveModelCall();
             timing.modelCalls++;
           });
+          modelCallLog = meta.calls;
           let candidates: Candidate[] = [];
           const warnings: string[] = [];
           send("phase", { step: "search", elapsedMs: Date.now() - started });
@@ -223,12 +233,33 @@ export async function POST(request: NextRequest) {
           );
           if (unrelated.length) warnings.push("source_unrelated");
           await ensureActive();
-          const settled = await measure("compareMs", () =>
-            Promise.all(
-              related.map((source) =>
-                settle(meta.compare(notice, source, lang, signal)),
-              ),
+          // Comparisons run in parallel. Once an official source's comparison
+          // has succeeded, slower ones get 30 s more and are then reported as
+          // not finished, so one long tail no longer holds the whole result.
+          // An unfinished source still keeps the result in review.
+          const graced = await measure("compareMs", () =>
+            settleWithGrace(
+              related.map((source) => ({
+                decisive: source.authority === "registered",
+                run: (cutOff: AbortSignal) =>
+                  meta.compare(
+                    notice,
+                    source,
+                    lang,
+                    AbortSignal.any([signal, cutOff]),
+                  ),
+              })),
+              compareGraceMs,
             ),
+          );
+          const settled = graced.outcomes;
+          compareTimes.push(
+            ...related.map((source, i) => ({
+              registered: source.authority === "registered",
+              ms: graced.ms[i],
+              ok: settled[i].ok,
+              cutOff: graced.cutOff[i],
+            })),
           );
           const compared = related.filter((_source, i) => settled[i].ok);
           const failed = related.filter((_source, i) => !settled[i].ok);
@@ -305,6 +336,8 @@ export async function POST(request: NextRequest) {
               ...timing,
               rejected: diagnostics,
               attempts: attemptCodes,
+              sources: compareTimes,
+              calls: modelCallLog,
               elapsedMs: Date.now() - started,
             }),
           );

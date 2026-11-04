@@ -28,3 +28,52 @@ export async function firstInOrder<T>(
   }
   return { values, errors };
 }
+
+/**
+ * Runs tasks in parallel. Once a decisive task (an official source) has
+ * succeeded, or once every decisive task has finished, the remaining tasks get
+ * `graceMs` more and are then aborted. Aborted tasks settle as failures, so the
+ * caller keeps reporting them as incomplete. Without decisive tasks the grace
+ * starts after the first success.
+ */
+export async function settleWithGrace<T>(
+  tasks: { run: (signal: AbortSignal) => Promise<T>; decisive: boolean }[],
+  graceMs: number,
+): Promise<{ outcomes: Outcome<T>[]; ms: number[]; cutOff: boolean[] }> {
+  const controllers = tasks.map(() => new AbortController());
+  const started = Date.now();
+  const ms: number[] = tasks.map(() => 0);
+  const done = tasks.map(() => false);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let cut = false;
+  const cutOff = tasks.map(() => false);
+  const startGrace = () => {
+    if (timer || cut) return;
+    timer = setTimeout(() => {
+      cut = true;
+      controllers.forEach((controller, i) => {
+        if (done[i]) return;
+        cutOff[i] = true;
+        controller.abort(new DOMException("grace", "TimeoutError"));
+      });
+    }, graceMs);
+  };
+  const anyDecisive = tasks.some((task) => task.decisive);
+  const outcomes = await Promise.all(
+    tasks.map((task, i) =>
+      settle(task.run(controllers[i].signal)).then((outcome) => {
+        done[i] = true;
+        ms[i] = Date.now() - started;
+        const decisiveLeft = tasks.some((t, j) => t.decisive && !done[j]);
+        if (
+          (outcome.ok && (task.decisive || !anyDecisive)) ||
+          (anyDecisive && !decisiveLeft)
+        )
+          startGrace();
+        return outcome;
+      }),
+    ),
+  );
+  if (timer) clearTimeout(timer);
+  return { outcomes, ms, cutOff };
+}

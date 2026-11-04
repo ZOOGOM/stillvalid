@@ -948,3 +948,76 @@ test("the image reader's own classification is reported without changing the not
       assert.equal("content_kind" in result, false);
     }
   }));
+
+test("a long stall is not retried, a body timeout is a stall, and each call is recorded", () =>
+  withTestKey(async () => {
+    const keepAlive = setInterval(() => {}, 1000);
+    const hang = (init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        if (init?.signal?.aborted) return reject(init.signal.reason);
+        init?.signal?.addEventListener("abort", () =>
+          reject(init.signal?.reason),
+        );
+      });
+    try {
+      // The first attempt times out after longer than the quick-failure
+      // window: no second attempt.
+      let calls = 0;
+      await assert.rejects(
+        new MetaClient(
+          async (_input, init) => {
+            calls++;
+            return hang(init);
+          },
+          () => {},
+          { extractionAttemptMs: 40, fastFailureMs: 10 },
+        ).extract("Workshop. Open.", undefined, null),
+        { code: "model_unavailable" },
+      );
+      assert.equal(calls, 1);
+      // Headers arrive but the body never finishes: a stall, not a model
+      // output error.
+      const bodyStall = new MetaClient(
+        async (_input, init) =>
+          new Response(
+            new ReadableStream({
+              start(controller) {
+                init?.signal?.addEventListener("abort", () =>
+                  controller.error(init.signal?.reason),
+                );
+              },
+            }),
+          ),
+        () => {},
+      );
+      await assert.rejects(
+        bodyStall.call("/chat/completions", {}, undefined, 20),
+        { code: "model_unavailable" },
+      );
+      assert.equal(bodyStall.calls[0].outcome, "stall");
+      // A successful call records its duration and token usage only.
+      const ok = new MetaClient(
+        async () =>
+          Response.json({
+            choices: [],
+            usage: { prompt_tokens: 120, completion_tokens: 30 },
+          }),
+        () => {},
+      );
+      await ok.call("/chat/completions", {});
+      assert.equal(ok.calls.length, 1);
+      assert.equal(ok.calls[0].path, "chat/completions");
+      assert.equal(ok.calls[0].outcome, "ok");
+      assert.equal(ok.calls[0].inputTokens, 120);
+      assert.equal(ok.calls[0].outputTokens, 30);
+      assert.deepEqual(Object.keys(ok.calls[0]).sort(), [
+        "inputTokens",
+        "ms",
+        "outcome",
+        "outputTokens",
+        "path",
+      ]);
+    } finally {
+      clearInterval(keepAlive);
+    }
+  }));

@@ -48,14 +48,12 @@ export async function POST(request: NextRequest) {
     let modelCalls = 0;
     let found = false;
     let shape: LocateDiagnostic | null = null;
+    const client = new MetaClient(undefined, async () => {
+      await reserveModelCall();
+      modelCalls++;
+    });
     try {
-      const { box, boxes, diagnostic } = await new MetaClient(
-        undefined,
-        async () => {
-          await reserveModelCall();
-          modelCalls++;
-        },
-      ).locate(
+      const { box, boxes, diagnostic } = await client.locate(
         parsed.data.image,
         AbortSignal.any([request.signal, AbortSignal.timeout(65000)]),
         parsed.data.prompt,
@@ -80,6 +78,7 @@ export async function POST(request: NextRequest) {
           found,
           // Response shape only (types, lengths, token counts).
           shape,
+          calls: client.calls,
         }),
       );
       await releaseWork(lease, actor).catch(() => {});
