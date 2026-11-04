@@ -34,6 +34,8 @@ import {
   RefreshCw,
   RotateCw,
   ScanLine,
+  ScanSearch,
+  Undo2,
   Search,
   ShieldCheck,
   Sparkles,
@@ -53,9 +55,10 @@ import {
   resultLocale,
   type ResultLang,
 } from "@/lib/languages";
-import type { Lang, Notice, Result } from "@/lib/schema";
+import type { FieldComparison, Lang, Notice, Result } from "@/lib/schema";
 import type { DemoId } from "@/lib/demo";
 import { loadImage, prepareImage, transformImage } from "./image";
+import { googleMapsSearchUrl } from "@/lib/maps";
 
 type Stage = "input" | "review" | "processing" | "result";
 type Dialog = "how" | "about" | "privacy" | "delete" | null;
@@ -84,6 +87,62 @@ function countryName(code: string | null, lang: ResultLang) {
         code,
       ) || code
     : copy(lang).unset;
+}
+// A plain link to a Google Maps search for the displayed place text. It does
+// not confirm the place; it only opens a search in a new tab when activated.
+function MapSearchLink({
+  href,
+  place,
+  side,
+  rt,
+}: {
+  href: string;
+  place: string;
+  side: string;
+  rt: Record<ResultCopyKey, string>;
+}) {
+  return (
+    <a
+      className="map-search-link"
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <MapPin size={15} aria-hidden="true" />
+      <span>
+        <span className="sr-only">{side}: </span>
+        {rt.mapSearch}
+        {": "}
+        <bdi dir="auto">{place}</bdi>
+        <span className="sr-only"> ({rt.mapNewTab})</span>
+      </span>
+      <ExternalLink size={13} aria-hidden="true" />
+    </a>
+  );
+}
+type ClientTiming = {
+  prepareMs?: number;
+  extractMs?: number;
+  extractServerMs?: number;
+  extractCalls?: number;
+  extractedAt?: number;
+  reviewMs?: number;
+  checkMs?: number;
+};
+function seconds(ms: number, lang: ResultLang): string {
+  return new Intl.NumberFormat(resultLocale(lang), {
+    style: "unit",
+    unit: "second",
+    unitDisplay: "short",
+    maximumFractionDigits: ms < 10000 ? 1 : 0,
+  }).format(ms / 1000);
+}
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
 }
 function timeLabel(value: string, lang: ResultLang) {
   return new Intl.DateTimeFormat(resultLocale(lang), {
@@ -543,6 +602,24 @@ export default function StillValidApp() {
   const [notice, setNotice] = useState<Notice | null>(null),
     [sourceUrl, setSourceUrl] = useState(""),
     [result, setResult] = useState<Result | null>(null);
+  // The photo before an automatic notice crop, so it can be restored.
+  const [beforeAutoCrop, setBeforeAutoCrop] = useState<string | null>(null);
+  // Client-observed stage durations for the current flow (not stored).
+  const timings = useRef<ClientTiming>({});
+  const [clientTiming, setClientTiming] = useState<ClientTiming>({});
+  const [progressStarted, setProgressStarted] = useState<number | null>(null),
+    [progressNow, setProgressNow] = useState(0);
+  useEffect(() => {
+    if (stage !== "processing") {
+      setProgressStarted(null);
+      return;
+    }
+    const begin = Date.now();
+    setProgressStarted(begin);
+    setProgressNow(begin);
+    const tick = setInterval(() => setProgressNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, [stage]);
   const [live, setLive] = useState<boolean | null>(null),
     [error, setError] = useState<string | null>(null),
     [toast, setToast] = useState<{ text: string; lang: ResultLang } | null>(
@@ -677,6 +754,8 @@ export default function StillValidApp() {
     setCountryConfirmed(false);
   };
   const reset = () => {
+    setClientTiming({});
+    timings.current = {};
     controller.current?.abort();
     operation.current++;
     uploadGeneration.current++;
@@ -685,6 +764,7 @@ export default function StillValidApp() {
     setResult(null);
     setNotice(null);
     setImage(null);
+    setBeforeAutoCrop(null);
     setImageName("");
     setText("");
     setMode("photo");
@@ -703,9 +783,12 @@ export default function StillValidApp() {
     setPreparing(true);
     setError(null);
     try {
+      const prepareStart = performance.now();
       const prepared = await prepareImage(file);
+      timings.current = { prepareMs: performance.now() - prepareStart };
       if (generation === uploadGeneration.current) {
         setImage(prepared);
+        setBeforeAutoCrop(null);
         setImageName(file.name);
         setMode("photo");
       }
@@ -716,6 +799,63 @@ export default function StillValidApp() {
       if (generation === uploadGeneration.current) setPreparing(false);
       if (fileRef.current) fileRef.current.value = "";
       if (cameraRef.current) cameraRef.current.value = "";
+    }
+  };
+  // Opt-in: one SAM 3.1 call finds the printed notice and crops to it, with a
+  // small margin. The user can undo, crop by hand or rotate as before.
+  const autoFind = async () => {
+    if (!image || preparing || !live) return;
+    const generation = ++uploadGeneration.current;
+    setPreparing(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/locate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image }),
+      });
+      if (!response.ok)
+        throw new Error(await responseError(response, "upload_too_large"));
+      const data = (await response.json()) as {
+        box: {
+          x1: number;
+          y1: number;
+          x2: number;
+          y2: number;
+          w: number;
+          h: number;
+        } | null;
+      };
+      if (generation !== uploadGeneration.current) return;
+      if (!data.box) {
+        setToast({ text: t.autoFindNone, lang });
+        return;
+      }
+      const loaded = await loadImage(image);
+      const sx = loaded.naturalWidth / data.box.w,
+        sy = loaded.naturalHeight / data.box.h;
+      const marginX = loaded.naturalWidth * 0.02,
+        marginY = loaded.naturalHeight * 0.02;
+      const x = Math.max(0, data.box.x1 * sx - marginX),
+        y = Math.max(0, data.box.y1 * sy - marginY);
+      const area = {
+        x,
+        y,
+        width:
+          Math.min(loaded.naturalWidth, (data.box.x2 + 1) * sx + marginX) - x,
+        height:
+          Math.min(loaded.naturalHeight, (data.box.y2 + 1) * sy + marginY) - y,
+      };
+      const cropped = await transformImage(image, 0, area);
+      if (generation !== uploadGeneration.current) return;
+      setBeforeAutoCrop(image);
+      setImage(cropped);
+      setToast({ text: t.autoFindDone, lang });
+    } catch (e) {
+      if (generation === uploadGeneration.current)
+        setError(e instanceof Error ? e.message : "network");
+    } finally {
+      if (generation === uploadGeneration.current) setPreparing(false);
     }
   };
   const extract = async () => {
@@ -735,6 +875,8 @@ export default function StillValidApp() {
     setStep("extract");
     const abort = new AbortController();
     controller.current = abort;
+    const extractStart = performance.now();
+    if (mode === "text") timings.current = {};
     try {
       const response = await fetch("/api/extract", {
         method: "POST",
@@ -750,6 +892,13 @@ export default function StillValidApp() {
         throw new Error(await responseError(response, "upload_too_large"));
       const data = await response.json();
       if (abort.signal.aborted || operation.current !== generation) return;
+      timings.current = {
+        prepareMs: timings.current.prepareMs,
+        extractMs: performance.now() - extractStart,
+        extractServerMs: data.timing?.extractMs,
+        extractCalls: data.timing?.modelCalls,
+        extractedAt: performance.now(),
+      };
       setNotice(data.notice);
       setCountryConfirmed(false);
       setStage("review");
@@ -782,6 +931,25 @@ export default function StillValidApp() {
     setStep("search");
     const abort = new AbortController();
     controller.current = abort;
+    const checkStart = performance.now();
+    const reviewMs =
+      timings.current.extractedAt !== undefined
+        ? checkStart - timings.current.extractedAt
+        : undefined;
+    const finishTiming = () => {
+      // Photo and reading stages belong only to the first check after them.
+      const observed =
+        reviewMs === undefined
+          ? { checkMs: performance.now() - checkStart }
+          : {
+              ...timings.current,
+              reviewMs,
+              checkMs: performance.now() - checkStart,
+            };
+      // A recheck of the same notice is not a new review period.
+      timings.current = { ...timings.current, extractedAt: undefined };
+      setClientTiming(observed);
+    };
     try {
       const response = await fetch("/api/checks", {
         method: "POST",
@@ -802,6 +970,7 @@ export default function StillValidApp() {
         const saved = await response.json();
         if (!saved.result) throw new Error("busy");
         if (abort.signal.aborted || operation.current !== generation) return;
+        finishTiming();
         setResult(saved.result);
         setStage("result");
         return;
@@ -830,6 +999,7 @@ export default function StillValidApp() {
           if (event.type === "phase") setStep(event.data.step);
           if (event.type === "error") throw new Error(event.data.code);
           if (event.type === "result") {
+            finishTiming();
             setResult(event.data);
             setStage("result");
             inFlightId.current = null;
@@ -956,6 +1126,36 @@ export default function StillValidApp() {
     }
   };
 
+  // Map search links for location cards only, built from the values shown on
+  // the card. Identical before/after values share one link. No links in
+  // synthetic examples (fictional places).
+  const mapLinks = (f: FieldComparison) => {
+    if (f.key !== "location" || !result || result.mode === "demo")
+      return { any: false } as const;
+    const before = googleMapsSearchUrl(f.before);
+    const after = googleMapsSearchUrl(f.after);
+    const same = !!before && !!after && f.before!.trim() === f.after!.trim();
+    return {
+      before: same ? null : before,
+      after: same ? null : after,
+      both: same ? before : null,
+      any: !!(before || after),
+    };
+  };
+  // Per-candidate outcomes replace source-specific warnings in the summary
+  // list, so one unreadable or oversized candidate does not read as a failure
+  // of every source.
+  const perSourceView = !!result?.attempts?.length && result.mode !== "demo";
+  const perCandidateWarning = (w: string) =>
+    w.startsWith("source_") || w === "fetch" || w === "network";
+  const shownWarnings = !result
+    ? []
+    : perSourceView
+      ? [
+          ...result.warnings.filter((w) => !perCandidateWarning(w)),
+          ...(result.warnings.some(perCandidateWarning) ? ["attempts"] : []),
+        ]
+      : result.warnings;
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main">
@@ -1116,6 +1316,30 @@ export default function StillValidApp() {
                           <span title={imageName} dir="auto">
                             {imageName}
                           </span>
+                          {live === true &&
+                            (beforeAutoCrop ? (
+                              <button
+                                aria-label={t.autoFindUndo}
+                                title={t.autoFindUndo}
+                                disabled={preparing}
+                                onClick={() => {
+                                  uploadGeneration.current++;
+                                  setImage(beforeAutoCrop);
+                                  setBeforeAutoCrop(null);
+                                }}
+                              >
+                                <Undo2 size={17} />
+                              </button>
+                            ) : (
+                              <button
+                                aria-label={t.autoFind}
+                                title={t.autoFind}
+                                disabled={preparing}
+                                onClick={() => void autoFind()}
+                              >
+                                <ScanSearch size={17} />
+                              </button>
+                            ))}
                           <button
                             aria-label={t.crop}
                             title={t.crop}
@@ -1133,8 +1357,10 @@ export default function StillValidApp() {
                               setPreparing(true);
                               try {
                                 const rotated = await transformImage(image, 90);
-                                if (generation === uploadGeneration.current)
+                                if (generation === uploadGeneration.current) {
                                   setImage(rotated);
+                                  setBeforeAutoCrop(null);
+                                }
                               } catch (e) {
                                 if (generation === uploadGeneration.current)
                                   setError(
@@ -1156,6 +1382,7 @@ export default function StillValidApp() {
                             onClick={() => {
                               uploadGeneration.current++;
                               setImage(null);
+                              setBeforeAutoCrop(null);
                               setPreparing(false);
                             }}
                           >
@@ -1609,7 +1836,17 @@ export default function StillValidApp() {
                 );
               })}
             </div>
-            <p className="progress-hint">{t.takesTime}</p>
+            {progressStarted !== null && (
+              <p className="progress-elapsed" aria-live="off">
+                {t.progressElapsed.replace(
+                  "{s}",
+                  seconds(Math.max(0, progressNow - progressStarted), lang),
+                )}
+              </p>
+            )}
+            <p className="progress-hint">
+              {t.takesTime} {step !== "extract" && t.progressTypical}
+            </p>
             <button className="secondary" onClick={() => void cancel()}>
               <X size={16} />
               {t.cancel}
@@ -1708,6 +1945,14 @@ export default function StillValidApp() {
                       <div>
                         <small>{rt.originalValue}</small>
                         <p dir="auto">{f.before || "—"}</p>
+                        {mapLinks(f).before && (
+                          <MapSearchLink
+                            href={mapLinks(f).before!}
+                            place={f.before!.trim()}
+                            side={rt.originalValue}
+                            rt={rt}
+                          />
+                        )}
                       </div>
                       <span className="compare-arrow">
                         <ArrowRight size={17} />
@@ -1715,8 +1960,32 @@ export default function StillValidApp() {
                       <div>
                         <small>{rt.currentValue}</small>
                         <p dir="auto">{f.after || "—"}</p>
+                        {mapLinks(f).after && (
+                          <MapSearchLink
+                            href={mapLinks(f).after!}
+                            place={f.after!.trim()}
+                            side={rt.currentValue}
+                            rt={rt}
+                          />
+                        )}
                       </div>
                     </div>
+                    {mapLinks(f).both && (
+                      <div className="map-search-both">
+                        <MapSearchLink
+                          href={mapLinks(f).both!}
+                          place={f.before!.trim()}
+                          side={rt.mapBothSides}
+                          rt={rt}
+                        />
+                      </div>
+                    )}
+                    {mapLinks(f).any && (
+                      <p className="map-search-note">
+                        <MapPin size={14} aria-hidden="true" />
+                        <span>{rt.mapSearchNote}</span>
+                      </p>
+                    )}
                     <details className="evidence-details">
                       <summary>
                         <FileCheck2 size={15} />
@@ -1760,15 +2029,17 @@ export default function StillValidApp() {
                     </details>
                   </article>
                 ))}
-                {!!result.warnings.length && (
+                {!!shownWarnings.length && (
                   <div className="result-warnings">
-                    {result.warnings.map((w) => (
+                    {shownWarnings.map((w) => (
                       <p key={w}>
                         <Info size={15} />
                         <span>
-                          {sourceWarningText(w, lang) ||
-                            rt[("warning_" + w) as ResultCopyKey] ||
-                            rt.warning_evidence}
+                          {w === "attempts"
+                            ? rt.attemptsNote
+                            : sourceWarningText(w, lang) ||
+                              rt[("warning_" + w) as ResultCopyKey] ||
+                              rt.warning_evidence}
                         </span>
                       </p>
                     ))}
@@ -1817,43 +2088,117 @@ export default function StillValidApp() {
                 <section className="sources-card">
                   <h2>
                     <ShieldCheck size={17} />
-                    {rt.sourcesTitle}
+                    {perSourceView ? rt.attemptsTitle : rt.sourcesTitle}
                   </h2>
-                  {result.sources.map((s) => (
-                    <div className="source-entry" key={s.id}>
-                      <div className="source-index">
-                        <FileText size={16} />
-                        <span>
-                          {result.mode === "demo" ? (
-                            rt.syntheticSource
-                          ) : (
-                            <bdi>{new URL(s.url).hostname}</bdi>
-                          )}
-                        </span>
-                      </div>
-                      <p dir="auto">{s.title}</p>
-                      {result.mode !== "demo" && (
-                        <>
-                          <small>
-                            {s.authority === "registered"
-                              ? rt.sourceRegistered
-                              : rt.sourceUnverified}
-                          </small>
-                          <small>
-                            {rt.fetched}: {timeLabel(s.fetchedAt, lang)}
-                          </small>
-                          <a
-                            href={s.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                  {perSourceView
+                    ? result.attempts!.map((a, i) => {
+                        const s = result.sources.find(
+                          (source) => source.id === a.sourceId,
+                        );
+                        return (
+                          <div
+                            className={"source-entry attempt-" + a.outcome}
+                            key={a.url + i}
                           >
-                            {rt.openSource}
-                            <ArrowUpRight size={13} />
-                          </a>
-                        </>
-                      )}
-                    </div>
-                  ))}
+                            <div className="source-index">
+                              <FileText size={16} />
+                              <span>
+                                <bdi>{hostOf(a.url)}</bdi>
+                              </span>
+                            </div>
+                            {s && <p dir="auto">{s.title}</p>}
+                            <p className="attempt-outcome">
+                              {rt[("attempt_" + a.outcome) as ResultCopyKey]}
+                            </p>
+                            {a.outcome === "fetch_failed" && (
+                              <small>
+                                {sourceWarningText(a.code || "", lang) ||
+                                  rt[
+                                    ("warning_" +
+                                      (a.code === "network"
+                                        ? "network"
+                                        : "fetch")) as ResultCopyKey
+                                  ]}
+                              </small>
+                            )}
+                            {a.authority && (
+                              <small>
+                                {a.authority === "registered"
+                                  ? rt.sourceRegistered
+                                  : rt.sourceUnverified}
+                              </small>
+                            )}
+                            {a.outcome === "compared" && a.identity && (
+                              <small>
+                                {
+                                  rt[
+                                    ("identity_" + a.identity) as ResultCopyKey
+                                  ]
+                                }
+                              </small>
+                            )}
+                            {a.section && <small>{rt.identity_section}</small>}
+                            {a.outcome === "compared" && !!a.fields && (
+                              <small>
+                                {rt.evidenceCount
+                                  .replace("{n}", String(a.verified || 0))
+                                  .replace("{m}", String(a.fields))}
+                              </small>
+                            )}
+                            {s && (
+                              <small>
+                                {rt.fetched}: {timeLabel(s.fetchedAt, lang)}
+                              </small>
+                            )}
+                            <a
+                              href={a.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {a.outcome === "compared" &&
+                              a.authority === "registered"
+                                ? rt.openSource
+                                : rt.openLink}
+                              <ArrowUpRight size={13} />
+                            </a>
+                          </div>
+                        );
+                      })
+                    : result.sources.map((s) => (
+                        <div className="source-entry" key={s.id}>
+                          <div className="source-index">
+                            <FileText size={16} />
+                            <span>
+                              {result.mode === "demo" ? (
+                                rt.syntheticSource
+                              ) : (
+                                <bdi>{new URL(s.url).hostname}</bdi>
+                              )}
+                            </span>
+                          </div>
+                          <p dir="auto">{s.title}</p>
+                          {result.mode !== "demo" && (
+                            <>
+                              <small>
+                                {s.authority === "registered"
+                                  ? rt.sourceRegistered
+                                  : rt.sourceUnverified}
+                              </small>
+                              <small>
+                                {rt.fetched}: {timeLabel(s.fetchedAt, lang)}
+                              </small>
+                              <a
+                                href={s.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {rt.openSource}
+                                <ArrowUpRight size={13} />
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      ))}
                   {!result.sources.length && (
                     <p className="muted">{rt.noComparison}</p>
                   )}
@@ -1884,6 +2229,50 @@ export default function StillValidApp() {
                 )}
               </aside>
             </div>
+            {result.mode === "live" &&
+              (result.timing || clientTiming.checkMs !== undefined) && (
+                <details className="timing-details">
+                  <summary>{rt.timingTitle}</summary>
+                  <dl>
+                    {(
+                      [
+                        ["timing_prepare", clientTiming.prepareMs],
+                        ["timing_extract", clientTiming.extractMs],
+                        ["timing_extractServer", clientTiming.extractServerMs],
+                        ["timing_review", clientTiming.reviewMs],
+                        ["timing_search", result.timing?.searchMs],
+                        ["timing_fetch", result.timing?.fetchMs],
+                        ["timing_compare", result.timing?.compareMs],
+                        ["timing_total", result.elapsedMs || undefined],
+                        ["timing_check", clientTiming.checkMs],
+                      ] as [ResultCopyKey, number | undefined][]
+                    )
+                      // A skipped search (official link given) is not shown.
+                      .filter(
+                        ([key, ms]) =>
+                          ms !== undefined &&
+                          !(key === "timing_search" && ms === 0),
+                      )
+                      .map(([key, ms]) => (
+                        <div key={key}>
+                          <dt>{rt[key]}</dt>
+                          <dd>{seconds(ms!, lang)}</dd>
+                        </div>
+                      ))}
+                  </dl>
+                  {result.timing && (
+                    <p>
+                      {rt.timing_calls.replace(
+                        "{n}",
+                        String(
+                          result.timing.modelCalls +
+                            (clientTiming.extractCalls || 0),
+                        ),
+                      )}
+                    </p>
+                  )}
+                </details>
+              )}
             <div className="result-bottom">
               <p>
                 <Info size={15} />
@@ -1971,6 +2360,7 @@ export default function StillValidApp() {
           close={closeCrop}
           done={(updated) => {
             setImage(updated);
+            setBeforeAutoCrop(null);
             setCropping(false);
           }}
         />
@@ -2024,6 +2414,7 @@ export default function StillValidApp() {
               <p>{t.privacyBody}</p>
               <p>{t.privacyAbuse}</p>
               <p>{t.privacyMore}</p>
+              <p>{t.privacyMaps}</p>
               <a
                 href="https://dev.meta.ai/docs/models"
                 target="_blank"

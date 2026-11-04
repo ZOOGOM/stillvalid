@@ -109,3 +109,95 @@ Offline, the real NASM, Seoul and two GOV.UK pages were checked with constructed
 | Seoul internship notice, poster with an earlier end date | `changed` 3/31 → 4/3, verified | 34.7 s |
 
 Each is a single run; the GOV.UK date change was artificial and the inputs were not photographed. Local checks passed TypeScript, 159 tests, seven harness tests, the build and 21 browser-flow groups with no page errors or accessibility violations. A reconnecting client still starts a new check, because the server cancels work when the stream disconnects. The session was deleted with HTTP 204.
+
+## 2026-11-04 submission rehearsal on d46ab66
+
+At approximately 04:30 UTC, both public production aliases returned HTTP 200 for home and `/api/status`, reporting `d46ab66e6ab6ca8d299c6fac2f01a527708eaab4`, `muse-spark-1.3` and `liveAvailable: true`. CSP, HSTS with preload, DENY framing, nosniff, referrer and permissions policies were present. Remote `main` matched that commit. Readiness metadata alone was not counted as inference evidence.
+
+A Chromium browser at a 390×844 mobile viewport then used two self-designed notice cards, visibly labelled as examples. These were generated images, not physical camera photographs or official posters. Both complete recorded flows used actual production image upload, crop, extraction, review, a user-supplied official URL and comparison, without fixture responses.
+
+| Reconstructed input | Observed production result | Client extraction | Client comparison |
+| --- | --- | --- | --- |
+| Seoul internship card with deliberately earlier 31 March deadline | `changed`, verified; original period ending `3. 31.(화) 15:00` versus official period ending `4. 3.(금) 15:00` | 24,071 ms | 25,203 ms |
+| GOV.UK Consul General For a Day card | `matched`, verified; `22 November 2026` on both sides | 17,460 ms | 45,289 ms |
+
+Each result had no warnings and one verified deadline field. Both comparison timing records had `rejected: []`. Switching the result display to Korean issued no additional extraction/check request. Both completed recording sessions were deleted with HTTP 204. Neither example establishes a real historical deadline change or general notice accuracy.
+
+An earlier Seoul capture attempt consumed one extraction and one comparison (server durations 21,514 ms and 26,136 ms; comparison `rejected: []`). A Playwright response-body capture error stopped the recorder before its final result was preserved. That attempt's final status and session deletion were not verified; normal result expiry applies. The recording utility was repaired without application changes. Across that attempt and the two completed flows, timing logs established **six reserved model calls**, with one call per extraction/comparison and no provider retry. Tokens and cost were not measured. The UTC-day total and exact remaining budget are unknown; the daily limit was not changed.
+
+A separate built-in different-edition example was captured from the production interface with its synthetic/no-live-lookup banner visible. It is separate from the real model calls above. The public event page confirmed the 4 November 21:00 ET deadline. The submission portal redirected the unauthenticated browser to login, so authenticated form requirements and video limits were not verified. No entry was submitted.
+
+Local verification on the unchanged application source passed TypeScript, **159 behavioral/security tests**, **seven harness tests**, the production build, **21 browser-flow groups** with no recorded page errors or automatic accessibility violations, and `npm audit --omit=dev` with zero reported vulnerabilities. The browser suite uses fixtures. The user subsequently reported one physical iPhone camera flow, described below; HEIC and comprehensive Safari coverage remain unverified. Android physical-device testing is unavailable in this session. The real-notice human-reference evaluation sheet remains uncompleted.
+
+### User-reported iPhone camera flow and read-only source diagnosis
+
+The user supplied result screenshots for a public festival notice, reported taking the original photo with an iPhone camera, reported OS version 27.3, and estimated about three minutes to the result. The result was `review`, with a missing retrieved event date and an unverified matching venue. This establishes a user-observed camera-input/result flow, not independent verification of the exact device, Safari version, image MIME type, HEIC conversion, cropping, permission failures, or network interruption. The original image and exact extracted notice/model output were not available for this diagnosis. No repeat model request was made.
+
+The user identified [the related article](https://gyeongnamzine.com/10448) as a page containing the information. A browser request returned HTTP 200; its raw HTML was 30,530 bytes. The application's unchanged `parseSourceDocument` extracted 2,177 characters, including the event edition, 14–15 November 2026 dates and venue. Therefore, this observed page response does **not** reproduce the app's too-large guard (600,000 response bytes or 22,000 extracted characters). The warning could concern another candidate or a different response; the precise failed source was not identified. A separate Python HTTP request returned 403, so browser access is not proof that every client or the production fetch path receives the same response.
+
+The article's domain is not in the default official-host registry, and the user's result showed unverified authority. No organiser relationship was established from the page. Content being present does not establish official authority or a verified comparison. The parser also joins adjacent table cells without a separator, producing text such as `행사명제4회 수산제농경문화제`. Constructed offline model outputs using the fetched page reproduced `title_not_in_quote`, and a spaced title also produced `field_scope`. Exact title matching can reject spacing differences and a Korean particle attached immediately after a title; these reproductions do not establish which quote the live model selected.
+
+A separate production log sequence around the user's screenshot time recorded a 38.1-second extraction and a 57.7-second search/check, with `title_not_in_quote` and `field_scope` diagnostics. Without a matching request ID, that sequence cannot be conclusively assigned to the user's run or used to replace the user's approximately three-minute observation. Candidate quality, text/identity matching and long waits remain material product limitations. No decision rules, test expectations, registry entries or environment variables were changed to make this example pass.
+
+## 2026-11-04 iPhone case diagnosis, source reporting, PDF, SAM opt-in and map search (PR #5)
+
+All work below was verified without model calls: **0 paid model calls**, cost not measured. Commits on `codex/submission-demo-prep` after `68a9e5b`: `c371d9f`, `d9eb096`, `b0d8471`, `276d066`, `e9ce73e`, `9e3632b` and this record. Production remained on `d46ab66`; nothing was merged or promoted.
+
+### Reported iPhone check ("제4회 수산제 농경문화제")
+
+- **Official source, independently checked.** The Miryang City tourism calendar on `www.miryang.go.kr` lists 「제4회 수산제 농경문화제」, 2026. 11. 14(토) ~ 11. 15.(일) 10:00~17:00, 수산제 역사공원 일원, **주최: 밀양시**. The page the user identified (`gyeongnamzine.com/10448`) is a magazine article, not the organiser. Neither host is in the registered-source list; no registry entry was added. Registering `go.kr` hosts is a policy decision: government sites also host public boards, so it needs the user's approval and its own tests.
+- **Not preserved:** the user's photo, extraction, model identity quote and response. Everything below uses constructed fixtures and constructed model outputs. It shows mechanisms that *can* produce the reported review; it does not establish which one did.
+- **Observed in this environment:** the article returned HTTP 200, 30,085 bytes, and 2,177 extracted characters (below the 600,000-byte and 22,000-character limits). Its label/value table was flattened into `행사명제4회 수산제농경문화제` and `장소수산제역사공원 일원`. A title glued to its label cannot pass the exact title check (`title_not_in_quote`).
+- **Fixed:** table cells and definition terms now keep a ` | ` boundary (`행사명 | 제4회 수산제농경문화제`); cell text is unchanged. An explicit name row naming another event (`행사명 | …`) now marks another section.
+- **Intentionally still review:** poster spacing (`수산제 농경문화제` vs `수산제농경문화제`), an attached particle (`…문화제가`), an unregistered host, a specific different page heading (the article headline), another edition, institution or event, fabricated quotes and archived pages. `tests/korean-notice.test.ts` covers these, and its tests fail on the previous source and comparison code.
+- **Real registered pages, rechecked offline** with constructed outputs after the table change: NASM L1/L2 and the Seoul internship notice still verify, both GOV.UK notices still verify, and the Engen sub-programme with the general date is still rejected for section scope.
+
+### Per-source reasons and stage timing
+
+- **Per-source reasons.** Results now list each candidate in priority order: could not be read (with the fixed reason), unrelated (not compared), compared, or analysis not finished. Compared sources add authority, an identity category, any section exclusion and the confirmed-quote count. Source-specific warnings moved out of the general list, so one oversized candidate does not read as a failure of every source.
+- **Logs.** `check_timing` now carries the check id, the rejection codes and per-candidate outcome codes; no URLs, notice or source text.
+- **Timing.** Extraction responses return the server duration and reserved calls. The result's expandable "Processing time" panel separates photo preparation, the whole reading request, reading on the server, the user's review time, search, retrieval, comparison, the server total, the whole check request and the model-call count.
+- **Progress screen.** It shows the elapsed time and the measured range so far (about 45–90 s with an official link, longer with search) without a promised completion time.
+- **Link path.** The source-link hint now says a link skips search; the server already makes no search call when a link is given. Existing parallel fetching and comparison were not changed and are not claimed as new.
+- **Not measured.** No new latency measurements were taken. The user's roughly three-minute iPhone observation was not matched to any server log line.
+- **Not changed.** A dropped connection still cancels server work (`request.signal`); resuming would need work to outlive the request, which was not changed before the deadline. No speculative search before the user's review was added.
+
+### PDF sources and SAM 3.1 (opt-in)
+
+- **PDF sources.** An `application/pdf` source with a `%PDF-` signature is read with `unpdf` 1.9.1 (pdf.js 6.4, no eval path), limited to 5 MB and 20 pages, without font faces or XFA. Only its text layer is used and every quote is verified against it exactly.
+  - Scanned PDFs: `source_pdf_no_text`. Damaged or disguised files: `source_format`. More than 20 pages: `source_too_large`.
+  - A PDF's metadata title is never identity evidence.
+  - Tests use synthetic generated PDFs. A live PDF source has not been fetched in production.
+- **SAM 3.1 (opt-in).** "Find the notice automatically" sends the prepared photo once to SAM 3.1 (`/api/locate`), keeps the most confident box covering at least 8% of the frame, and crops with a 2% margin.
+  - It shares the extraction limits and the daily allowance, and the crop can be undone.
+  - Only mocked provider tests ran. **The real SAM response, the default `poster` prompt and its crop quality are unverified.**
+
+### Google Maps search on location cards
+
+- Location comparison cards link each displayed place value to `https://www.google.com/maps/search/?api=1&query=…`. The query is the shown text, trimmed and otherwise unchanged; identical values share one link; synthetic examples have none.
+- `tests/maps.test.ts` covers Korean, English, spaces, `&`, `#`, brackets, `+`, `%`, emoji and Arabic, plus null, empty, whitespace, `—` and over-2,048-character input.
+- `scripts/browser-maps-check.mjs` ran ten fixture results (changed, same, before only, after only, both null, `—`, unverified review, unavailable, two sources, demo):
+  - link counts and decoded queries matched each card's own values, with zero empty or wrong-side searches;
+  - "needs review" badges and warnings stayed;
+  - hrefs and place text were identical in all ten display languages;
+  - there were zero google.com requests before a click (all were recorded and aborted). Mouse click and keyboard Enter each opened a new page requesting the expected URL;
+  - clicks and language changes added no `/api/checks`, `/api/extract` or `/api/demo` requests;
+  - the copied summary held no map URL;
+  - 320, 360 and 390 px in ko, ar and de had no horizontal overflow and 44 px link targets;
+  - axe and page-error counts were zero.
+- During development, axe flagged the existing copy toast while it was animating in (white text over a light measured background). The check was reordered to audit before copying; the toast itself was not changed and was not separately evaluated.
+- **Real devices: unverified.** iPhone Safari and Android Chrome were not tested. Whether the Google Maps app or the web map opens, back navigation and query preservation on a phone are for the user's own check. Desktop Chromium results above are not phone results.
+
+### Commands (local, no Meta key)
+
+The server ran with `liveAvailable: false`.
+
+| Command | Result |
+| --- | --- |
+| `npm run typecheck` | passed |
+| `npm test` | **173/173** |
+| `npm run test:live-harness` | **7/7** |
+| `npm run build` | passed |
+| `npm run test:browser` | **21 groups**, 0 page errors, 0 axe violations |
+| `npm run test:browser-maps` | all checks above passed |
+| `npm audit --omit=dev` | **0 vulnerabilities** |

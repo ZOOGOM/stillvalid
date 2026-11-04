@@ -77,6 +77,9 @@ export type Source = {
   fetchedAt: string;
   authority: "registered" | "unverified";
   institution?: string;
+  // "pdf" when the text came from a PDF's text layer. Its metadata title is
+  // display-only and never identity evidence.
+  format?: "pdf";
 };
 export type Candidate = { url: string; title: string };
 export type FieldComparison = {
@@ -88,6 +91,29 @@ export type FieldComparison = {
   sourceId: string;
   relation: "changed" | "same" | "unclear";
   verified: boolean;
+};
+// What happened to each source candidate, in priority order. Codes only; the
+// URL is the public candidate address already shown to the user.
+export type IdentityCategory =
+  | "ok"
+  | "title"
+  | "institution"
+  | "edition"
+  | "heading"
+  | "archived"
+  | "different"
+  | "quote"
+  | "country";
+export type SourceAttempt = {
+  url: string;
+  outcome: "compared" | "fetch_failed" | "unrelated" | "compare_failed";
+  code?: string;
+  sourceId?: string;
+  authority?: Source["authority"];
+  identity?: IdentityCategory;
+  section?: boolean;
+  verified?: number;
+  fields?: number;
 };
 export type Result = {
   id: string;
@@ -104,6 +130,15 @@ export type Result = {
   warnings: string[];
   lang: ResultLang;
   elapsedMs: number;
+  attempts?: SourceAttempt[];
+  timing?: CheckTiming;
+};
+// Server-side stage durations for one check, in milliseconds.
+export type CheckTiming = {
+  searchMs: number;
+  fetchMs: number;
+  compareMs: number;
+  modelCalls: number;
 };
 
 export function normalize(s: string): string {

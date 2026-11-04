@@ -1,0 +1,44 @@
+# StillValid submission copy
+
+Prepared for the **Indie developer track, individual entrant**, under **Build for Your World**. The entrant confirmed the track. Submission is to be completed later by the entrant; this file does not establish a submitted entry. The authenticated form's field names, character limits and video requirements still need checking.
+
+## Project name and tagline
+
+**StillValid — Saved a notice. Still the same?**
+
+## Short description
+
+StillValid compares a saved notice photo with official web material and shows supported differences with quotes you can inspect. It uses Meta Muse Spark 1.3 for visual transcription, source discovery and structured comparison, followed by deterministic evidence checks. Uncertain results stay open for review.
+
+## Problem and users
+
+People save photos of posters and announcements, then return to them days or weeks later. Deadlines, venues and arrangements may have changed. Finding the official page and checking every detail takes time, especially when the notice is in another language. StillValid helps students, parents, newcomers and anyone relying on a saved public notice revisit the evidence before acting. These are intended users; adoption and user impact have not yet been measured.
+
+## How it works and how Meta is used
+
+Muse Spark 1.3 reads an uploaded notice into a strict JSON schema while preserving original wording. The user reviews the extracted title, issuing institution, edition and fields. StillValid can discover source candidates through Meta's Responses API with built-in web search, or fetch an official HTTPS URL supplied by the user.
+
+Muse Spark compares the notice and retrieved text field by field with exact supporting quotes. A deterministic verifier checks quote presence, registered official-domain authority, notice identity, edition and section context. Page-level archive or withdrawal notices and incomplete or conflicting evidence prevent confirmation. The verifier supplements model interpretation; it does not establish general factual accuracy.
+
+The interface and result labels support ten display languages. Switching display language preserves the original values and evidence and does not require another model call. This is display-language support, not a measured ten-language accuracy claim.
+
+## Technical execution
+
+The mobile web app uses Next.js and React, with server-side Meta calls and Redis-backed session results in the hosted service. Source retrieval checks public HTTPS destinations, pins public DNS answers and rechecks redirects. Results belong to an anonymous session, can be deleted, and expire after 24 hours. StillValid does not persist original image files; image processing for extraction is handled by Meta under its provider terms. Model credentials remain on the server.
+
+Regression tests cover fabricated quotes, different institutions and editions, section mismatches, archive notices, ambiguous dates and unsupported cancellation claims. Browser fixtures exercise upload, cropping, review, result evidence, language switching and error recovery. Automated browser checks do not establish physical iPhone or Android support.
+
+## Demonstration and limitations
+
+The recorded demonstration uses clearly labelled reconstructed notice cards and real production requests against public official pages. The Seoul example returned a verified deadline change, and the GOV.UK example returned a verified match. A deliberately changed date illustrates the comparison workflow; it is not evidence that an institution actually extended that deadline. Built-in synthetic examples are identified separately and make no live lookup. The three-minute silent video uses recorded Chromium mobile-viewport screens and explanatory captions; it is not a physical-phone recording.
+
+Accuracy has not been measured on a human-labelled real-notice set. Earlier controlled production observations took roughly 45–90 seconds from image extraction to a result; a user-reported iPhone camera flow took about three minutes and ended in review. These are observations, not a latency guarantee. Search without an official URL can end in review or unavailability, especially when candidates are attachments or unreadable pages. The official-host registry has limited coverage, and section/title heuristics can reject legitimate notices. If multiple programmes share an unlabelled passage, correct attribution can still depend on the model. One reported iPhone camera flow does not establish comprehensive Safari or HEIC support; Android physical-device testing remains incomplete.
+
+## Entry links
+
+- App: https://stillvalid-beta.vercel.app
+- Repository: https://github.com/ZOOGOM/stillvalid
+- Submission portal: https://cerebralvalley.ai/e/meta-ai-developer-hackathon/hackathon/submit
+- Demo video: add the final uploaded video URL after reviewing the cut and the form's requirements.
+
+The public event page says submissions are due **4 November 2026 at 9:00 PM ET**, equivalent to **5 November at 02:00 UTC / 11:00 KST**. Aim to finish by 10:00 KST; do not rely on an unannounced grace period. Before submitting, confirm the registered individual Indie entry, final video access, repository access and deployed commit, then save the confirmation screen.

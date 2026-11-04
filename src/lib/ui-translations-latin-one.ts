@@ -103,7 +103,8 @@ export const esUiCopy: UiCopy = {
   editText: "Editar el texto y leer de nuevo",
   sourceLabel: "URL del aviso oficial",
   optional: "opcional",
-  sourceHint: "¿No tienes enlace? Buscaremos posibles fuentes oficiales.",
+  sourceHint:
+    "Si añades el enlace de la página oficial, se omite la búsqueda y se compara directamente con esa página, lo que es más rápido. ¿No tienes enlace? Buscaremos posibles fuentes oficiales.",
   sourcePlaceholder: "https://institucion-oficial/aviso",
   mismatch: "Tu región de uso no coincide con el país leído en el aviso.",
   useNoticeCountry: "Usar el país del aviso",
@@ -192,6 +193,15 @@ export const esUiCopy: UiCopy = {
   sourceSelected: "Puedes volver a consultar con la URL oficial.",
   keyboardHint: "Pulsa Escape para cerrar",
   checkImage: "Comprueba que el texto se vea con claridad.",
+  progressElapsed: "Transcurrido: {s}",
+  progressTypical:
+    "En nuestras mediciones, las comprobaciones con enlace oficial tardaron unos 45–90 segundos, y más con búsqueda. No se garantiza el tiempo de finalización.",
+  autoFind: "Buscar el aviso automáticamente",
+  autoFindDone: "Se recortó al área que parece el aviso. Puedes deshacerlo.",
+  autoFindNone: "No se encontró el área del aviso. Recórtala tú.",
+  autoFindUndo: "Deshacer recorte automático",
+  privacyMaps:
+    "Solo cuando tocas una búsqueda en el mapa se envía el texto del lugar elegido a Google Maps, y se aplican las políticas de Google. Antes de tocarla no se hace ninguna solicitud al mapa.",
 };
 
 export const frUiCopy: UiCopy = {
@@ -299,7 +309,7 @@ export const frUiCopy: UiCopy = {
   sourceLabel: "URL de l'annonce officielle",
   optional: "facultatif",
   sourceHint:
-    "Pas de lien ? Nous chercherons des sources officielles possibles.",
+    "Avec le lien de la page officielle, la recherche est ignorée et la comparaison se fait directement avec cette page, ce qui est plus rapide. Pas de lien ? Nous chercherons des sources officielles possibles.",
   sourcePlaceholder: "https://organisme-officiel/annonce",
   mismatch: "Votre région d'utilisation diffère du pays lu dans l'annonce.",
   useNoticeCountry: "Utiliser le pays de l'annonce",
@@ -390,4 +400,14 @@ export const frUiCopy: UiCopy = {
   sourceSelected: "Vous pouvez vérifier à nouveau avec l'URL officielle.",
   keyboardHint: "Appuyez sur Échap pour fermer",
   checkImage: "Vérifiez que le texte est lisible.",
+  progressElapsed: "Écoulé : {s}",
+  progressTypical:
+    "Dans nos mesures, les vérifications avec un lien officiel ont pris environ 45 à 90 secondes, et davantage avec une recherche. La durée n'est pas garantie.",
+  autoFind: "Trouver l'avis automatiquement",
+  autoFindDone:
+    "Recadré sur la zone qui ressemble à l'avis. Vous pouvez annuler.",
+  autoFindNone: "Aucune zone d'avis trouvée. Recadrez vous-même.",
+  autoFindUndo: "Annuler le recadrage automatique",
+  privacyMaps:
+    "Ce n'est que lorsque vous touchez une recherche sur la carte que le texte du lieu choisi est envoyé à Google Maps, sous les règles de Google. Aucune requête cartographique n'est faite avant.",
 };

@@ -50,8 +50,9 @@ export async function POST(request: NextRequest) {
         AbortSignal.any([request.signal, AbortSignal.timeout(130000)]),
       );
       if (notice.country && !isCountry(notice.country)) notice.country = null;
+      // Server-side duration and reserved calls only; no notice content.
       return NextResponse.json(
-        { notice },
+        { notice, timing: { extractMs: Date.now() - started, modelCalls } },
         { headers: { "Cache-Control": "no-store" } },
       );
     } finally {

@@ -296,6 +296,37 @@ export class MetaClient {
     result.title = extractedTitle(result);
     return result;
   }
+  /**
+   * Opt-in only: SAM 3.1 finds the printed notice in a photo so the crop can
+   * be suggested. One model call per tap; the image is not stored. Returns the
+   * best box in the image's own pixels, or null when nothing matched.
+   */
+  async locate(image: string, signal?: AbortSignal): Promise<NoticeBox | null> {
+    validateImage(image);
+    const response = await this.call(
+      "/responses",
+      {
+        model: process.env.SAM_MODEL || "sam-3.1",
+        input: [
+          {
+            type: "message",
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: process.env.SAM_NOTICE_PROMPT || "poster",
+              },
+              { type: "input_image", image_url: image },
+            ],
+          },
+        ],
+        metadata: { include_confidence: "true", mask_encoding: "one_bit" },
+      },
+      signal,
+      30000,
+    );
+    return bestNoticeBox(responseText(response));
+  }
   async discover(
     notice: Notice,
     country: string | null,
@@ -388,4 +419,70 @@ export function candidatesFromResponse(
     }
   }
   return [...unique.values()].slice(0, 3);
+}
+
+export type NoticeBox = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  w: number;
+  h: number;
+  c: number | null;
+};
+
+// Responses output text, whether given as a convenience field or as parts.
+function responseText(response: Record<string, unknown>): string {
+  if (typeof response.output_text === "string") return response.output_text;
+  const output = Array.isArray(response.output) ? response.output : [];
+  return output
+    .flatMap((item) =>
+      item && typeof item === "object" && Array.isArray(item.content)
+        ? item.content
+        : [],
+    )
+    .map((part) =>
+      part && typeof part === "object" && typeof part.text === "string"
+        ? part.text
+        : "",
+    )
+    .join("");
+}
+
+/**
+ * Reads SAM box tokens (<|box;x1=..;y1=..;x2=..;y2=..;w=..;h=..[;c=..]|>) and
+ * keeps the most confident box covering at least 8% of the frame, so a small
+ * label or a sticker is not offered as "the notice".
+ */
+export function bestNoticeBox(text: string): NoticeBox | null {
+  const boxes: NoticeBox[] = [];
+  for (const match of text.matchAll(/<\|box;([^|]*)\|>/g)) {
+    const fields = Object.fromEntries(
+      match[1].split(";").map((pair) => pair.split("=") as [string, string]),
+    );
+    const [x1, y1, x2, y2, w, h] = ["x1", "y1", "x2", "y2", "w", "h"].map(
+      (key) => Number(fields[key]),
+    );
+    const c = fields.c === undefined ? null : Number(fields.c);
+    if (
+      ![x1, y1, x2, y2, w, h].every(Number.isFinite) ||
+      w <= 0 ||
+      h <= 0 ||
+      x2 <= x1 ||
+      y2 <= y1 ||
+      x1 < 0 ||
+      y1 < 0 ||
+      x2 > w ||
+      y2 > h
+    )
+      continue;
+    if (((x2 - x1) * (y2 - y1)) / (w * h) < 0.08) continue;
+    boxes.push({ x1, y1, x2, y2, w, h, c: Number.isFinite(c) ? c : null });
+  }
+  boxes.sort(
+    (a, b) =>
+      (b.c ?? 0) - (a.c ?? 0) ||
+      (b.x2 - b.x1) * (b.y2 - b.y1) - (a.x2 - a.x1) * (a.y2 - a.y1),
+  );
+  return boxes[0] || null;
 }
