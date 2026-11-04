@@ -2773,6 +2773,7 @@ export default function StillValidApp() {
           {dialog === "privacy" && (
             <div className="prose">
               <p>{t.privacyBody}</p>
+              <p>{t.privacyModel}</p>
               <p>{t.privacyAbuse}</p>
               <p>{t.privacyMore}</p>
               <p>{t.privacyMaps}</p>

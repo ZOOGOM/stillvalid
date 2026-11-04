@@ -8,7 +8,7 @@ Prepared for the **Indie developer track, individual entrant**, under **Build fo
 
 ## Short description
 
-StillValid compares a saved notice photo with official web material and shows supported differences with quotes you can inspect. It uses Meta Muse Spark 1.3 for visual transcription, source discovery and structured comparison, followed by deterministic evidence checks. Uncertain results stay open for review.
+StillValid compares a saved notice photo with official web material and shows supported differences with quotes you can inspect. It uses Meta's muse-spark-1.3-contributor model (a lower-priced variant; submitted notices may be used to improve Meta's models under Meta's terms, as the in-app privacy notice states) for visual transcription, source discovery and structured comparison, followed by deterministic evidence checks. Uncertain results stay open for review.
 
 ## Problem and users
 
