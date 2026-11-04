@@ -5,12 +5,20 @@ import { randomUUID } from "node:crypto";
 let phase = "configuration";
 let providerStatus = null;
 async function verify() {
+  // Verify the production key's live catalog before the new deployment can
+  // receive traffic. This GET performs no inference or model reservation.
+  if (process.env.VERCEL_ENV === "production") {
+    phase = "model-catalog";
+    await import("./check-meta.mjs");
+    if (process.exitCode) throw new Error("model_catalog");
+  }
   if (process.env.STILLVALID_VERIFY_DEPLOYMENT !== "1") {
     console.log(JSON.stringify({ hostedVerification: "skipped" }));
     return;
   }
   if (process.env.VERCEL !== "1") throw new Error("hosting_required");
-  const { MetaClient, configured, modelId } = await import("../src/lib/meta.ts");
+  const { MetaClient, configured, stepModel } =
+    await import("../src/lib/meta.ts");
   const { restCommand } = await import("../src/lib/redis-store.ts");
   if (!configured()) throw new Error("not_configured");
 
@@ -52,7 +60,7 @@ async function verify() {
     JSON.stringify({
       hostedVerification: "passed",
       redisReadWriteDelete: true,
-      model: modelId(),
+      model: stepModel("extraction"),
       providerStatus,
       textInferenceTested: true,
       input: "synthetic-diagnostic",

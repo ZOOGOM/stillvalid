@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { MetaClient } from "../src/lib/meta";
+import { MetaClient, modelId, stepModel } from "../src/lib/meta";
 import { comparisonSchema, noticeSchema } from "../src/lib/schema";
 import { resultLanguages } from "../src/lib/languages";
 import { z } from "zod";
@@ -240,7 +240,7 @@ test("Meta structured requests use the documented endpoint, model and JSON schem
       async (input, init) => {
         assert.equal(input, "https://api.meta.ai/v1/chat/completions");
         const body = JSON.parse(String(init?.body));
-        assert.equal(body.model, "muse-spark-1.3-contributor");
+        assert.equal(body.model, modelId());
         assert.equal(body.response_format.type, "json_schema");
         assert.equal(body.response_format.json_schema.strict, true);
         assert.equal(body.messages[0].role, "developer");
@@ -1075,14 +1075,92 @@ test("each step defaults to the lower-priced model and can be overridden per ste
       () => {},
     );
     const previous = process.env.META_EXTRACTION_MODEL;
+    const previousCommon = process.env.META_MODEL;
     try {
       delete process.env.META_EXTRACTION_MODEL;
+      delete process.env.META_MODEL;
       await client.extract("Workshop. Open.", undefined, null);
       process.env.META_EXTRACTION_MODEL = "reader-model";
       await client.extract("Workshop. Open.", undefined, null);
     } finally {
       if (previous === undefined) delete process.env.META_EXTRACTION_MODEL;
       else process.env.META_EXTRACTION_MODEL = previous;
+      if (previousCommon === undefined) delete process.env.META_MODEL;
+      else process.env.META_MODEL = previousCommon;
     }
     assert.deepEqual(models, ["muse-spark-1.3-contributor", "reader-model"]);
+  }));
+
+test("all request steps use step override > shared META_MODEL > contributor default", () =>
+  withTestKey(async () => {
+    const steps = ["extraction", "search", "comparison"] as const;
+    const keys = [
+      "META_MODEL",
+      ...steps.map((s) => `META_${s.toUpperCase()}_MODEL`),
+    ];
+    const saved = new Map(keys.map((key) => [key, process.env[key]]));
+    const sent: string[] = [];
+    const client = new MetaClient(
+      async (url, init) => {
+        const body = JSON.parse(String(init?.body));
+        sent.push(body.model);
+        if (String(url).endsWith("/responses"))
+          return Response.json({ output: [] });
+        const output =
+          body.response_format.json_schema.name === "comparison"
+            ? {
+                same_notice: false,
+                identity_quote: "",
+                country: null,
+                source_role: "unknown",
+                comparisons: [],
+              }
+            : notice;
+        return Response.json({
+          choices: [
+            {
+              finish_reason: "stop",
+              message: { content: JSON.stringify(output) },
+            },
+          ],
+        });
+      },
+      () => {},
+    );
+    const source = {
+      id: "s",
+      url: "https://www.gov.uk/test",
+      title: "Workshop",
+      text: "Workshop. Open.",
+      authority: "registered" as const,
+      fetchedAt: "2026-11-04T00:00:00Z",
+    };
+    const exercise = async (expected: string[]) => {
+      sent.length = 0;
+      assert.deepEqual(steps.map(stepModel), expected);
+      await client.extract(notice.originalText, undefined, null);
+      await client.discover(notice, null);
+      await client.compare(notice, source, "en");
+      assert.deepEqual(sent, expected);
+    };
+    try {
+      for (const key of keys) delete process.env[key];
+      await exercise(steps.map(() => "muse-spark-1.3-contributor"));
+      process.env.META_MODEL = " muse-spark-1.3 ";
+      await exercise(steps.map(() => "muse-spark-1.3"));
+      process.env.META_EXTRACTION_MODEL = "reader-model";
+      process.env.META_SEARCH_MODEL = "search-model";
+      process.env.META_COMPARISON_MODEL = "comparison-model";
+      await exercise(["reader-model", "search-model", "comparison-model"]);
+      for (const step of steps)
+        process.env[`META_${step.toUpperCase()}_MODEL`] = " \t ";
+      await exercise(steps.map(() => "muse-spark-1.3"));
+      process.env.META_MODEL = " \t ";
+      await exercise(steps.map(() => "muse-spark-1.3-contributor"));
+    } finally {
+      for (const [key, value] of saved) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
   }));
