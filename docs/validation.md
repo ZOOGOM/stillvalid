@@ -219,3 +219,25 @@ Live checks on `a9411e6` used **five model calls** (approved limit six). The ses
 | 제4회 수산제 농경문화제, official Miryang City schedule page (`www.miryang.go.kr`, now registered) | Source registered and identity `ok`. Date and place were not verified because their wording differs from the poster (`2026. 11. 14 ~ 15` vs `2026. 11. 14(토) ~ 11. 15.(일) …`; `수산제역사공원 일원` vs `수산제 역사공원 일원(…)`); overall `review` | 58.8 s (fetch 9.3 s, compare 49.1 s) |
 
 SAM 3.1 returned no qualifying box with the default `poster` prompt for either image. The API's raw output is not returned or logged, so it is unknown whether the cause is the prompt, the photos or the response shape. The opt-in button therefore currently says no notice was found and leaves the photo unchanged. This is not a working crop feature yet. Real devices, HEIC and the map app hand-off remain unverified.
+
+### SAM 3.1 diagnosis (`0dc7d2c`)
+
+`/api/locate` now returns and logs the provider response shape only: status, top-level keys, output and part types, output-text length, token counts and each box's share of the frame. It never includes image data, mask payloads or free text. A fixed prompt list (poster, document, paper, sign, notice, flyer) allows diagnosis without forwarding free text.
+
+**Five model calls** were made in production; the session was deleted with HTTP 204.
+
+| Image | Prompt | Response | Box | Confidence |
+| --- | --- | --- | --- | ---: |
+| Seoul notice, camera-style rendering | poster | `completed`, one `message`/`output_text` part, text length 0 (zero matches) | none | — |
+| same | paper | text length 565, one box | 161,166–984,870 of 1080×1440 (37% of frame) | 0.906 |
+| same | document | text length 577, one box | 161,166–984,871 (37%) | 0.902 |
+| NASM poster, camera-style rendering | paper | text length 550, one box | 162,153–966,650 (26%) | 0.824 |
+| same | document | text length 546, one box | 162,153–966,650 (26%) | 0.926 |
+
+**Cause:** the concept prompt. "poster" matched nothing on these printed sheets. The response shape and parser worked as documented.
+
+**Result:**
+- Drawn on the images, both boxes enclose the tilted sheet.
+- The default prompt is now `document`; the change is covered by unit tests.
+- After this change, the default path itself was not called again live.
+- These were rendered test images, not physical camera photos. Behaviour on real photos, in poor light or with several notices in one photo remains unmeasured.
