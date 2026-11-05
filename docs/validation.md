@@ -337,3 +337,35 @@ The faster models were far quicker but misread one character of the Seoul title 
 ## 2026-11-04 production with `muse-spark-1.3-contributor` (`f671f3b`)
 
 Reading, search and comparison default to `muse-spark-1.3-contributor` (the owner's cost decision; see the privacy notice). Same two photos with their official links, twice each, reading then check, one call each: Seoul notice `changed` with a verified deadline 2 of 2, title read correctly ("서울영커리언스") 2 of 2, 32.3 and 35.7 s end to end (reading 16.4–19.8 s, comparison 12.6–13.6 s); Smithsonian fellowship `review` 2 of 2 (identity not confirmed, as with the earlier models), 12.0 and 16.4 s (reading 3.6–4.0 s, comparison 7.6–10.2 s). Median 24.3 s over these four runs versus 26.8 s with `muse-spark-1.3` at minimal effort. Four runs are a small sample: no accuracy claim beyond these outcomes, and the original P50 15 s / P90 30 s target is not shown to be met. Eight model calls.
+
+
+> Historical commit IDs in this section refer to the repository before its history rewrite.
+
+## 2026-11-04 submission refresh and bounded rehearsal on `ae54a88`
+
+Remote `main` and both public aliases reported `ae54a88e62ac17f8e13c97a09dbbb511c3d027e8` with `liveAvailable: true` and model `muse-spark-1.3`. PR #5 was confirmed merged. A new documentation branch was created from that main; no application rules, source registrations, limits or environment variables were changed. The user confirmed that the current iPhone SAM, HEIC and map hand-off checks are **not yet performed**. The earlier physical iPhone camera/result observation remains valid only for its earlier version.
+
+### New production observations
+
+Before running requests, the user was told to expect at most six model calls. This bounded run used **three reserved model calls**, established by returned stage timings and corresponding runtime logs: one SAM call, one extraction and one comparison. A fourth HTTP operation failed before comparison and reserved zero calls. No paid retry followed the failure. The UTC-day total, remaining allowance, tokens and monetary cost were not measured. The existing code default of 300 calls/day and raised hourly test ceilings were left unchanged pending the user's decision about returning to 100.
+
+| Operation                      | Input and observed result                                                                                                                                    | Server timing                                             | Reserved calls |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | -------------: |
+| Optional SAM locator           | Self-designed synthetic four-notice board; four boxes offered, numbered selection, crop and undo observed                                                    | 1,324 ms                                                  |              1 |
+| Seoul photo reading            | Clearly labelled reconstructed card, artificially earlier 31 March deadline; review screen reached                                                           | 15,907 ms                                                 |              1 |
+| Seoul official HTML comparison | `changed`, deadline verified, 31 March → 3 April; `rejected: []`                                                                                             | fetch 1,700 ms; compare 17,932 ms; server total 19,732 ms |              1 |
+| Miryang official HTML check    | Reconstructed text sent directly to checks API, no new image extraction. `unavailable`; one source attempt `fetch_failed:fetch`, no comparisons or map links | fetch 12,009 ms; compare 0 ms                             |              0 |
+
+The Miryang source was `www.miryang.go.kr/tur/sim/EgovSchdulDetail.do` with schedule id `SCHDUL_0000000007990`. A separate read-only request in the workspace retrieved the event date, venue and organiser, but it does not reproduce the hosted DNS-pinned fetch path or establish why that production request failed. Earlier successful Miryang observations are separate measurements. Do not present this new operation as another successful review comparison or a verified source timeout diagnosis.
+
+Client wall times were 17,555 ms for extraction and 21,100 ms for the Seoul check. These observations come from Chromium automation, excluding a physical camera and normal user review time; they do not establish an improvement over the earlier user's approximately three-minute flow. Switching the completed Seoul result to Korean generated zero additional model requests. Both sessions returned HTTP 204 on deletion. No physical iPhone or Android was used in this run.
+
+The capture utility attempted to scroll to a map link after the Miryang retrieval had failed and timed out because no location card existed. That was an automation error, not a page runtime error. It did not cause an additional model call. The response and failure screen were retained; the video uses explicitly labelled local map fixtures for the map UI portion.
+
+### Local checks and demo provenance
+
+On unchanged application code, TypeScript, **179 behavioral/security tests**, **seven evaluation harness tests**, production build and `npm audit --omit=dev` (zero reported vulnerabilities) passed. A production server with both Meta key variables unset ran the browser checks: **21 primary flow groups**, the map suite and **seven locator scenarios** passed, with no recorded page errors or automatic accessibility violations. The map suite used fixed HTTP responses, aborted Google requests, and observed two expected URL requests after click/keyboard activation. It is not real-phone app switching or a new live notice comparison.
+
+The refreshed three-minute silent cut uses production screen captures and explanatory captions, with waiting omitted. Its synthetic board, reconstructed notice, direct-API input and local map fixture are labelled separately. Prior Creative Commons public-photo and PDF observations remain attributed to the earlier dated records. Those photos were not reused in the refreshed cut. The final video link and authenticated submission-form limits remain for the entrant to verify; no upload or submission was performed.
+
+**Later configuration note:** the owner subsequently instructed that the then-current daily call limit of 300 remain unchanged; this historical pending decision is not the present configuration.
