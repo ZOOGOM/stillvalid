@@ -45,7 +45,9 @@ NOTE=[
  (147.2,153.8,'Note',"The current deployment uses Meta's contributor model: what you submit may be used to improve Meta's models. Don't submit anything you wouldn't want shared."),
  (154.4,160.8,'NoteFull','Illustrative animation · Narration and motion graphics generated with AI tools · App recorded on build fbbb841. The live app has since been updated.'),
 ]
-if os.environ.get('SUF')=='_T2': NOTE=[(a,b,'NoteSide' if st=='NoteTop' else st,t) for a,b,st,t in NOTE]
+if os.environ.get('SUF')=='_T2':
+    NOTE=[(a,b,'NoteSide' if st=='NoteTop' else st,t) for a,b,st,t in NOTE]
+    NOTE=[((110.5,116.0,'NoteSide',t) if t.startswith('The same input') else (a,b,st,t)) for a,b,st,t in NOTE]
 ev+=NOTE
 hdr='''[Script Info]
 ScriptType: v4.00+

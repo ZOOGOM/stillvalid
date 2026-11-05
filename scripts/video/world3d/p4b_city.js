@@ -221,12 +221,12 @@ const ROW_MAT = new THREE.ShaderMaterial({ uniforms: { uFade: { value: 1 }, uEye
     float rectA(vec2 f, vec4 r, vec2 aa){ vec2 a = smoothstep(r.xy - aa, r.xy + aa, f) * smoothstep(r.zw + aa, r.zw - aa, f); return a.x * a.y; }
     vec3 roomAt(vec2 q, vec2 hw, vec3 d, float deep, vec3 tint, float seed){
       vec3 id = 1.0 / max(abs(d), vec3(1e-4));
-      float tx = (hw.x - q.x * sign(d.x)) * id.x, ty = (hw.y - q.y * sign(d.y)) * id.y, tz = deep * id.z, t = min(min(tx, ty), tz);
+      float tx = (hw.x - q.x * sign(d.x)) * id.x, ty = (hw.y - q.y * sign(d.y)) * id.y, tz = deep * id.z, t = max(min(min(tx, ty), tz), 0.0);
       vec3 p = vec3(q, 0.0) + d * t; vec3 c;
-      if (t == tz) { c = tint * (0.42 + 0.42 * smoothstep(-hw.y, hw.y, p.y)); float fur = step(p.y, -hw.y + 0.9) * step(0.3, n2(vec2(p.x * 0.7 + seed, 2.0))); c *= 1.0 - 0.55 * fur; }
-      else if (t == ty) { c = d.y > 0.0 ? tint * (0.62 + 0.8 * exp(-dot(p.xz - vec2(0.0, deep * 0.5), p.xz - vec2(0.0, deep * 0.5)) * 0.45)) : tint * 0.22; }
+      if (t >= tz) { c = tint * (0.42 + 0.42 * smoothstep(-hw.y, hw.y, p.y)); float fur = step(p.y, -hw.y + 0.9) * step(0.3, n2(vec2(p.x * 0.7 + seed, 2.0))); c *= 1.0 - 0.55 * fur; }
+      else if (t >= ty) { c = d.y > 0.0 ? tint * (0.62 + 0.8 * exp(-dot(p.xz - vec2(0.0, deep * 0.5), p.xz - vec2(0.0, deep * 0.5)) * 0.45)) : tint * 0.22; }
       else c = tint * (0.30 + 0.22 * (p.z / deep));
-      return c;
+      return clamp(c, vec3(0.0), vec3(3.0));
     }
     void main(){
       if (uFade < 0.999 && h21(gl_FragCoord.xy) > uFade) discard;
@@ -239,8 +239,8 @@ const ROW_MAT = new THREE.ShaderMaterial({ uniforms: { uFade: { value: 1 }, uEye
         vec3 c = mix(vec3(0.0042, 0.0042, 0.005) * (0.55 + 0.9 * n2(vL.xz * 0.35 + s)), alb * vec3(0.022, 0.024, 0.03), par) + vec3(1.0, 0.72, 0.42) * rl * 0.5;
         gl_FragColor = vec4(c, 1.0); return; }
       bool zF = abs(N.z) > 0.5;
-      float a = zF ? vL.x : vL.z, W = zF ? vHalf.x : vHalf.z, Y = vY, vin = max(-dot(vV, N), 1e-3), va = zF ? vV.x : vV.z;
-      vec3 ray = vec3(va, vV.y, vin) / vin;
+      float a = zF ? vL.x : vL.z, W = zF ? vHalf.x : vHalf.z, Y = vY, vin = max(-dot(vV, N), 1e-3), va = zF ? vV.x : vV.z, vLen = max(length(vV), 1e-3);
+      vec3 ray = vec3(clamp(vec2(va, vV.y) / max(vin, vLen * 0.04), vec2(-25.0), vec2(25.0)), 1.0);
       float px = max(max(length(vec2(dFdx(a), dFdy(a))), length(vec2(dFdx(Y), dFdy(Y)))), 1e-4);
       float up = exp(-Y / 7.0), face = zF ? (N.z > 0.0 ? 1.0 : 0.7) : 0.55;
       vec3 light = (vec3(0.020, 0.024, 0.036) + vec3(1.0, 0.63, 0.34) * (0.30 * up + 0.007)) * face;
@@ -274,8 +274,8 @@ const ROW_MAT = new THREE.ShaderMaterial({ uniforms: { uFade: { value: 1 }, uEye
       vec2 q = (f2 - 0.5) * vec2(BW, fh), hw = vec2(BW, fh) * 0.5;
       vec3 inner = lit > 0.5 ? roomAt(q, hw, ray, isGF ? 6.0 : 4.0, tint, s + idx) : roomAt(q, hw, ray, 4.0, vec3(0.012, 0.012, 0.015), s + idx);
       float bl = h21(cid + 2.3 + s), blindY = mix(0.86, 0.34, h21(cid + 4.4 + s));
-      if (!isGF && bl > 0.42) { float bm = smoothstep(blindY - 0.01, blindY + 0.01, f2.y); float slats = 0.82 + 0.18 * sin(f2.y * fh * 62.0) * smoothstep(0.05, 0.015, px); inner = mix(inner, (lit > 0.5 ? tint * 0.34 : vec3(0.014, 0.014, 0.016)) * slats, bm); }
-      float F = 0.05 + 0.65 * pow(1.0 - vin / length(vV), 3.0);
+      if (!isGF && bl > 0.42) { float bm = smoothstep(blindY - 0.01, blindY + 0.01, f2.y); float slats = 0.82 + 0.18 * sin(fract(f2.y) * fh * 62.0) * smoothstep(0.05, 0.015, px); inner = mix(inner, (lit > 0.5 ? tint * 0.34 : vec3(0.014, 0.014, 0.016)) * slats, bm); }
+      float fb0 = clamp(1.0 - vin / vLen, 0.0, 1.0), F = 0.05 + 0.65 * fb0 * fb0 * fb0;
       vec3 refl = vec3(0.030, 0.038, 0.058) * (0.55 + 0.9 * n2(vec2(a * 0.09 + s, Y * 0.04))) + vec3(1.0, 0.65, 0.36) * 0.05 * up;
       vec3 glass = mix(inner, refl, F);
       float mull = isGF ? smoothstep(0.012, 0.006, abs(fract(f2.x * 2.0 + 0.5) - 0.5) / 2.0 - 0.0) : smoothstep(0.012 + aa.x, 0.012, abs(f2.x - 0.5)) ;
@@ -289,7 +289,7 @@ const ROW_MAT = new THREE.ShaderMaterial({ uniforms: { uFade: { value: 1 }, uEye
       float gfrac = (1.0 - 2.0 * mx) * (y1 - y0);
       float patchLit = litF * 3.2 * pow(h21(floor(vec2(a, Y) / vec2(7.0, 6.8)) + s), 3.0);
       vec3 cFar = wall * (1.0 - gfrac) + gfrac * (vec3(0.010, 0.012, 0.018) + vec3(1.0, 0.72, 0.44) * patchLit * (isGF ? 0.42 : 0.2));
-      gl_FragColor = vec4(mix(cFar, c, k), 1.0);
+      gl_FragColor = vec4(clamp(mix(cFar, c, k), vec3(0.0), vec3(4.0)), 1.0);
     }` });
 const ROW_BUILDINGS = (() => {
   const rnd = mulberry32(44), list = [];

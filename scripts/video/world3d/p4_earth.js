@@ -92,6 +92,9 @@ const EARTH_MAT = new THREE.ShaderMaterial({ uniforms: EARTH_U, depthTest: false
         vec3 grain = nc * sp + 0.55 * nc * nc * (sp - 1.0);
         nl = mix(nl, max(grain, vec3(0.0)), mag);
       }
+      // the map has a hard-edged rectangle of fishing-fleet light in the East China Sea: that was the straight 'seam'. Open water here, feathered
+      vec2 ll = vec2(uv.x * 360.0 - 180.0, uv.y * 180.0 - 90.0), sb = smoothstep(vec2(125.6, 29.8), vec2(125.95, 30.15), ll) * smoothstep(vec2(128.9, 33.05), vec2(128.55, 32.8), ll);
+      nl *= 1.0 - sb.x * sb.y;
       nl = max(nl - vec3(0.004, 0.006, 0.012), 0.0);
       float night = 1.0 - smoothstep(-0.10, 0.10, ndl);
       vec3 col = lit + nl * uNight * night + surf * 0.0075;
