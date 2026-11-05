@@ -1,6 +1,6 @@
 <div>
 
-![StillValid — gespeicherte Hinweise mit aktuellen Belegen vergleichen](docs/images/stillvalid-banner.webp)
+![StillValid — gespeicherte Hinweise mit aktuellen Belegen vergleichen](../docs/images/stillvalid-banner.webp)
 
 # StillValid
 
@@ -10,7 +10,7 @@
 
 Vergleiche ein Foto oder einen Text mit aktuellen offiziellen Quellen und sieh Änderungen, Originalzitate und offene Fragen. Ohne Installation oder Registrierung.
 
-[App öffnen](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [README](README.md)
+[App öffnen](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [README](../README.md)
 
 **Languages / 言語 / 언어 / اللغات:**
 
@@ -18,7 +18,7 @@ Vergleiche ein Foto oder einen Text mit aktuellen offiziellen Quellen und sieh �
 
 ## Warum StillValid
 
-- **Das Modell schlägt vor, der Code entscheidet.** Jede Änderung muss durch exakte Zitate belegt sein, die sowohl im Hinweis als auch auf einer offiziellen Seite vorkommen; ein deterministischer Prüfer in [`compare.ts`](src/lib/compare.ts) stuft alles andere als „Prüfung nötig“ ein.
+- **Das Modell schlägt vor, der Code entscheidet.** Jede Änderung muss durch exakte Zitate belegt sein, die sowohl im Hinweis als auch auf einer offiziellen Seite vorkommen; ein deterministischer Prüfer in [`compare.ts`](../src/lib/compare.ts) stuft alles andere als „Prüfung nötig“ ein.
 - **Nur offizielle Quellen.** Blogs, soziale Netzwerke und Suchausschnitte zählen nie als Beleg. Ein im Hinweis gedruckter `go.kr`/`gov`-Link wird vorausgefüllt; sonst schlägt Metas integrierte Websuche echte Seiten vor.
 - **Durchgängig mit Meta-Modellen gebaut.** Muse Spark liest, sucht und vergleicht; SAM 3.1 findet den Hinweis auf einer vollen Pinnwand; Ergebnisse erscheinen in zehn Sprachen ohne zusätzliche Modellaufrufe.
 
@@ -32,7 +32,7 @@ Synthetisches Beispiel: Ein fiktiver Bibliothekshinweis nennt den 4. November al
 
 Aufnahmen der echten Produktionsoberfläche vom 5. November 2026 (KST), in Chromium mit mobiler Breite. Das Ergebnis ist ein gekennzeichnetes synthetisches Beispiel, keine echte Prüfung und kein iPhone-Foto. Die Oberfläche ist deutsch; die Originalwerte des Beispiels bleiben englisch.
 
-<p align="center"><img src="docs/screenshots/readme/de-home.jpg" width="310" alt="Einblicke in die App: StillValid"><img src="docs/screenshots/readme/de-result.jpg" width="310" alt="Anwendungsbeispiel: StillValid"></p>
+<p align="center"><img src="../docs/screenshots/readme/de-home.jpg" width="310" alt="Einblicke in die App: StillValid"><img src="../docs/screenshots/readme/de-result.jpg" width="310" alt="Anwendungsbeispiel: StillValid"></p>
 
 ## So funktioniert die Nutzung
 
@@ -85,7 +85,7 @@ Kleine Stichproben älterer Versionen mit rekonstruierten öffentlichen Hinweise
 | `muse-spark-1.3-contributor` · Seoul + Smithsonian · 4 runs | median 24.3 s; Seoul `changed` 2/2, Smithsonian `review` 2/2 |
 | `muse-spark-1.3` · minimal · 4 runs | median 26.8 s |
 
-[Validation record](docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b)
+[Validation record](../docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b)
 
 ## API und Konfiguration
 
@@ -132,7 +132,7 @@ npm run test:browser-early
 npm run test:browser-image
 ```
 
-[Validation / 검증 기록](docs/validation.md) · [Evaluation / 평가](docs/evaluation.md) · [Deployment / 배포](docs/deployment.md) · [Acceptance / 확인표](docs/acceptance.md) · [Performance / 성능](docs/performance.md) · [README screenshot provenance](docs/screenshots/readme/README.md) · [.env.example](.env.example) · [MIT](LICENSE)
+[Validation / 검증 기록](../docs/validation.md) · [Evaluation / 평가](../docs/evaluation.md) · [Deployment / 배포](../docs/deployment.md) · [Acceptance / 확인표](../docs/acceptance.md) · [Performance / 성능](../docs/performance.md) · [README screenshot provenance](../docs/screenshots/readme/README.md) · [.env.example](../.env.example) · [MIT](../LICENSE)
 
 ## Lizenz
 

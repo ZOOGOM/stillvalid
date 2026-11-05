@@ -1,6 +1,6 @@
 <div dir="rtl">
 
-![StillValid — قارن الإعلانات المحفوظة بالأدلة الحالية](docs/images/stillvalid-banner.webp)
+![StillValid — قارن الإعلانات المحفوظة بالأدلة الحالية](../docs/images/stillvalid-banner.webp)
 
 # StillValid
 
@@ -10,7 +10,7 @@
 
 قارن صورة الإعلان أو نصه بالمصادر الرسمية الحالية، واطّلع على التغييرات والاقتباسات وما يحتاج إلى تأكيد. لا يلزم تثبيت أو تسجيل حساب.
 
-[افتح التطبيق](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [README](README.md)
+[افتح التطبيق](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [README](../README.md)
 
 **Languages / 言語 / 언어 / اللغات:**
 
@@ -18,7 +18,7 @@
 
 ## لماذا StillValid
 
-- **النموذج يقترح والكود يقرر.** يجب أن يستند كل تغيير إلى اقتباسات حرفية موجودة في الإعلان وفي صفحة رسمية معًا؛ ويعيد المدقق الحتمي في [`compare.ts`](src/lib/compare.ts) كل ما عدا ذلك إلى «يحتاج مراجعة».
+- **النموذج يقترح والكود يقرر.** يجب أن يستند كل تغيير إلى اقتباسات حرفية موجودة في الإعلان وفي صفحة رسمية معًا؛ ويعيد المدقق الحتمي في [`compare.ts`](../src/lib/compare.ts) كل ما عدا ذلك إلى «يحتاج مراجعة».
 - **المصادر الرسمية فقط.** المدونات ووسائل التواصل وملخصات البحث لا تُعد دليلًا أبدًا. يُملأ رابط `go.kr`/`gov` المطبوع على الإعلان تلقائيًا، وإلا يقترح بحث الويب المدمج من Meta صفحات حقيقية.
 - **مبني بالكامل بنماذج Meta.** يقرأ Muse Spark ويبحث ويقارن، ويحدد SAM 3.1 الإعلان على لوحة مزدحمة، وتُعرض النتائج بعشر لغات دون استدعاءات إضافية للنموذج.
 
@@ -32,7 +32,7 @@
 
 لقطات من واجهة الإنتاج الفعلية في 5 نوفمبر 2026 بتوقيت كوريا، عبر Chromium بعرض هاتف. النتيجة مثال اصطناعي معلن وليست فحصًا حقيقيًا أو صورة ملتقطة بجهاز iPhone. الواجهة بالعربية وتبقى القيم الأصلية للمثال بالإنجليزية.
 
-<p align="center"><img src="docs/screenshots/readme/ar-home.jpg" width="310" alt="شاشات التطبيق: StillValid"><img src="docs/screenshots/readme/ar-result.jpg" width="310" alt="مثال للاستخدام: StillValid"></p>
+<p align="center"><img src="../docs/screenshots/readme/ar-home.jpg" width="310" alt="شاشات التطبيق: StillValid"><img src="../docs/screenshots/readme/ar-result.jpg" width="310" alt="مثال للاستخدام: StillValid"></p>
 
 ## طريقة الاستخدام
 
@@ -85,7 +85,7 @@
 | `muse-spark-1.3-contributor` · Seoul + Smithsonian · 4 runs | median 24.3 s; Seoul `changed` 2/2, Smithsonian `review` 2/2 |
 | `muse-spark-1.3` · minimal · 4 runs | median 26.8 s |
 
-[Validation record](docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b)
+[Validation record](../docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b)
 
 ## واجهة API والإعدادات
 
@@ -132,7 +132,7 @@ npm run test:browser-early
 npm run test:browser-image
 ```
 
-[Validation / 검증 기록](docs/validation.md) · [Evaluation / 평가](docs/evaluation.md) · [Deployment / 배포](docs/deployment.md) · [Acceptance / 확인표](docs/acceptance.md) · [Performance / 성능](docs/performance.md) · [README screenshot provenance](docs/screenshots/readme/README.md) · [.env.example](.env.example) · [MIT](LICENSE)
+[Validation / 검증 기록](../docs/validation.md) · [Evaluation / 평가](../docs/evaluation.md) · [Deployment / 배포](../docs/deployment.md) · [Acceptance / 확인표](../docs/acceptance.md) · [Performance / 성능](../docs/performance.md) · [README screenshot provenance](../docs/screenshots/readme/README.md) · [.env.example](../.env.example) · [MIT](../LICENSE)
 
 ## الترخيص
 

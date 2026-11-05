@@ -1,4 +1,4 @@
-![StillValid — compare saved notices with current evidence](docs/images/stillvalid-banner.webp)
+![StillValid — compare saved notices with current evidence](../docs/images/stillvalid-banner.webp)
 
 # StillValid
 
@@ -8,7 +8,7 @@
 
 Compare a notice photo or pasted text with current official-source material. See **what changed, the supporting quotes, and what still needs confirmation** before you act.
 
-[**Open the app**](https://stillvalid-beta.vercel.app) · [Alternate site](https://stillvalid-zoogom.vercel.app) · [한국어 README](README.ko.md) · [日本語 README](README.ja.md) · [English README](README.en.md) · [Deployment guide](docs/deployment.md)
+[**Open the app**](https://stillvalid-beta.vercel.app) · [Alternate site](https://stillvalid-zoogom.vercel.app) · [한국어 README](README.ko.md) · [日本語 README](README.ja.md) · [English README](README.en.md) · [Deployment guide](../docs/deployment.md)
 
 **Languages / 언어 / 言語 / اللغات:**
 
@@ -18,7 +18,7 @@ Built for the Meta Global AI Developer Hackathon — **Indie developer**, “Bui
 
 ## Why StillValid
 
-- **The model proposes, code decides.** Every change must be backed by exact quotes that exist in both the notice and an official page; a deterministic verifier in [`compare.ts`](src/lib/compare.ts) returns everything else as "needs review".
+- **The model proposes, code decides.** Every change must be backed by exact quotes that exist in both the notice and an official page; a deterministic verifier in [`compare.ts`](../src/lib/compare.ts) returns everything else as "needs review".
 - **Official sources only.** Blogs, social posts and search snippets never count as evidence. A `go.kr`/`gov` link printed on the notice is filled in for you; otherwise Meta's built-in web search proposes real pages.
 - **Built with Meta models end to end.** Muse Spark reads the notice, searches and compares; SAM 3.1 finds the notice on a crowded board; results show in ten languages without extra model calls.
 
@@ -45,26 +45,26 @@ This is the app's **synthetic example**, not an actual deadline change. It makes
 | Real-notice accuracy | The complete ten-case human-reviewed evaluation remains unfinished; individual observations are not an overall accuracy score. |
 | Latency | Historical small-sample measurements vary. The latest request-efficiency changes have not been remeasured with live models; completion time is not guaranteed. |
 
-[Detailed validation](docs/validation.md) · [Evaluation method](docs/evaluation.md) · [Acceptance checklist](docs/acceptance.md)
+[Detailed validation](../docs/validation.md) · [Evaluation method](../docs/evaluation.md) · [Acceptance checklist](../docs/acceptance.md)
 
 ## See the app
 
-**Actual production UI, captured on 5 November 2026 (KST).** The result below is the app's visibly labelled **synthetic example**, not a live verification of a real notice. These are Chromium mobile-width screenshots, not photographs of an iPhone. [Capture details](docs/screenshots/readme/README.md).
+**Actual production UI, captured on 5 November 2026 (KST).** The result below is the app's visibly labelled **synthetic example**, not a live verification of a real notice. These are Chromium mobile-width screenshots, not photographs of an iPhone. [Capture details](../docs/screenshots/readme/README.md).
 
 <p align="center">
-  <img src="docs/screenshots/readme/en-home.jpg" width="310" alt="StillValid home screen with photo upload, camera and paste-text options">
-  <img src="docs/screenshots/readme/en-result.jpg" width="310" alt="Built-in synthetic example showing a changed deadline and location, with its demo label visible">
+  <img src="../docs/screenshots/readme/en-home.jpg" width="310" alt="StillValid home screen with photo upload, camera and paste-text options">
+  <img src="../docs/screenshots/readme/en-result.jpg" width="310" alt="Built-in synthetic example showing a changed deadline and location, with its demo label visible">
 </p>
 
 **Start with a notice → inspect a result with before/after values.** Try the three built-in examples on the home page—changed details, cancellation, and a different edition—without a model call.
 
 ### A historical live-check screen
 
-These screens show an earlier production run comparing **reconstructed text** based on a public Seoul notice with its official page. The earlier deadline in the input was deliberately changed for the test; it does not establish a real historical deadline change. The code and deployment have since changed, so this is not evidence of current performance. [Experiment record](docs/validation.md).
+These screens show an earlier production run comparing **reconstructed text** based on a public Seoul notice with its official page. The earlier deadline in the input was deliberately changed for the test; it does not establish a real historical deadline change. The code and deployment have since changed, so this is not evidence of current performance. [Experiment record](../docs/validation.md).
 
 <p align="center">
-  <img src="docs/screenshots/readme/en-3-review.png" width="310" alt="Earlier production review of reconstructed Seoul notice text">
-  <img src="docs/screenshots/readme/en-4-result.png" width="310" alt="Earlier production result comparing a deliberately altered test deadline with the official page">
+  <img src="../docs/screenshots/readme/en-3-review.png" width="310" alt="Earlier production review of reconstructed Seoul notice text">
+  <img src="../docs/screenshots/readme/en-4-result.png" width="310" alt="Earlier production result comparing a deliberately altered test deadline with the official page">
 </p>
 
 ## Check a notice in five steps
@@ -83,8 +83,8 @@ These screens show an earlier production run comparing **reconstructed text** ba
 The input is illustrative text. The evidence card is from the built-in synthetic example; it is not the result of running that input through a model.
 
 <p align="center">
-  <img src="docs/screenshots/readme/en-input.jpg" width="310" alt="Text input containing a notice explicitly labelled as a synthetic example">
-  <img src="docs/screenshots/readme/en-evidence.jpg" width="310" alt="Expanded synthetic example card showing both the original and retrieved deadline quotations">
+  <img src="../docs/screenshots/readme/en-input.jpg" width="310" alt="Text input containing a notice explicitly labelled as a synthetic example">
+  <img src="../docs/screenshots/readme/en-evidence.jpg" width="310" alt="Expanded synthetic example card showing both the original and retrieved deadline quotations">
 </p>
 
 </details>
@@ -106,7 +106,7 @@ The input is illustrative text. The evidence card is from the built-in synthetic
 <details>
 <summary><strong>View language and region settings</strong></summary>
 
-<p align="center"><img src="docs/screenshots/readme/en-settings.jpg" width="360" alt="Actual settings panel with display-language and optional region controls"></p>
+<p align="center"><img src="../docs/screenshots/readme/en-settings.jpg" width="360" alt="Actual settings panel with display-language and optional region controls"></p>
 
 Language changes update the UI and copied summary without translating evidence or rerunning the same factual check. Region memory is opt-in and can be cleared. Location detection never sets the notice's country.
 
@@ -149,7 +149,7 @@ flowchart LR
 
 SAM 3.1 can locate the notice before reading when requested. The Spark stages use `muse-spark-1.3-contributor` by default; extraction/comparison use Chat Completions with strict JSON schemas, and source search uses Responses with built-in web search.
 
-The model proposes comparisons; [`compare.ts`](src/lib/compare.ts) verifies them:
+The model proposes comparisons; [`compare.ts`](../src/lib/compare.ts) verifies them:
 
 - **Quotes must exist** in the notice and source, with only permitted spacing normalisation. Search snippets and model guesses cannot substitute for fetched evidence.
 - **Authority and identity must match.** A registered official domain is necessary for confirmation, but insufficient on its own. Title, institution, edition and section scope are checked; resident-content paths, other editions and archive/withdrawal markers can prevent verification.
@@ -169,7 +169,7 @@ These checks constrain model output; they do not establish general accuracy or r
 | Earlier parallel comparison | The first two eligible pages can begin comparison as they arrive while final source selection retains priority order. Exact redirect duplicates share a comparison. |
 | Smaller unnecessary input | Blank white margins and marked page navigation are reduced while notice text is retained; stable prompt-cache keys and minimal reasoning apply to the Spark stages. |
 
-**There is no guaranteed completion time.** Previous small-sample tests varied substantially; the newest request-efficiency changes have passed offline regression checks but have not had a new live-model latency study. The median 15-second / p90 30-second goals are not established as achieved. [Performance details](docs/performance.md) · [Dated validation record](docs/validation.md).
+**There is no guaranteed completion time.** Previous small-sample tests varied substantially; the newest request-efficiency changes have passed offline regression checks but have not had a new live-model latency study. The median 15-second / p90 30-second goals are not established as achieved. [Performance details](../docs/performance.md) · [Dated validation record](../docs/validation.md).
 
 The app keeps input on timeout. A received result survives a late stream failure, and a stored result can be recovered without rerunning the model. Browser ceilings are 150 seconds for reading, 200 seconds for checking and 80 seconds for locating; these are failure limits, not expected wait times.
 
@@ -177,9 +177,9 @@ The app keeps input on timeout. A received result survives a late stream failure
 
 **Under Meta's terms, what you send to the default contributor model (your photo or text and the model's response) is used to train future Meta models.** The app explains this in all ten display languages. Deleting a StillValid result does not delete provider-held data.
 
-- StillValid does not persist original image files. Session-owned results and required text/quotes have a 24-hour expiry policy and can be deleted. The reading cache is tab-memory only. [Storage implementation](src/lib/redis-store.ts).
+- StillValid does not persist original image files. Session-owned results and required text/quotes have a 24-hour expiry policy and can be deleted. The reading cache is tab-memory only. [Storage implementation](../src/lib/redis-store.ts).
 - Model keys stay server-side. Source retrieval validates HTTPS, public addresses and every redirect, with DNS-to-connection pinning. Notice/source text, credentials, cookies and raw IP addresses are not written to application diagnostic logs.
-- Default ceilings: **300 model calls per UTC day**, 3 concurrent jobs globally, 10 starts per minute globally, 60 extractions and 40 checks per session/hour, and 200 starts per network/hour. These are request limits, **not a money cap**. [Limit definitions](src/lib/limits.ts).
+- Default ceilings: **300 model calls per UTC day**, 3 concurrent jobs globally, 10 starts per minute globally, 60 extractions and 40 checks per session/hour, and 200 starts per network/hour. These are request limits, **not a money cap**. [Limit definitions](../src/lib/limits.ts).
 
 | Evidence | Status as of 5 November 2026 (KST) |
 |---|---|
@@ -188,7 +188,7 @@ The app keeps input on timeout. A received result survives a late stream failure
 | Physical devices | One earlier user-reported iPhone camera/result flow exists. Comprehensive current iPhone/Android, Safari HEIC and map-app/back-navigation checks remain incomplete. |
 | Accuracy and latency | Controlled historical observations exist; the complete 10-case real-notice evaluation and representative latency study remain unfinished. Ten display languages do not establish ten-language verification accuracy. |
 
-Script-only pages, scanned PDFs, ambiguous identity and unsupported cancellation wording can remain unverified. This app does not decide eligibility, provide emergency guidance or perform medical/legal judgement. [Acceptance checklist](docs/acceptance.md) · [Evaluation method](docs/evaluation.md).
+Script-only pages, scanned PDFs, ambiguous identity and unsupported cancellation wording can remain unverified. This app does not decide eligibility, provide emergency guidance or perform medical/legal judgement. [Acceptance checklist](../docs/acceptance.md) · [Evaluation method](../docs/evaluation.md).
 
 ## Developer notes: the processing pipeline
 
@@ -222,18 +222,18 @@ Spark model resolution is **step variable → META_MODEL → default**, and reas
 4. Do not fill in ambiguous dates or missing years, times or time zones. Cancellation must be an explicit current assertion about the same event.
 5. With no readable source the result is unavailable; unverified fields, missing coverage, source conflict or other blockers can require review. If the checks pass, statuses are considered in cancellation, deadline passed, changed and matched order.
 
-Section detection relies on page structure and text. When different notices share an unlabelled section, model interpretation can still affect scope. See the [validation record](docs/validation.md) for counterexamples and regression coverage.
+Section detection relies on page structure and text. When different notices share an unlabelled section, model interpretation can still affect scope. See the [validation record](../docs/validation.md) for counterexamples and regression coverage.
 
 ### Security and recovery design
 
 - Source fetches allow credential-free HTTPS on port 443, block private/reserved addresses and internal hosts, pin connections to DNS results and recheck every redirect. A generic forward proxy fails closed.
-- Writes require same-origin requests and an HTTP-only anonymous session. CSP and frame restrictions are in [configuration](next.config.ts). Hosted runs use shared Redis; a single server can use SQLite.
+- Writes require same-origin requests and an HTTP-only anonymous session. CSP and frame restrictions are in [configuration](../next.config.ts). Hosted runs use shared Redis; a single server can use SQLite.
 - The **global** work limit is three concurrent jobs and ten starts per minute; session-hour and network-hour limits are separate. A work lease is released when execution ends, not merely when its result is deleted.
 - Check responses stream NDJSON with a heartbeat every ten seconds. The browser stops after 45 seconds without bytes. A received result survives later stream errors, and a saved result can be recovered without another model call.
 
 ### Historical observations and outstanding work
 
-These are small observations on earlier production versions using **reconstructed public notices**. The photo-like inputs were rendered images, not physical iPhone camera photos. They were not measured after the latest request-efficiency changes and cannot establish general accuracy or current latency. [Original record](docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b).
+These are small observations on earlier production versions using **reconstructed public notices**. The photo-like inputs were rendered images, not physical iPhone camera photos. They were not measured after the latest request-efficiency changes and cannot establish general accuracy or current latency. [Original record](../docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b).
 
 | Observation | Result | Scope |
 |---|---|---|
@@ -281,7 +281,7 @@ Open `http://localhost:3000`. Synthetic examples work without a Meta key. For li
 | `DATABASE_PATH` | SQLite path for a single server. |
 | `STILLVALID_VERIFY_DEPLOYMENT` | Opt-in hosting probe; `1` performs a real paid extraction. Keep `0` unless deliberately testing it. |
 
-Environment changes need redeployment. Review the ten-language privacy notice before changing model variants. `/api/status` exposes the deployed SHA, effective models and reasoning settings—not proof that an inference succeeded. See [.env.example](.env.example) and [deployment](docs/deployment.md).
+Environment changes need redeployment. Review the ten-language privacy notice before changing model variants. `/api/status` exposes the deployed SHA, effective models and reasoning settings—not proof that an inference succeeded. See [.env.example](../.env.example) and [deployment](../docs/deployment.md).
 
 </details>
 
@@ -302,13 +302,13 @@ npm run test:browser-early
 npm run test:browser-image
 ```
 
-The default README and the English guide contain the same content. After editing either file, compare them before committing:
+The default README and the English guide contain the same content with links adjusted for their locations. After editing either file, compare them before committing:
 
 ```bash
-git diff --no-index -- README.md README.en.md
+node scripts/check-readme-sync.mjs
 ```
 
-No output means the files match; a difference makes the command exit with a non-zero status. This is a manual check, not an automated CI gate.
+The command reports whether their content matches after resolving relative links; a mismatch exits with a non-zero status. This is a manual check, not an automated CI gate.
 
 Set `CHROMIUM_PATH` if Chromium is not at `/usr/bin/chromium`. These browser suites use fixtures and make no model calls. They do not replace physical-device testing or establish full accessibility conformance. `npm run verify:meta` is a read-only model-catalog check requiring a key; live evaluation and the opt-in hosting probe can incur model costs.
 
@@ -320,12 +320,12 @@ Set `CHROMIUM_PATH` if Chromium is not at `/usr/bin/chromium`. These browser sui
 | `GET /api/checks/{id}`, `DELETE /api/checks/{id}` | Read or delete/cancel a session-owned result. |
 | `DELETE /api/session` | Delete the session's results. |
 
-Start in [`app.tsx`](src/components/app.tsx), [`meta.ts`](src/lib/meta.ts), [`compare.ts`](src/lib/compare.ts), [`source-planning.ts`](src/lib/source-planning.ts), [`source.ts`](src/lib/source.ts) and [`request-efficiency.ts`](src/lib/request-efficiency.ts). Storage adapters, limits and language dictionaries live under `src/lib`; tests and browser scripts live under `tests` and `scripts`.
+Start in [`app.tsx`](../src/components/app.tsx), [`meta.ts`](../src/lib/meta.ts), [`compare.ts`](../src/lib/compare.ts), [`source-planning.ts`](../src/lib/source-planning.ts), [`source.ts`](../src/lib/source.ts) and [`request-efficiency.ts`](../src/lib/request-efficiency.ts). Storage adapters, limits and language dictionaries live under `src/lib`; tests and browser scripts live under `tests` and `scripts`.
 
-Vercel's Git integration builds pushes to connected branches. GitHub Pages alone cannot run the protected server routes. A Dockerfile and Compose configuration are also included. [Deployment guide](docs/deployment.md).
+Vercel's Git integration builds pushes to connected branches. GitHub Pages alone cannot run the protected server routes. A Dockerfile and Compose configuration are also included. [Deployment guide](../docs/deployment.md).
 
 </details>
 
 ## License
 
-Original source code is [MIT](LICENSE). Third-party libraries, models and external content retain their own terms. The app footer remains **Copyright 2026 Zoogom. All rights reserved.**
+Original source code is [MIT](../LICENSE). Third-party libraries, models and external content retain their own terms. The app footer remains **Copyright 2026 Zoogom. All rights reserved.**

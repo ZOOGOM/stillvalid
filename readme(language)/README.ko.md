@@ -1,4 +1,4 @@
-![StillValid — 저장한 안내와 현재 근거 비교](docs/images/stillvalid-banner.webp)
+![StillValid — 저장한 안내와 현재 근거 비교](../docs/images/stillvalid-banner.webp)
 
 # StillValid · 지금도 맞나요
 
@@ -8,7 +8,7 @@
 
 공고 사진이나 붙여 넣은 글을 현재 공식 자료와 비교합니다. 행동하기 전에 **바뀐 내용, 원문 근거, 아직 확인해야 할 점**을 함께 살펴보세요.
 
-[**앱 열기**](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [日本語](README.ja.md) · [프로젝트 소개](README.md) · [배포 가이드](docs/deployment.md)
+[**앱 열기**](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [日本語](README.ja.md) · [프로젝트 소개](../README.md) · [배포 가이드](../docs/deployment.md)
 
 **Languages / 언어 / 言語 / اللغات:**
 
@@ -18,7 +18,7 @@ Meta Global AI Developer Hackathon **Indie developer 개인 부문**, “Build f
 
 ## 왜 StillValid인가
 
-- **모델은 제안하고, 코드가 판정합니다.** 모든 변경은 공고와 공식 페이지 양쪽에 실제로 존재하는 인용문으로 뒷받침되어야 하며, [`compare.ts`](src/lib/compare.ts)의 결정적 검증기가 그 외는 전부 "확인 필요"로 돌려보냅니다.
+- **모델은 제안하고, 코드가 판정합니다.** 모든 변경은 공고와 공식 페이지 양쪽에 실제로 존재하는 인용문으로 뒷받침되어야 하며, [`compare.ts`](../src/lib/compare.ts)의 결정적 검증기가 그 외는 전부 "확인 필요"로 돌려보냅니다.
 - **공식 출처만 근거로 씁니다.** 블로그·SNS·검색 요약은 근거가 되지 않습니다. 공고에 적힌 `go.kr`/`gov` 링크는 자동으로 채워지고, 없으면 Meta 내장 웹 검색이 실제 페이지를 제안합니다.
 - **Meta 모델로 끝까지 만들었습니다.** Muse Spark가 읽고, 찾고, 비교하며, SAM 3.1이 복잡한 게시판에서 공고를 찾고, 결과는 추가 모델 호출 없이 10개 언어로 보입니다.
 
@@ -45,26 +45,26 @@ Meta Global AI Developer Hackathon **Indie developer 개인 부문**, “Build f
 | 실제 공고 정확도 | 사람이 검토한 정답을 사용하는 10건 전체 평가는 미완료입니다. 개별 관찰만으로 전체 정확도를 나타낼 수 없습니다. |
 | 속도 | 이전 소규모 측정의 편차가 컸습니다. 최신 요청 최적화 후 실제 모델로 다시 측정하지 않았으며 완료 시간은 보장되지 않습니다. |
 
-[상세 검증 기록](docs/validation.md) · [평가 방법](docs/evaluation.md) · [구현 확인표](docs/acceptance.md)
+[상세 검증 기록](../docs/validation.md) · [평가 방법](../docs/evaluation.md) · [구현 확인표](../docs/acceptance.md)
 
 ## 화면으로 살펴보기
 
-**2026년 11월 5일(KST)에 직접 캡처한 실제 운영 앱 화면입니다.** 아래 결과는 화면에 표시된 앱 내 **합성 예제**이며, 실제 공고를 모델로 검증한 결과가 아닙니다. 휴대폰 너비의 Chromium 화면으로, iPhone 실기기 사진과는 구분합니다. [캡처 정보](docs/screenshots/readme/README.md).
+**2026년 11월 5일(KST)에 직접 캡처한 실제 운영 앱 화면입니다.** 아래 결과는 화면에 표시된 앱 내 **합성 예제**이며, 실제 공고를 모델로 검증한 결과가 아닙니다. 휴대폰 너비의 Chromium 화면으로, iPhone 실기기 사진과는 구분합니다. [캡처 정보](../docs/screenshots/readme/README.md).
 
 <p align="center">
-  <img src="docs/screenshots/readme/ko-home.jpg" width="310" alt="사진 업로드, 카메라 촬영과 텍스트 입력을 선택할 수 있는 StillValid 시작 화면">
-  <img src="docs/screenshots/readme/ko-result.jpg" width="310" alt="합성 예제 표시와 함께 마감과 장소의 변경 전후를 보여 주는 결과 화면">
+  <img src="../docs/screenshots/readme/ko-home.jpg" width="310" alt="사진 업로드, 카메라 촬영과 텍스트 입력을 선택할 수 있는 StillValid 시작 화면">
+  <img src="../docs/screenshots/readme/ko-result.jpg" width="310" alt="합성 예제 표시와 함께 마감과 장소의 변경 전후를 보여 주는 결과 화면">
 </p>
 
 **공고 넣기 → 변경 전후와 근거 확인.** 첫 화면의 세 가지 예제에서 변경·취소·다른 회차 사례를 체험할 수 있습니다. 예제는 모델을 호출하지 않습니다.
 
 ### 이전 실제 운영 검사의 화면
 
-아래는 이전 운영 버전에서 서울시 공개 공고를 바탕으로 **재구성한 텍스트**와 공식 페이지를 비교했던 화면입니다. 공고의 이전 마감일은 비교 시험을 위해 인위적으로 바꾼 값이며, 실제 과거 마감 변경을 증명하지 않습니다. 이후 코드와 배포가 바뀌었으므로 현재 성능을 뜻하지 않습니다. [실험 기록](docs/validation.md).
+아래는 이전 운영 버전에서 서울시 공개 공고를 바탕으로 **재구성한 텍스트**와 공식 페이지를 비교했던 화면입니다. 공고의 이전 마감일은 비교 시험을 위해 인위적으로 바꾼 값이며, 실제 과거 마감 변경을 증명하지 않습니다. 이후 코드와 배포가 바뀌었으므로 현재 성능을 뜻하지 않습니다. [실험 기록](../docs/validation.md).
 
 <p align="center">
-  <img src="docs/screenshots/readme/ko-3-review.png" width="310" alt="이전 운영 버전에서 재구성한 서울시 공고의 읽기 검토 화면">
-  <img src="docs/screenshots/readme/ko-4-result.png" width="310" alt="시험용으로 바꾼 이전 마감일과 공식 페이지의 값을 비교한 이전 운영 화면">
+  <img src="../docs/screenshots/readme/ko-3-review.png" width="310" alt="이전 운영 버전에서 재구성한 서울시 공고의 읽기 검토 화면">
+  <img src="../docs/screenshots/readme/ko-4-result.png" width="310" alt="시험용으로 바꾼 이전 마감일과 공식 페이지의 값을 비교한 이전 운영 화면">
 </p>
 
 ## 다섯 단계로 확인하기
@@ -83,8 +83,8 @@ Meta Global AI Developer Hackathon **Indie developer 개인 부문**, “Build f
 입력 화면은 설명용 글입니다. 근거 카드는 앱 내 합성 예제에서 가져온 화면이며, 해당 입력을 모델로 처리한 결과가 아닙니다.
 
 <p align="center">
-  <img src="docs/screenshots/readme/ko-input.jpg" width="310" alt="실제 공고가 아닌 합성 예제임을 명시한 텍스트 입력 화면">
-  <img src="docs/screenshots/readme/ko-evidence.jpg" width="310" alt="가진 안내와 조회한 자료의 마감 인용문을 각각 펼친 합성 예제 근거 카드">
+  <img src="../docs/screenshots/readme/ko-input.jpg" width="310" alt="실제 공고가 아닌 합성 예제임을 명시한 텍스트 입력 화면">
+  <img src="../docs/screenshots/readme/ko-evidence.jpg" width="310" alt="가진 안내와 조회한 자료의 마감 인용문을 각각 펼친 합성 예제 근거 카드">
 </p>
 
 </details>
@@ -106,7 +106,7 @@ Meta Global AI Developer Hackathon **Indie developer 개인 부문**, “Build f
 <details>
 <summary><strong>언어·지역 설정 화면 보기</strong></summary>
 
-<p align="center"><img src="docs/screenshots/readme/ko-settings.jpg" width="360" alt="표시 언어와 선택형 사용 지역을 설정하는 실제 운영 앱 화면"></p>
+<p align="center"><img src="../docs/screenshots/readme/ko-settings.jpg" width="360" alt="표시 언어와 선택형 사용 지역을 설정하는 실제 운영 앱 화면"></p>
 
 언어를 바꾸면 화면과 복사할 요약의 표시가 바뀝니다. 근거를 번역하거나 같은 사실 검사를 다시 실행하지 않습니다. 지역 기억은 선택 사항이며 지울 수 있습니다. 위치로 찾은 지역을 공고 국가로 사용하지 않습니다.
 
@@ -149,7 +149,7 @@ flowchart LR
 
 요청하면 읽기 전에 SAM 3.1로 공고 영역을 찾습니다. Spark 단계의 기본 모델은 `muse-spark-1.3-contributor`입니다. 읽기·비교는 엄격한 JSON 스키마를 사용하는 Chat Completions, 검색은 내장 웹 검색을 사용하는 Responses로 처리합니다.
 
-모델이 비교 결과를 제안하면 [`compare.ts`](src/lib/compare.ts)가 다시 검증합니다.
+모델이 비교 결과를 제안하면 [`compare.ts`](../src/lib/compare.ts)가 다시 검증합니다.
 
 - **인용이 실제로 있어야 합니다.** 허용된 공백 정규화 범위 안에서 공고와 출처의 원문에 존재해야 합니다. 검색 요약이나 모델의 추측을 가져온 자료 대신 쓸 수 없습니다.
 - **공식성과 공고 동일성을 확인합니다.** 등록된 공식 도메인은 필요조건일 뿐 충분조건은 아닙니다. 제목·기관·회차·해당 구간의 범위를 확인하며, 주민 게시물 경로·다른 회차·보관 또는 철회 표시가 있으면 검증을 보류할 수 있습니다.
@@ -169,7 +169,7 @@ flowchart LR
 | 비교를 더 일찍 병렬 실행 | 처음 두 후보의 관련 자료가 도착하면 비교를 시작하되 최종 출처 선택 순서는 유지합니다. 동일 페이지로 연결된 정확한 중복은 비교를 재사용합니다. |
 | 불필요한 입력 감소 | 공고 글자를 유지하면서 빈 흰 여백과 표시된 웹페이지 탐색 요소를 줄입니다. Spark 단계에 안정된 프롬프트 캐시 키와 최소 추론 설정을 적용합니다. |
 
-**완료 시간을 보장하지 않습니다.** 이전 소규모 검사에서도 소요 시간이 크게 달랐습니다. 최신 요청 최적화는 오프라인 회귀 검사를 통과했지만, 이후 실제 모델 지연을 다시 측정하지는 않았습니다. 중앙값 15초·p90 30초 목표 달성도 입증되지 않았습니다. [성능 설명](docs/performance.md) · [날짜별 검증 기록](docs/validation.md).
+**완료 시간을 보장하지 않습니다.** 이전 소규모 검사에서도 소요 시간이 크게 달랐습니다. 최신 요청 최적화는 오프라인 회귀 검사를 통과했지만, 이후 실제 모델 지연을 다시 측정하지는 않았습니다. 중앙값 15초·p90 30초 목표 달성도 입증되지 않았습니다. [성능 설명](../docs/performance.md) · [날짜별 검증 기록](../docs/validation.md).
 
 시간이 초과돼도 입력을 유지합니다. 이미 받은 결과는 뒤늦은 연결 오류로 사라지지 않으며, 저장된 결과가 있으면 모델을 다시 부르지 않고 복구할 수 있습니다. 브라우저 대기 상한은 읽기 150초·확인 200초·영역 찾기 80초입니다. 이는 예상 소요 시간이 아니라 실패 처리 상한입니다.
 
@@ -177,9 +177,9 @@ flowchart LR
 
 **Meta 약관에 따라 기본 contributor 모델에 보낸 내용(사진·글과 모델 응답)은 향후 Meta 모델 학습에 사용됩니다.** 앱은 이를 10개 표시 언어로 안내합니다. StillValid에서 결과를 삭제해도 제공자가 보유한 데이터까지 삭제되지는 않습니다.
 
-- StillValid는 원본 이미지 파일을 영구 저장하지 않습니다. 결과와 필요한 텍스트·인용은 익명 세션에 속하며 24시간 만료 정책과 삭제 기능을 적용합니다. 읽기 캐시는 탭 메모리만 사용합니다. [저장소 구현](src/lib/redis-store.ts).
+- StillValid는 원본 이미지 파일을 영구 저장하지 않습니다. 결과와 필요한 텍스트·인용은 익명 세션에 속하며 24시간 만료 정책과 삭제 기능을 적용합니다. 읽기 캐시는 탭 메모리만 사용합니다. [저장소 구현](../src/lib/redis-store.ts).
 - 모델 키는 서버에만 둡니다. 자료를 가져올 때 HTTPS·공개 주소·모든 리디렉션을 검증하고 DNS 조회 결과와 연결 주소를 고정합니다. 앱 진단 로그에는 공고·출처 원문, 인증정보, 쿠키, 원본 IP 주소를 기록하지 않습니다.
-- 기본 한도: **UTC 하루 모델 호출 300회**, 전체 동시 작업 3개·분당 시작 10회, 세션·시간당 읽기 60회·확인 40회, 네트워크·시간당 시작 200회입니다. 호출 횟수 제한이며 **금액 상한은 아닙니다.** [한도 정의](src/lib/limits.ts).
+- 기본 한도: **UTC 하루 모델 호출 300회**, 전체 동시 작업 3개·분당 시작 10회, 세션·시간당 읽기 60회·확인 40회, 네트워크·시간당 시작 200회입니다. 호출 횟수 제한이며 **금액 상한은 아닙니다.** [한도 정의](../src/lib/limits.ts).
 
 | 검증 항목 | 2026년 11월 5일(KST) 기준 |
 |---|---|
@@ -188,7 +188,7 @@ flowchart LR
 | 실제 기기 | 이전에 사용자가 보고한 iPhone 촬영·결과 확인 사례가 있습니다. 현재 버전의 iPhone·Android 종합 검사, Safari HEIC, 지도 앱 연결·복귀 검사는 아직 완결되지 않았습니다. |
 | 정확도·지연 | 통제된 과거 관찰은 있으나, 실제 공고 10건의 완성된 평가와 대표성 있는 속도 측정은 미완료입니다. 표시 언어 10개가 검증 정확도 10개 언어를 입증하지는 않습니다. |
 
-스크립트 전용 페이지·스캔 PDF·모호한 동일성·지원하지 않는 취소 표현은 확인하지 못할 수 있습니다. 자격 판정, 긴급 안내, 의료·법률 판단을 제공하지 않습니다. [구현 확인표](docs/acceptance.md) · [평가 방법](docs/evaluation.md).
+스크립트 전용 페이지·스캔 PDF·모호한 동일성·지원하지 않는 취소 표현은 확인하지 못할 수 있습니다. 자격 판정, 긴급 안내, 의료·법률 판단을 제공하지 않습니다. [구현 확인표](../docs/acceptance.md) · [평가 방법](../docs/evaluation.md).
 
 ## 개발자 노트: 실제 처리 과정
 
@@ -222,18 +222,18 @@ flowchart LR
 4. 불명확한 날짜·없는 연도·시각·시간대는 채워 넣지 않습니다. 취소는 같은 행사에 대한 현재의 명시적 선언이어야 합니다.
 5. 읽을 수 있는 출처가 없으면 확인 불가, 검증되지 않은 항목·누락·출처 충돌 등으로 결론을 확정할 수 없으면 확인 필요로 표시합니다. 조건을 충족한 경우 취소·마감 경과·변경·일치 순으로 상태를 정합니다.
 
-구역 구분은 페이지 구조와 텍스트에 의존합니다. 구분 표지가 없는 여러 공고가 한 구역에 섞이면 모델 해석이 영향을 줄 수 있습니다. 자세한 반례와 회귀 검사는 [검증 기록](docs/validation.md)에 있습니다.
+구역 구분은 페이지 구조와 텍스트에 의존합니다. 구분 표지가 없는 여러 공고가 한 구역에 섞이면 모델 해석이 영향을 줄 수 있습니다. 자세한 반례와 회귀 검사는 [검증 기록](../docs/validation.md)에 있습니다.
 
 ### 보안과 복구 설계
 
 - 출처는 인증정보 없는 HTTPS 443만 허용하며 사설·예약 주소와 내부 호스트를 차단합니다. DNS 조회 결과를 연결에 고정하고 각 리디렉션을 다시 검증합니다. 일반 포워드 프록시 환경에서는 안전하게 실패합니다.
-- 쓰기 요청은 동일 출처와 HTTP 전용 익명 세션으로 보호합니다. CSP·프레임 차단 등의 헤더는 [설정](next.config.ts)에 정의돼 있습니다. 서버리스에서는 공유 Redis, 단일 서버에서는 SQLite를 사용합니다.
+- 쓰기 요청은 동일 출처와 HTTP 전용 익명 세션으로 보호합니다. CSP·프레임 차단 등의 헤더는 [설정](../next.config.ts)에 정의돼 있습니다. 서버리스에서는 공유 Redis, 단일 서버에서는 SQLite를 사용합니다.
 - 전체 작업에 동시 3개·분당 시작 10회의 제한이 있습니다. 세션당 시간 제한과 네트워크 기반 제한은 별도로 적용됩니다. 실행 lease는 실제 작업 종료 시 해제되며, 결과 삭제만으로 다른 작업이 아직 실행 중인 자리를 해제하지 않습니다.
 - 확인 응답은 NDJSON이고 10초마다 heartbeat를 보냅니다. 브라우저가 45초 동안 데이터를 받지 못하면 연결을 중단합니다. 수신한 결과는 이후 스트림 오류로 지워지지 않고, 저장된 결과는 추가 모델 호출 없이 복구할 수 있습니다.
 
 ### 이전 실측과 현재 남은 과제
 
-아래는 이전 운영 버전에서 **공개 공고를 재구성한 입력**으로 수행한 소규모 관찰입니다. 사진처럼 제작한 이미지이며 실제 iPhone 촬영 사진이 아닙니다. 표본이 작고, 현재의 마지막 요청 최적화 이후 속도를 다시 측정한 결과가 아니므로 일반적인 성능이나 정확도를 보장하지 않습니다. [원본 기록](docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b).
+아래는 이전 운영 버전에서 **공개 공고를 재구성한 입력**으로 수행한 소규모 관찰입니다. 사진처럼 제작한 이미지이며 실제 iPhone 촬영 사진이 아닙니다. 표본이 작고, 현재의 마지막 요청 최적화 이후 속도를 다시 측정한 결과가 아니므로 일반적인 성능이나 정확도를 보장하지 않습니다. [원본 기록](../docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b).
 
 | 관찰 | 결과 | 범위 |
 |---|---|---|
@@ -281,7 +281,7 @@ npm run dev
 | `DATABASE_PATH` | 단일 서버의 SQLite 경로. |
 | `STILLVALID_VERIFY_DEPLOYMENT` | 선택형 호스팅 점검. `1`이면 실제 유료 추출을 한 번 수행합니다. 의도적으로 검사할 때 외에는 `0`을 유지하세요. |
 
-환경변수를 바꾸면 재배포해야 합니다. 모델 종류를 바꾸기 전에는 10개 언어의 개인정보 안내를 검토하세요. `/api/status`는 배포 SHA·적용 모델·추론 설정을 보여 주며, 실제 추론 성공을 입증하지는 않습니다. [.env.example](.env.example) · [배포 안내](docs/deployment.md).
+환경변수를 바꾸면 재배포해야 합니다. 모델 종류를 바꾸기 전에는 10개 언어의 개인정보 안내를 검토하세요. `/api/status`는 배포 SHA·적용 모델·추론 설정을 보여 주며, 실제 추론 성공을 입증하지는 않습니다. [.env.example](../.env.example) · [배포 안내](../docs/deployment.md).
 
 </details>
 
@@ -302,13 +302,13 @@ npm run test:browser-early
 npm run test:browser-image
 ```
 
-기본 README와 영문 안내는 같은 내용입니다. 둘 중 하나를 수정한 뒤 커밋 전에 다음 명령으로 차이를 확인하세요.
+기본 README와 영문 안내는 같은 내용이며 상대 링크는 파일 위치에 맞게 다릅니다. 둘 중 하나를 수정한 뒤 커밋 전에 다음 명령으로 확인하세요.
 
 ```bash
-git diff --no-index -- README.md README.en.md
+node scripts/check-readme-sync.mjs
 ```
 
-출력이 없으면 두 파일이 같습니다. 차이가 있으면 종료 상태가 0이 아닙니다. 이 확인은 수동 절차이며 자동 CI 검사는 아닙니다.
+상대 링크를 해석한 후 내용이 같은지 알려 줍니다. 차이가 있으면 종료 상태가 0이 아닙니다. 이 확인은 수동 절차이며 자동 CI 검사는 아닙니다.
 
 Chromium이 `/usr/bin/chromium`에 없다면 `CHROMIUM_PATH`를 지정하세요. 이 브라우저 검사들은 고정 응답을 사용하며 모델 호출을 하지 않습니다. 실기기 검사를 대신하거나 완전한 접근성 준수를 입증하지는 않습니다. `npm run verify:meta`는 키가 필요한 읽기 전용 모델 목록 확인입니다. 실제 평가와 선택형 호스팅 점검은 모델 비용이 발생할 수 있습니다.
 
@@ -320,12 +320,12 @@ Chromium이 `/usr/bin/chromium`에 없다면 `CHROMIUM_PATH`를 지정하세요.
 | `GET /api/checks/{id}`, `DELETE /api/checks/{id}` | 세션 소유 결과 조회 또는 삭제·취소. |
 | `DELETE /api/session` | 세션 결과 전체 삭제. |
 
-주요 코드는 [`app.tsx`](src/components/app.tsx), [`meta.ts`](src/lib/meta.ts), [`compare.ts`](src/lib/compare.ts), [`source-planning.ts`](src/lib/source-planning.ts), [`source.ts`](src/lib/source.ts), [`request-efficiency.ts`](src/lib/request-efficiency.ts)입니다. 저장소 어댑터·한도·언어 사전은 `src/lib`, 시험과 브라우저 스크립트는 `tests`·`scripts`에 있습니다.
+주요 코드는 [`app.tsx`](../src/components/app.tsx), [`meta.ts`](../src/lib/meta.ts), [`compare.ts`](../src/lib/compare.ts), [`source-planning.ts`](../src/lib/source-planning.ts), [`source.ts`](../src/lib/source.ts), [`request-efficiency.ts`](../src/lib/request-efficiency.ts)입니다. 저장소 어댑터·한도·언어 사전은 `src/lib`, 시험과 브라우저 스크립트는 `tests`·`scripts`에 있습니다.
 
-Vercel Git 연동은 연결된 브랜치의 push를 빌드합니다. 보호된 서버 API가 필요하므로 GitHub Pages만으로 운영할 수 없습니다. Dockerfile과 Compose 설정도 제공합니다. [배포 안내](docs/deployment.md).
+Vercel Git 연동은 연결된 브랜치의 push를 빌드합니다. 보호된 서버 API가 필요하므로 GitHub Pages만으로 운영할 수 없습니다. Dockerfile과 Compose 설정도 제공합니다. [배포 안내](../docs/deployment.md).
 
 </details>
 
 ## 라이선스
 
-원본 소스 코드는 [MIT](LICENSE)입니다. 외부 라이브러리·모델·콘텐츠에는 각각의 조건이 적용됩니다. 앱 푸터의 **Copyright 2026 Zoogom. All rights reserved.** 문구는 유지합니다.
+원본 소스 코드는 [MIT](../LICENSE)입니다. 외부 라이브러리·모델·콘텐츠에는 각각의 조건이 적용됩니다. 앱 푸터의 **Copyright 2026 Zoogom. All rights reserved.** 문구는 유지합니다.

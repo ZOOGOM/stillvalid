@@ -1,4 +1,4 @@
-![StillValid — 保存したお知らせと現在の根拠を比較](docs/images/stillvalid-banner.webp)
+![StillValid — 保存したお知らせと現在の根拠を比較](../docs/images/stillvalid-banner.webp)
 
 # StillValid
 
@@ -8,7 +8,7 @@
 
 お知らせの写真やテキストを現在の公式資料と照らし合わせ、**変更点・原文の根拠・追加確認が必要な点**を表示するモバイル向けウェブアプリです。
 
-[**アプリを開く**](https://stillvalid-beta.vercel.app) · [予備サイト](https://stillvalid-zoogom.vercel.app) · [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [デプロイガイド（英語）](docs/deployment.md)
+[**アプリを開く**](https://stillvalid-beta.vercel.app) · [予備サイト](https://stillvalid-zoogom.vercel.app) · [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [デプロイガイド（英語）](../docs/deployment.md)
 
 **Languages / 언어 / 言語 / اللغات:**
 
@@ -18,7 +18,7 @@ Meta Global AI Developer Hackathon の **Indie developer 個人部門**、テー
 
 ## StillValid の特長
 
-- **モデルは提案し、コードが判定します。** すべての変更は、お知らせと公式ページの両方に実在する引用で裏付けられる必要があり、[`compare.ts`](src/lib/compare.ts) の決定的な検証器がそれ以外をすべて「要確認」に戻します。
+- **モデルは提案し、コードが判定します。** すべての変更は、お知らせと公式ページの両方に実在する引用で裏付けられる必要があり、[`compare.ts`](../src/lib/compare.ts) の決定的な検証器がそれ以外をすべて「要確認」に戻します。
 - **公式情報源だけを根拠にします。** ブログ・SNS・検索の要約は根拠になりません。お知らせに印刷された `go.kr`/`gov` のリンクは自動入力され、なければ Meta 内蔵のウェブ検索が実在のページを提案します。
 - **Meta のモデルで一貫して構築。** Muse Spark が読み取り・検索・比較を行い、SAM 3.1 が掲示板の中からお知らせを見つけ、結果は追加のモデル呼び出しなしで10言語で表示されます。
 
@@ -45,15 +45,15 @@ Meta Global AI Developer Hackathon の **Indie developer 個人部門**、テー
 | 実際のお知らせの精度 | 人手で正解を確認する10件の評価は未完了です。個別の観察結果は全体の精度を示しません。 |
 | 速度 | 過去の少数サンプルでは結果にばらつきがありました。最新のリクエスト最適化後、実際のモデルによる再測定は行っていません。完了時間は保証できません。 |
 
-[詳細な検証記録（英語）](docs/validation.md) · [評価方法（英語）](docs/evaluation.md) · [実装確認表（英語）](docs/acceptance.md)
+[詳細な検証記録（英語）](../docs/validation.md) · [評価方法（英語）](../docs/evaluation.md) · [実装確認表（英語）](../docs/acceptance.md)
 
 ## 画面を見る
 
-下の画像は実際の運用アプリを **2026年11月5日（KST）** に Chromium のモバイル幅で撮影したものです。結果は明示された**合成サンプル**であり、実際のお知らせをモデルで検証した結果ではありません。iPhone 実機の写真でもありません。[画像の出所](docs/screenshots/readme/README.md)
+下の画像は実際の運用アプリを **2026年11月5日（KST）** に Chromium のモバイル幅で撮影したものです。結果は明示された**合成サンプル**であり、実際のお知らせをモデルで検証した結果ではありません。iPhone 実機の写真でもありません。[画像の出所](../docs/screenshots/readme/README.md)
 
 <p align="center">
-  <img src="docs/screenshots/readme/ja-home.jpg" width="310" alt="写真のアップロードやテキスト入力を選ぶ日本語の開始画面">
-  <img src="docs/screenshots/readme/ja-result.jpg" width="310" alt="架空の申込期限と場所の変更を示す合成サンプルの結果画面">
+  <img src="../docs/screenshots/readme/ja-home.jpg" width="310" alt="写真のアップロードやテキスト入力を選ぶ日本語の開始画面">
+  <img src="../docs/screenshots/readme/ja-result.jpg" width="310" alt="架空の申込期限と場所の変更を示す合成サンプルの結果画面">
 </p>
 
 ホーム画面の3つのサンプルでは、変更・中止・別の回のお知らせをモデル呼び出しなしで試せます。
@@ -64,8 +64,8 @@ Meta Global AI Developer Hackathon の **Indie developer 個人部門**、テー
 入力欄は説明用の架空テキストです。根拠カードは別の組み込み合成サンプルであり、入力欄の内容をモデルで処理した結果ではありません。
 
 <p align="center">
-  <img src="docs/screenshots/readme/ja-input.jpg" width="310" alt="架空の例と明記されたテキスト入力画面">
-  <img src="docs/screenshots/readme/ja-evidence.jpg" width="310" alt="変更前と変更後の期限の引用を開いた合成サンプルのカード">
+  <img src="../docs/screenshots/readme/ja-input.jpg" width="310" alt="架空の例と明記されたテキスト入力画面">
+  <img src="../docs/screenshots/readme/ja-evidence.jpg" width="310" alt="変更前と変更後の期限の引用を開いた合成サンプルのカード">
 </p>
 
 </details>
@@ -97,7 +97,7 @@ Meta Global AI Developer Hackathon の **Indie developer 個人部門**、テー
 <details>
 <summary><strong>表示言語と利用地域の設定画面</strong></summary>
 
-<p align="center"><img src="docs/screenshots/readme/ja-settings.jpg" width="360" alt="表示言語と任意の利用地域を選ぶ日本語の設定画面"></p>
+<p align="center"><img src="../docs/screenshots/readme/ja-settings.jpg" width="360" alt="表示言語と任意の利用地域を選ぶ日本語の設定画面"></p>
 
 言語変更は表示とコピー用要約を切り替えます。同じ事実確認の再実行や引用の翻訳は行いません。地域の記憶は任意で、解除できます。現在地で推定した地域をお知らせの国には設定しません。
 
@@ -138,7 +138,7 @@ flowchart LR
 
 Spark の既定モデルは `muse-spark-1.3-contributor` です。読み取りと比較は厳密な JSON スキーマを使う Chat Completions、検索は内蔵ウェブ検索を使う Responses を利用します。任意で SAM 3.1 による領域検出を先に実行できます。
 
-モデルが比較を提案し、[`compare.ts`](src/lib/compare.ts) が原文引用、登録された公式ドメイン、機関・タイトル・回・該当箇所を再検証します。住民投稿、別の回、アーカイブ・撤回表示は検証を妨げることがあります。欠けた年・時刻・タイムゾーンは補いません。中止は同じイベントに関する現在の明示的な記述が必要で、対応する文法は一部の英語・韓国語表現に限られます。
+モデルが比較を提案し、[`compare.ts`](../src/lib/compare.ts) が原文引用、登録された公式ドメイン、機関・タイトル・回・該当箇所を再検証します。住民投稿、別の回、アーカイブ・撤回表示は検証を妨げることがあります。欠けた年・時刻・タイムゾーンは補いません。中止は同じイベントに関する現在の明示的な記述が必要で、対応する文法は一部の英語・韓国語表現に限られます。
 
 これらはモデル出力を制約する仕組みであり、一般的な正確性の証明や発行元への確認の代わりにはなりません。
 
@@ -149,7 +149,7 @@ Spark の既定モデルは `muse-spark-1.3-contributor` です。読み取り�
 - **取得と比較:** DNS・リダイレクト・取得全体に15秒、個々の通信に12秒の上限があります。最初の2候補は関連資料の到着時に比較を開始できます。完全に同一のリダイレクト先は比較を共有します。
 - **入力の削減:** 条件を満たす白い余白や明示的なナビゲーション要素を減らし、お知らせの本文を残します。安定したキャッシュキーと最小推論設定を使用します。
 
-完了時間は保証できません。最新の最適化後の実モデル速度は未測定で、中央値15秒／90パーセンタイル30秒の目標達成は確認されていません。[性能説明（英語）](docs/performance.md)
+完了時間は保証できません。最新の最適化後の実モデル速度は未測定で、中央値15秒／90パーセンタイル30秒の目標達成は確認されていません。[性能説明（英語）](../docs/performance.md)
 
 ## プライバシーと利用上限
 
@@ -157,7 +157,7 @@ Spark の既定モデルは `muse-spark-1.3-contributor` です。読み取り�
 
 - 元の画像ファイルは StillValid に永続保存されません。結果と必要な原文・引用は匿名セッションに属し、24時間の有効期限と削除機能があります。
 - モデルキーはサーバー専用です。HTTPS・公開 IP・リダイレクトの検証と DNS 固定を行います。アプリの診断ログにお知らせや出典の本文、認証情報、Cookie、元の IP は記録しません。
-- 既定の上限は **UTC 1日300モデル呼び出し**、全体で同時3件・1分間10開始、セッションごとに1時間60読み取り・40確認、ネットワークごとに1時間200開始です。呼び出し数の制限であり、**金額の上限ではありません**。[上限定義](src/lib/limits.ts)
+- 既定の上限は **UTC 1日300モデル呼び出し**、全体で同時3件・1分間10開始、セッションごとに1時間60読み取り・40確認、ネットワークごとに1時間200開始です。呼び出し数の制限であり、**金額の上限ではありません**。[上限定義](../src/lib/limits.ts)
 
 スクリプト専用ページ、スキャン PDF、曖昧な同一性、未対応の中止表現は確認できない場合があります。本アプリは資格判断、緊急案内、医療・法律上の判断を行いません。
 
@@ -193,7 +193,7 @@ Spark の優先順位は **ステップ別変数 → META_MODEL → 既定値**�
 
 ### 過去の観察と残課題
 
-過去の本番版における小規模な観察です。公開情報を再構成した入力を使用し、写真風の画像は実際の iPhone 撮影ではありません。最新最適化後の速度ではなく、一般的な精度・速度を保証しません。[詳細記録（英語）](docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b)
+過去の本番版における小規模な観察です。公開情報を再構成した入力を使用し、写真風の画像は実際の iPhone 撮影ではありません。最新最適化後の速度ではなく、一般的な精度・速度を保証しません。[詳細記録（英語）](../docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b)
 
 | 観察 | 結果 | 範囲 |
 |---|---|---|
@@ -239,7 +239,7 @@ npm run dev
 | `DATABASE_PATH` | 単一サーバーでの SQLite パス。 |
 | `STILLVALID_VERIFY_DEPLOYMENT` | 任意のホスティング検証。`1` は有料の実モデル読み取りを1回実行します。意図的な検査以外は `0` にします。 |
 
-環境変数の変更には再デプロイが必要です。モデル変更前に10言語のプライバシー案内を確認してください。`/api/status` はデプロイ SHA や有効なモデル設定を示しますが、推論成功の証明ではありません。[.env.example](.env.example) · [デプロイガイド（英語）](docs/deployment.md)
+環境変数の変更には再デプロイが必要です。モデル変更前に10言語のプライバシー案内を確認してください。`/api/status` はデプロイ SHA や有効なモデル設定を示しますが、推論成功の証明ではありません。[.env.example](../.env.example) · [デプロイガイド（英語）](../docs/deployment.md)
 
 </details>
 
@@ -260,7 +260,7 @@ npm run test:browser-early
 npm run test:browser-image
 ```
 
-基本 README と英語版は同じ内容です。変更後はコミット前に `git diff --no-index -- README.md README.en.md` で比較します。出力がなければ一致し、差分がある場合は終了ステータスが0以外になります。これは手動確認であり、自動 CI ゲートではありません。
+基本 README と英語版は同じ内容で、相対リンクはファイルの場所に合わせています。変更後、コミット前に `node scripts/check-readme-sync.mjs` で確認します。リンクを解決した後に内容を比較し、差分がある場合は終了ステータスが0以外になります。これは手動確認であり、自動 CI ゲートではありません。
 
 ブラウザ検査は固定レスポンスを使い、モデルを呼び出しません。実機テストや完全なアクセシビリティ準拠の証明にはなりません。`npm run verify:meta` はキーを必要とする読み取り専用モデル一覧確認です。ライブ評価と任意のホスティング検証には費用が発生する場合があります。
 
@@ -272,10 +272,10 @@ npm run test:browser-image
 | `GET /api/checks/{id}`, `DELETE /api/checks/{id}` | セッション所有の結果取得、削除・キャンセル。 |
 | `DELETE /api/session` | セッション結果の一括削除。 |
 
-主なコードは [`app.tsx`](src/components/app.tsx)、[`meta.ts`](src/lib/meta.ts)、[`compare.ts`](src/lib/compare.ts)、[`source-planning.ts`](src/lib/source-planning.ts)、[`source.ts`](src/lib/source.ts)、[`request-efficiency.ts`](src/lib/request-efficiency.ts) です。ストレージ・制限・言語辞書は `src/lib`、テストとブラウザスクリプトは `tests`・`scripts` にあります。
+主なコードは [`app.tsx`](../src/components/app.tsx)、[`meta.ts`](../src/lib/meta.ts)、[`compare.ts`](../src/lib/compare.ts)、[`source-planning.ts`](../src/lib/source-planning.ts)、[`source.ts`](../src/lib/source.ts)、[`request-efficiency.ts`](../src/lib/request-efficiency.ts) です。ストレージ・制限・言語辞書は `src/lib`、テストとブラウザスクリプトは `tests`・`scripts` にあります。
 
 </details>
 
 ## ライセンス
 
-オリジナルのソースコードは [MIT](LICENSE) です。外部ライブラリ、モデル、コンテンツにはそれぞれの条件が適用されます。アプリのフッターは **Copyright 2026 Zoogom. All rights reserved.** のままです。
+オリジナルのソースコードは [MIT](../LICENSE) です。外部ライブラリ、モデル、コンテンツにはそれぞれの条件が適用されます。アプリのフッターは **Copyright 2026 Zoogom. All rights reserved.** のままです。
