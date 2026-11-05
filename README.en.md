@@ -4,7 +4,7 @@
 
 Compare a notice photo or pasted text with current official-source material. See **what changed, the supporting quotes, and what still needs confirmation** before you act.
 
-[**Open the app**](https://stillvalid-beta.vercel.app) · [Alternate site](https://stillvalid-zoogom.vercel.app) · [한국어 README](README.ko.md) · [English README](README.en.md) · [Deployment guide](docs/deployment.md)
+[**Open the app**](https://stillvalid-beta.vercel.app) · [Alternate site](https://stillvalid-zoogom.vercel.app) · [한국어 README](README.ko.md) · [日本語 README](README.ja.md) · [English README](README.en.md) · [Deployment guide](docs/deployment.md)
 
 Built for the Meta Global AI Developer Hackathon — **Indie developer**, “Build for Your World.” No installation or account is required.
 
