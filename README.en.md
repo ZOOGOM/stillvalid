@@ -8,6 +8,29 @@ Compare a notice photo or pasted text with current official-source material. See
 
 Built for the Meta Global AI Developer Hackathon — **Indie developer**, “Build for Your World.” No installation or account is required.
 
+## Quick navigation
+
+[Example](#example-a-saved-deadline) · [Validation at a glance](#validation-at-a-glance) · [Screens](#see-the-app) · [How to use](#check-a-notice-in-five-steps) · [Features](#what-is-available-today) · [Results](#understand-the-result) · [Evidence checks](#how-the-evidence-is-checked) · [Developer notes](#developer-notes-the-processing-pipeline) · [Run locally](#run-and-develop)
+
+## Example: a saved deadline
+
+1. **Saved notice:** a fictional library announcement says the deadline is **4 November**.
+2. **Retrieved material:** the built-in example supplies a fictional update saying **10 November**.
+3. **Result:** StillValid displays the before/after values and the supporting text. In a live check, source authority, identity and evidence must also pass verification; otherwise the overall result can be **needs review**.
+
+This is the app's **synthetic example**, not an actual deadline change. It makes no live lookup or model call.
+
+## Validation at a glance
+
+| Area | Evidence and remaining work |
+|---|---|
+| Automated checks | The latest integration passed type checking, **205 unit tests**, **7 evaluation-harness tests** and the production build. Seven browser suites passed on the preceding application release using fixtures. |
+| Physical devices | One earlier iPhone camera/result flow was reported by a user; comprehensive current iPhone/Android, HEIC and map-app hand-off checks remain incomplete. |
+| Real-notice accuracy | The complete ten-case human-reviewed evaluation remains unfinished; individual observations are not an overall accuracy score. |
+| Latency | Historical small-sample measurements vary. The latest request-efficiency changes have not been remeasured with live models; completion time is not guaranteed. |
+
+[Detailed validation](docs/validation.md) · [Evaluation method](docs/evaluation.md) · [Acceptance checklist](docs/acceptance.md)
+
 ## See the app
 
 **Actual production UI, captured on 5 November 2026 (KST).** The result below is the app's visibly labelled **synthetic example**, not a live verification of a real notice. These are Chromium mobile-width screenshots, not photographs of an iPhone. [Capture details](docs/screenshots/readme/README.md).
@@ -262,6 +285,14 @@ npm run test:browser-prefill
 npm run test:browser-early
 npm run test:browser-image
 ```
+
+The default README and the English guide contain the same content. After editing either file, compare them before committing:
+
+```bash
+git diff --no-index -- README.md README.en.md
+```
+
+No output means the files match; a difference makes the command exit with a non-zero status. This is a manual check, not an automated CI gate.
 
 Set `CHROMIUM_PATH` if Chromium is not at `/usr/bin/chromium`. These browser suites use fixtures and make no model calls. They do not replace physical-device testing or establish full accessibility conformance. `npm run verify:meta` is a read-only model-catalog check requiring a key; live evaluation and the opt-in hosting probe can incur model costs.
 
