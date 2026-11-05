@@ -25,7 +25,7 @@ for(let i=0;i<cuts.length-1;i++){
     const zone=(cls,arr,order)=>arr.length?`<div class="z ${cls}">${arr.sort(order||(()=>0)).map(e=>`<div class="${e.s}">${esc(e.t)}</div>`).join('')}</div>`:'';
     const narr=act.filter(e=>e.s.startsWith('Narr')), note=act.filter(e=>e.s.startsWith('Note')&&e.s!=='NoteSide'), side=act.filter(e=>e.s==='NoteSide');
     const nc=narr.some(e=>e.s==='NarrFull')?'full':'right', oc=note.some(e=>e.s==='NoteFull')?'full':'right';
-    await p.setContent(`<!doctype html><style>${css}</style>${zone('n '+nc,narr)}${zone('o '+oc,note,(x,y)=>(y.s==='NoteTop')-(x.s==='NoteTop'))}${side.map(e=>`<div class="side NoteSide">${esc(e.t)}</div>`).join('')}`);
+    await p.setContent(`<!doctype html><style>${css}</style>${zone('n '+nc,narr)}${zone('o '+oc,note,(x,y)=>(y.s==='NoteTop')-(x.s==='NoteTop'))}${side.length?`<div class="side">${side.sort((x,y)=>x.a-y.a).map(e=>`<div class="NoteSide" style="margin-top:10px">${esc(e.t)}</div>`).join('')}</div>`:''}`);
     await p.screenshot({path:f,omitBackground:true});
   }
   list+=`file '${f}'\nduration ${(c-a).toFixed(4)}\n`;

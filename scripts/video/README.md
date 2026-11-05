@@ -17,3 +17,5 @@ Recordings, rendered overlays, frames, audio and the final video are NOT in this
 - world3d/p*.js: Three.js scene parts (earth, city, cafe, phone, post, timeline, constants); the large p3_assets.js is excluded.
 
 Order: tools/rec.mjs -> tools/card(s).mjs -> overlays/src/render.mjs -> build/column.py -> build/subs.py -> build/subs_render.mjs -> build/audio.py -> build/t0.py -> build/compose.py.
+
+Added after the first commit: `tools/range_render.mjs` renders a frame range of the 3D film; `build/compose_music.py` synthesizes the background music and mixes it with the narration; `build/compose.py` builds the T1 and T2 masters.
