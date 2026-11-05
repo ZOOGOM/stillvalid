@@ -309,7 +309,7 @@ const ko = {
   privacyBody:
     "실시간 확인을 시작하면 입력 내용을 Meta Model API로 보내요. 사진은 브라우저에서 다시 인코딩해 메타데이터를 줄이며 StillValid 서버에는 원본 이미지를 저장하지 않아요. 결과와 필요한 인용문은 익명 세션에 연결되어 24시간 동안 조회할 수 있고 직접 삭제할 수 있어요. 만료 자료는 주기적 정리 또는 다음 서버 기동·요청 시 제거돼요. 외부 제공자의 데이터 처리 조건은 별도로 적용돼요.",
   privacyModel:
-    "비용을 줄이려고 Meta의 muse-spark-1.3-contributor 모델을 사용해요. 이 모델은 Meta의 조건에 따라 입력 내용이 Meta의 모델 개선에 사용될 수 있어요. 자세한 조건은 아래 Meta 안내에서 확인하고, 공유하고 싶지 않은 내용은 넣지 마세요.",
+    "비용을 줄이려고 Meta의 muse-spark-1.3-contributor 모델을 사용해요. Meta의 조건에 따라 이 모델에 보낸 내용(사진·글과 모델 응답)은 향후 Meta 모델 학습에 사용돼요. 자세한 조건은 아래 Meta 안내에서 확인하고, 그렇게 쓰이길 원하지 않는 내용은 넣지 마세요.",
   privacyMore:
     "위치 권한은 현재 위치로 지역 찾기를 누를 때만 요청해요. 좌표는 기기에서 국가 추정에만 사용하고 StillValid 서버로 전송하거나 저장하지 않아요. 감지한 지역은 직접 바꿀 수 있고, 지역 기억은 선택이에요. 학생 기록·민감정보가 담긴 자료는 사용하지 말고 필요한 부분만 잘라 주세요.",
   privacyMeta: "Meta 데이터 처리 안내",
@@ -646,7 +646,7 @@ const en: Copy = {
   privacyBody:
     "Starting a live check sends your input to Meta Model API. Photos are re-encoded in your browser to reduce metadata; StillValid doesn't save original image files. Results and necessary quotes are tied to an anonymous session, available for 24 hours, and can be deleted by you. Expired records are removed by periodic cleanup or the next server start/request. External providers' data handling terms apply separately.",
   privacyModel:
-    "To keep costs low, StillValid uses Meta's muse-spark-1.3-contributor model. Under Meta's terms for this model, what you submit may be used to improve Meta's models. See Meta's notice below for the details, and don't submit anything you don't want shared that way.",
+    "To keep costs low, StillValid uses Meta's muse-spark-1.3-contributor model. Under Meta's terms for this model, what you send (your photo or text and the model's response) is used to train future Meta models. See Meta's notice below for the details, and don't submit anything you don't want used that way.",
   privacyMore:
     "Location permission is requested only when you choose to find your region. Coordinates remain on your device for an approximate country lookup and are not sent to or saved by StillValid. You can correct the region; remembering it is optional. Avoid student records or sensitive content and crop to the relevant public notice.",
   privacyMeta: "Meta data handling",

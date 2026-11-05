@@ -12,6 +12,14 @@ Vergleiche ein Foto oder einen Text mit aktuellen offiziellen Quellen und sieh �
 
 [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [العربية](README.ar.md) · [Русский](README.ru.md)
 
+## Warum StillValid
+
+- **Das Modell schlägt vor, der Code entscheidet.** Jede Änderung muss durch exakte Zitate belegt sein, die sowohl im Hinweis als auch auf einer offiziellen Seite vorkommen; ein deterministischer Prüfer in [`compare.ts`](src/lib/compare.ts) stuft alles andere als „Prüfung nötig“ ein.
+- **Nur offizielle Quellen.** Blogs, soziale Netzwerke und Suchausschnitte zählen nie als Beleg. Ein im Hinweis gedruckter `go.kr`/`gov`-Link wird vorausgefüllt; sonst schlägt Metas integrierte Websuche echte Seiten vor.
+- **Durchgängig mit Meta-Modellen gebaut.** Muse Spark liest, sucht und vergleicht; SAM 3.1 findet den Hinweis auf einer vollen Pinnwand; Ergebnisse erscheinen in zehn Sprachen ohne zusätzliche Modellaufrufe.
+
+**Demo-Video:** in Produktion; der Link wird hier und im Einreichungsformular ergänzt.
+
 ## Anwendungsbeispiel
 
 Synthetisches Beispiel: Ein fiktiver Bibliothekshinweis nennt den 4. November als Frist, eine fiktive Aktualisierung den 10. November. Die App zeigt beide Werte und Belege. Bei einer echten Prüfung müssen Quelle, Identität und Belege zusätzlich verifiziert werden; andernfalls kann das Gesamtergebnis eine Prüfung erfordern. Das Beispiel nutzt weder Live-Suche noch Modellaufruf und belegt keine tatsächliche Friständerung.
@@ -54,7 +62,7 @@ Aufnahmen der echten Produktionsoberfläche vom 5. November 2026 (KST), in Chrom
 
 ## Datenschutz und Nutzungslimits
 
-Nach den Meta-Bedingungen kann das Standardmodell muse-spark-1.3-contributor Eingaben zur Modellverbesserung verwenden. Das Löschen in StillValid löscht keine beim Anbieter gespeicherten Daten. Originalbilddateien werden nicht dauerhaft gespeichert; Ergebnisse und Zitate gehören einer anonymen Sitzung, verfallen nach 24 Stunden und sind löschbar. Schlüssel bleiben auf dem Server. Standard: 300 Modellaufrufe pro UTC-Tag, global drei gleichzeitige Arbeiten und zehn Starts pro Minute; dies ist keine Geldobergrenze.
+Nach den Meta-Bedingungen werden Eingaben an das Standardmodell muse-spark-1.3-contributor zum Training künftiger Meta-Modelle verwendet. Das Löschen in StillValid löscht keine beim Anbieter gespeicherten Daten. Originalbilddateien werden nicht dauerhaft gespeichert; Ergebnisse und Zitate gehören einer anonymen Sitzung, verfallen nach 24 Stunden und sind löschbar. Schlüssel bleiben auf dem Server. Standard: 300 Modellaufrufe pro UTC-Tag, global drei gleichzeitige Arbeiten und zehn Starts pro Minute; dies ist keine Geldobergrenze.
 
 ## Entwicklernotizen
 

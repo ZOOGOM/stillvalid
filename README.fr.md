@@ -12,6 +12,14 @@ Comparez une photo ou un texte avec les sources officielles actuelles et consult
 
 [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [العربية](README.ar.md) · [Русский](README.ru.md)
 
+## Pourquoi StillValid
+
+- **Le modèle propose, le code décide.** Chaque changement doit s’appuyer sur des citations exactes présentes à la fois dans l’annonce et sur une page officielle ; un vérificateur déterministe dans [`compare.ts`](src/lib/compare.ts) renvoie tout le reste en « à vérifier ».
+- **Sources officielles uniquement.** Blogs, réseaux sociaux et extraits de recherche ne comptent jamais comme preuves. Un lien `go.kr`/`gov` imprimé sur l’annonce est pré-rempli ; sinon la recherche web intégrée de Meta propose de vraies pages.
+- **Construit de bout en bout avec les modèles Meta.** Muse Spark lit, cherche et compare ; SAM 3.1 repère l’annonce sur un panneau chargé ; les résultats s’affichent en dix langues sans appel supplémentaire au modèle.
+
+**Vidéo de démonstration :** en cours de production ; le lien sera ajouté ici et dans le formulaire de soumission.
+
 ## Exemple
 
 Exemple synthétique : un avis fictif de bibliothèque indique une date limite au 4 novembre, puis une mise à jour fictive au 10 novembre. Les deux valeurs et leurs citations sont affichées. En situation réelle, la source, l’identité et les preuves doivent aussi être vérifiées ; sinon le résultat peut nécessiter une vérification. Cet exemple ne lance ni recherche réelle ni appel au modèle et ne prouve aucun changement réel.
@@ -54,7 +62,7 @@ Captures de l’interface de production le 5 novembre 2026 (KST), dans Chromium 
 
 ## Confidentialité et limites
 
-Selon les conditions de Meta, le modèle par défaut muse-spark-1.3-contributor peut utiliser les entrées pour améliorer ses modèles. Supprimer un résultat StillValid ne supprime pas les données détenues par le fournisseur. Les images originales ne sont pas conservées ; résultats et citations appartiennent à une session anonyme, expirent après 24 heures et peuvent être supprimés. Les clés restent côté serveur. Limites par défaut : 300 appels par jour UTC, 3 tâches simultanées et 10 démarrages par minute au total ; ce n’est pas un plafond financier.
+Selon les conditions de Meta, le modèle par défaut muse-spark-1.3-contributor utilise les entrées pour entraîner les futurs modèles de Meta. Supprimer un résultat StillValid ne supprime pas les données détenues par le fournisseur. Les images originales ne sont pas conservées ; résultats et citations appartiennent à une session anonyme, expirent après 24 heures et peuvent être supprimés. Les clés restent côté serveur. Limites par défaut : 300 appels par jour UTC, 3 tâches simultanées et 10 démarrages par minute au total ; ce n’est pas un plafond financier.
 
 ## Notes de développement
 

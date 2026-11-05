@@ -189,7 +189,7 @@ export const esUiCopy: UiCopy = {
   privacyBody:
     "Al iniciar una consulta en vivo, tus datos se envían a Meta Model API. Las fotos se recodifican en el navegador para reducir los metadatos; StillValid no guarda los archivos de imagen originales. Los resultados y las citas necesarias se vinculan a una sesión anónima, están disponibles durante 24 horas y puedes eliminarlos. Los registros caducados se eliminan mediante limpieza periódica o al iniciar el servidor o recibir la siguiente solicitud. Las condiciones de tratamiento de datos de proveedores externos se aplican por separado.",
   privacyModel:
-    "Para reducir costes, StillValid usa el modelo muse-spark-1.3-contributor de Meta. Según las condiciones de Meta para este modelo, lo que envíes puede usarse para mejorar los modelos de Meta. Consulta el aviso de Meta más abajo y no envíes nada que no quieras compartir así.",
+    "Para reducir costes, StillValid usa el modelo muse-spark-1.3-contributor de Meta. Según las condiciones de Meta para este modelo, lo que envías (tu foto o texto y la respuesta del modelo) se usa para entrenar futuros modelos de Meta. Consulta el aviso de Meta más abajo y no envíes nada que no quieras que se use así.",
   privacyMore:
     "El permiso de ubicación solo se solicita cuando eliges encontrar tu región. Las coordenadas permanecen en tu dispositivo para estimar el país y StillValid no las envía ni guarda. Puedes corregir la región y recordarla es opcional. Evita registros estudiantiles y contenido sensible; recorta solo el aviso público pertinente.",
   privacyMeta: "Tratamiento de datos de Meta",
@@ -414,7 +414,7 @@ export const frUiCopy: UiCopy = {
   privacyBody:
     "Le lancement d'une vérification en direct envoie votre saisie à Meta Model API. Les photos sont réencodées dans votre navigateur pour réduire les métadonnées ; StillValid ne conserve pas les fichiers image d'origine. Les résultats et les citations nécessaires sont liés à une session anonyme, disponibles pendant 24 heures et peuvent être supprimés par vous. Les données expirées sont supprimées lors d'un nettoyage périodique ou au prochain démarrage du serveur ou à la prochaine demande. Les conditions de traitement des données des prestataires externes s'appliquent séparément.",
   privacyModel:
-    "Pour réduire les coûts, StillValid utilise le modèle muse-spark-1.3-contributor de Meta. Selon les conditions de Meta pour ce modèle, ce que vous envoyez peut servir à améliorer les modèles de Meta. Consultez l’avis de Meta ci-dessous et n’envoyez rien que vous ne voulez pas partager ainsi.",
+    "Pour réduire les coûts, StillValid utilise le modèle muse-spark-1.3-contributor de Meta. Selon les conditions de Meta pour ce modèle, ce que vous envoyez (votre photo ou texte et la réponse du modèle) sert à entraîner les futurs modèles de Meta. Consultez l’avis de Meta ci-dessous et n’envoyez rien que vous ne voulez pas voir utilisé ainsi.",
   privacyMore:
     "L'autorisation de localisation n'est demandée que lorsque vous choisissez de trouver votre région. Les coordonnées restent sur votre appareil pour estimer le pays ; StillValid ne les transmet ni ne les enregistre. Vous pouvez corriger la région et sa mémorisation est facultative. Évitez les dossiers scolaires et les contenus sensibles ; recadrez l'annonce publique utile.",
   privacyMeta: "Traitement des données par Meta",

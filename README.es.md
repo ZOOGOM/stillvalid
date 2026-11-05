@@ -12,6 +12,14 @@ Compara una foto o texto con información oficial actual y consulta cambios, cit
 
 [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [العربية](README.ar.md) · [Русский](README.ru.md)
 
+## Por qué StillValid
+
+- **El modelo propone, el código decide.** Cada cambio debe estar respaldado por citas exactas que existan tanto en el aviso como en una página oficial; un verificador determinista en [`compare.ts`](src/lib/compare.ts) devuelve todo lo demás como «necesita revisión».
+- **Solo fuentes oficiales.** Blogs, redes sociales y resúmenes de búsqueda nunca cuentan como evidencia. Un enlace `go.kr`/`gov` impreso en el aviso se rellena automáticamente; si no, la búsqueda web integrada de Meta propone páginas reales.
+- **Construido de principio a fin con modelos de Meta.** Muse Spark lee, busca y compara; SAM 3.1 localiza el aviso en un tablón lleno; los resultados se muestran en diez idiomas sin llamadas adicionales al modelo.
+
+**Vídeo de demostración:** en producción; el enlace se añadirá aquí y en el formulario de entrega.
+
 ## Ejemplo de uso
 
 Ejemplo sintético: un aviso ficticio de una biblioteca indica el 4 de noviembre como fecha límite y una actualización ficticia indica el 10 de noviembre. La aplicación muestra ambos valores y las citas. En una comprobación real también verifica la fuente, la identidad y las pruebas; si faltan, el resultado puede requerir revisión. El ejemplo no realiza búsquedas ni llamadas al modelo y no demuestra un cambio real.
@@ -54,7 +62,7 @@ Capturas de la interfaz real en producción, el 5 de noviembre de 2026 (KST), en
 
 ## Privacidad y límites de uso
 
-Según las condiciones de Meta, el modelo predeterminado muse-spark-1.3-contributor puede usar lo enviado para mejorar sus modelos. Eliminar resultados en StillValid no borra los datos del proveedor. No se conservan archivos originales de imagen; resultados y citas pertenecen a una sesión anónima, caducan a las 24 horas y se pueden eliminar. Las claves permanecen en el servidor. Límite predeterminado: 300 llamadas por día UTC, 3 trabajos simultáneos y 10 inicios por minuto globales; no es un límite monetario.
+Según las condiciones de Meta, el modelo predeterminado muse-spark-1.3-contributor usa lo enviado para entrenar futuros modelos de Meta. Eliminar resultados en StillValid no borra los datos del proveedor. No se conservan archivos originales de imagen; resultados y citas pertenecen a una sesión anónima, caducan a las 24 horas y se pueden eliminar. Las claves permanecen en el servidor. Límite predeterminado: 300 llamadas por día UTC, 3 trabajos simultáneos y 10 inicios por minuto globales; no es un límite monetario.
 
 ## Notas para desarrollo
 

@@ -12,6 +12,14 @@ Compare a notice photo or pasted text with current official-source material. See
 
 Built for the Meta Global AI Developer Hackathon — **Indie developer**, “Build for Your World.” No installation or account is required.
 
+## Why StillValid
+
+- **The model proposes, code decides.** Every change must be backed by exact quotes that exist in both the notice and an official page; a deterministic verifier in [`compare.ts`](src/lib/compare.ts) returns everything else as "needs review".
+- **Official sources only.** Blogs, social posts and search snippets never count as evidence. A `go.kr`/`gov` link printed on the notice is filled in for you; otherwise Meta's built-in web search proposes real pages.
+- **Built with Meta models end to end.** Muse Spark reads the notice, searches and compares; SAM 3.1 finds the notice on a crowded board; results show in ten languages without extra model calls.
+
+**Demo video:** being produced; the link will be added here and in the submission form.
+
 ## Quick navigation
 
 [Example](#example-a-saved-deadline) · [Validation at a glance](#validation-at-a-glance) · [Screens](#see-the-app) · [How to use](#check-a-notice-in-five-steps) · [Features](#what-is-available-today) · [Results](#understand-the-result) · [Evidence checks](#how-the-evidence-is-checked) · [Developer notes](#developer-notes-the-processing-pipeline) · [Run locally](#run-and-develop)
@@ -163,7 +171,7 @@ The app keeps input on timeout. A received result survives a late stream failure
 
 ## Privacy, limits and current validation
 
-**The default contributor model may use submitted inputs to improve Meta's models under its terms.** The app explains this in all ten display languages. Deleting a StillValid result does not delete provider-held data.
+**Under Meta's terms, what you send to the default contributor model (your photo or text and the model's response) is used to train future Meta models.** The app explains this in all ten display languages. Deleting a StillValid result does not delete provider-held data.
 
 - StillValid does not persist original image files. Session-owned results and required text/quotes have a 24-hour expiry policy and can be deleted. The reading cache is tab-memory only. [Storage implementation](src/lib/redis-store.ts).
 - Model keys stay server-side. Source retrieval validates HTTPS, public addresses and every redirect, with DNS-to-connection pinning. Notice/source text, credentials, cookies and raw IP addresses are not written to application diagnostic logs.
@@ -200,7 +208,7 @@ Browser → Next.js routes → Meta Model API / official HTTPS sources → Redis
 | Compare fields | same | Chat Completions, strict JSON | `META_COMPARISON_MODEL` |
 | Locate a notice, optional | `sam-3.1` | Responses, concept prompt | `SAM_MODEL` |
 
-Spark model resolution is **step variable → META_MODEL → default**, and reasoning defaults to `minimal`. Production builds check the model catalog read-only. Changing a model requires redeployment and review of the privacy notice in all ten languages. Under Meta's terms, inputs to the default contributor model may be used to improve Meta's models.
+Spark model resolution is **step variable → META_MODEL → default**, and reasoning defaults to `minimal`. Production builds check the model catalog read-only. Changing a model requires redeployment and review of the privacy notice in all ten languages. Under Meta's terms, inputs to the default contributor model are used to train future Meta models.
 
 ### How the verdict is assembled
 

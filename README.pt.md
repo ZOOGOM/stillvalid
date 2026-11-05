@@ -12,6 +12,14 @@ Compare uma foto ou texto com fontes oficiais atuais e veja mudanças, citaçõe
 
 [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [العربية](README.ar.md) · [Русский](README.ru.md)
 
+## Por que StillValid
+
+- **O modelo propõe, o código decide.** Toda mudança precisa de citações exatas que existam tanto no aviso quanto em uma página oficial; um verificador determinístico em [`compare.ts`](src/lib/compare.ts) devolve todo o resto como “precisa de revisão”.
+- **Somente fontes oficiais.** Blogs, redes sociais e resumos de busca nunca contam como evidência. Um link `go.kr`/`gov` impresso no aviso é preenchido automaticamente; caso contrário, a busca web integrada da Meta propõe páginas reais.
+- **Construído do início ao fim com modelos da Meta.** O Muse Spark lê, busca e compara; o SAM 3.1 localiza o aviso em um mural cheio; os resultados aparecem em dez idiomas sem chamadas extras ao modelo.
+
+**Vídeo de demonstração:** em produção; o link será adicionado aqui e no formulário de inscrição.
+
 ## Exemplo de uso
 
 Exemplo sintético: um aviso fictício de biblioteca informa prazo em 4 de novembro e uma atualização fictícia informa 10 de novembro. O app mostra os valores e as citações. Numa consulta real, fonte, identidade e evidências também precisam ser verificadas; caso contrário, o resultado pode exigir revisão. O exemplo não faz busca ao vivo nem chamada ao modelo e não prova uma alteração real.
@@ -54,7 +62,7 @@ Capturas da interface real em produção em 5 de novembro de 2026 (KST), no Chro
 
 ## Privacidade e limites
 
-Segundo os termos da Meta, o modelo padrão muse-spark-1.3-contributor pode usar os dados enviados para melhorar seus modelos. Excluir um resultado no StillValid não exclui dados mantidos pelo provedor. Arquivos de imagem originais não são armazenados permanentemente; resultados e citações pertencem a uma sessão anônima, expiram em 24 horas e podem ser apagados. As chaves ficam no servidor. Padrão: 300 chamadas por dia UTC, três trabalhos simultâneos e dez inícios por minuto globalmente; isso não é um limite financeiro.
+Segundo os termos da Meta, o modelo padrão muse-spark-1.3-contributor usa os dados enviados para treinar futuros modelos da Meta. Excluir um resultado no StillValid não exclui dados mantidos pelo provedor. Arquivos de imagem originais não são armazenados permanentemente; resultados e citações pertencem a uma sessão anônima, expiram em 24 horas e podem ser apagados. As chaves ficam no servidor. Padrão: 300 chamadas por dia UTC, três trabalhos simultâneos e dez inícios por minuto globalmente; isso não é um limite financeiro.
 
 ## Notas para desenvolvimento
 
