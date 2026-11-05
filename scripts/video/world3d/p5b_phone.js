@@ -17,7 +17,8 @@ const SCREEN_U = { tA: { value: null }, uGain: { value: 1 }, uReflect: { value: 
 const SCREEN_MAT = new THREE.ShaderMaterial({ uniforms: SCREEN_U, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
   vertexShader: `varying vec2 vUv; varying vec3 vW; varying vec3 vL; void main(){ vUv = uv; vL = position; vW = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `uniform sampler2D tA; uniform float uGain, uReflect; uniform vec3 uEyeL; varying vec2 vUv; varying vec3 vL;
-    void main(){ vec3 c = texture2D(tA, vUv).rgb * uGain;
+    void main(){ vec2 dx = dFdx(vUv), dy = dFdy(vUv);       // minified text: four rotated-grid taps a mip level sharper than trilinear would pick
+      vec3 c = (texture2D(tA, vUv + 0.125 * dx + 0.375 * dy, -1.0).rgb + texture2D(tA, vUv - 0.125 * dx - 0.375 * dy, -1.0).rgb + texture2D(tA, vUv + 0.375 * dx - 0.125 * dy, -1.0).rgb + texture2D(tA, vUv - 0.375 * dx + 0.125 * dy, -1.0).rgb) * 0.25 * uGain;
       // analytic reflection on the glass: the lamp above and the far window glow, in phone-local coordinates. Goes to zero before the IN pose
       vec3 V = normalize(uEyeL - vL); vec3 R = reflect(-V, vec3(0.0, 0.0, 1.0));
       float F = 0.04 + 0.96 * pow(clamp(1.0 - V.z, 0.0, 1.0), 5.0);
@@ -55,16 +56,16 @@ const STEAM = noDepth(new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.30), new TH
       float strand = smoothstep(0.42, 0.72, tex);
       float a = strand * exp(-x * x * 2.2) * smoothstep(0.0, 0.08, p.y) * pow(1.0 - p.y, 1.8);
       gl_FragColor = vec4(vec3(0.62, 0.55, 0.50) * a * 0.62 * uA, 0.0); }` })));
-STEAM.material.userData.thin = true; STEAM.material.userData.passable = true; STEAM.userData.passable = true; STEAM.renderOrder = 9; STEAM.name = 'Steam'; STEAM.position.copy(CUP_POS).add(V3(0, 0.215, 0)); CAFE.add(STEAM);
+STEAM.material.userData.thin = true; STEAM.material.userData.passable = true; STEAM.userData.passable = true; STEAM.renderOrder = 9; STEAM.name = 'Steam'; STEAM.position.copy(CUP_POS).add(V3(0, 0.215, 0)); CAFE.add(STEAM); STEAM.material.visible = false;   // the old wide shaft would lie over the cafe part's own steam
 
 // the cards. slot = where it floats, facing the orbit's path. pxW = its width on screen at its stop, at = its centre there (px)
-const ORBIT_C = V3(0.22, 1.02, -0.90), ORBIT_R = 0.95;
+const ORBIT_C = V3(0.22, 1.14, -0.90), ORBIT_R = 0.95;      // high enough that the phone, the glass and the cup lie wholly below the frame at every card's stop
 const CARD_DEF = [
-  { asp: 2100 / 1762, W: 0.30, th: -44, pi: 7, r: 0.95, pxW: 860, at: [960, 490], up: 0.0 },
-  { asp: 2100 / 1446, W: 0.30, th: -24, pi: 7, r: 0.95, pxW: 540, at: [345, 470], up: 0.01 },
-  { asp: 1980 / 635, W: 0.42, th: -2, pi: 7, r: 0.93, pxW: 1160, at: [800, 390], up: 0.015 },
-  { asp: 1980 / 635, W: 0.42, th: 26, pi: 7, r: 0.97, pxW: 1500, at: [960, 500], up: -0.012 },
-  { asp: 2100 / 2031, W: 0.27, th: 49, pi: 7, r: 0.95, pxW: 810, at: [960, 478], up: 0.0 },
+  { asp: 2100 / 1762, W: 0.30, th: -44, pi: 7, r: 0.95, pxW: 860, at: [960, 490], up: 0.0, rc: 155 / 2100 },
+  { asp: 2100 / 1446, W: 0.30, th: -24, pi: 7, r: 0.95, pxW: 640, at: [340, 470], up: 0.01, rc: 155 / 2100 },
+  { asp: 1980 / 635, W: 0.42, th: -2, pi: 7, r: 0.93, pxW: 1160, at: [800, 390], up: 0.015, rc: 86 / 1980 },
+  { asp: 1980 / 635, W: 0.42, th: 26, pi: 7, r: 0.97, pxW: 1500, at: [960, 500], up: -0.012, rc: 86 / 1980 },
+  { asp: 2100 / 2031, W: 0.27, th: 49, pi: 7, r: 0.95, pxW: 810, at: [960, 478], up: 0.0, rc: 155 / 2100 },
 ];
 CARD_DEF.forEach((c, i) => {
   const t = c.th * deg, p = c.pi * deg;
@@ -79,18 +80,30 @@ CARD_DEF.forEach((c, i) => {
   c.stopT = c.pos.clone().addScaledVector(c.right, -(c.at[0] - 960) / 1080 * field).addScaledVector(c.upv, -(540 - c.at[1]) / 1080 * field);
   c.stopH = -c.th; c.stopP = c.pi;
 });
-const CARD_TIMES = [ { r0: 2.4, r1: 4.2, b0: 34.4, b1: 36.0 }, { r0: 7.0, r1: 8.45, b0: 33.6, b1: 35.2 }, { r0: 14.4, r1: 15.3, b0: 32.8, b1: 34.4 }, { r0: 14.45, r1: 15.5, b0: 32.5, b1: 34.1 }, { r0: 24.8, r1: 26.2, b0: 32.0, b1: 33.6 } ];
-const CARD_SLAB_MAT = new THREE.MeshPhysicalMaterial({ color: 0xdfe4ea, metalness: 0, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.1, envMapIntensity: 1.5 });
+// r0..r1 the rise out of the screen, x0..x1 the exit through the frame's edge (then hidden, off-frame), b0..b1 the way home: one card at a time
+const CARD_TIMES = [
+  { r0: 1.0, r1: 4.2, x0: 6.95, x1: 8.1, dx: -0.3, dy: 0, b0: 34.85, b1: 36.0, sb: 0.3 },
+  { r0: 6.6, r1: 8.5, x0: 14.05, x1: 15.2, dx: -0.3, dy: 0, b0: 34.25, b1: 35.4, sb: 0.3 },
+  { r0: 13.75, r1: 15.45, x0: 18.95, x1: 20.1, dx: -0.5, dy: 0, b0: 33.6, b1: 34.75, sb: 0.3 },
+  { r0: 14.15, r1: 15.6, lead: 0.2, x0: 24.7, x1: 25.7, dx: -0.35, dy: 0.28, b0: 32.95, b1: 34.1, sb: 0.3 },
+  { r0: 24.3, r1: 26.2, sr: 0.2, x0: 99, x1: 99, dx: 0, dy: 0, b0: 31.4, b1: 33.5, sb: 0.25 },
+];
+const CARD_SLAB_MAT = new THREE.MeshPhysicalMaterial({ color: 0xe8edf4, emissive: 0x9aa2ad, emissiveIntensity: 0.55, metalness: 0, roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.2, envMapIntensity: 1.0, transparent: true });
+CARD_SLAB_MAT.userData.thin = true;                             // a closed thin solid: its two faces lie closer than the small QA scan's depth can tell apart
+const CARD_DEPTH_MAT = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
 const CARDS = CARD_DEF.map((c, i) => {
   const g = new THREE.Group(); g.name = 'Card' + (i + 1); CAFE.add(g);
-  const r = c.W * (20 / 350);
-  const slabG = new THREE.ExtrudeGeometry(rrShape(c.W * 0.9985, c.H * 0.9985, r), { depth: 0.0026, bevelEnabled: true, bevelSize: 0.0002, bevelThickness: 0.0005, bevelSegments: 2, curveSegments: 10 }); slabG.translate(0, 0, -0.0034);
-  const slab = new THREE.Mesh(slabG, CARD_SLAB_MAT.clone()); slab.castShadow = true; g.add(slab);
+  // the slab has the recorded PNG's own corner radius and sits just inside the face's outline: a larger corner on the PNG would leave the slab showing as a crescent
+  const ins = 0.0009, r = c.W * c.rc - ins;
+  const slabG = new THREE.ExtrudeGeometry(rrShape(c.W - 2 * ins, c.H - 2 * ins, r), { depth: 0.0026, bevelEnabled: true, bevelSize: 0.0002, bevelThickness: 0.0005, bevelSegments: 2, curveSegments: 14 }); slabG.translate(0, 0, -0.0034);
+  const slab = new THREE.Mesh(slabG, CARD_SLAB_MAT.clone()); g.add(slab);
   const mat = new THREE.ShaderMaterial({ uniforms: { tA: { value: null }, uO: { value: 1 }, uSheen: { value: 0 } }, transparent: true, depthWrite: false, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
     vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: `uniform sampler2D tA; uniform float uO, uSheen; varying vec2 vUv; void main(){ vec4 c = texture2D(tA, vUv);
       float s = uSheen * smoothstep(0.3, 0.0, abs(vUv.x + vUv.y - 1.0 - uSheen * 0.4)) * 0.05;
       gl_FragColor = vec4((c.rgb * 0.97 + s * c.a) * uO, c.a * uO); }` });
+  // draws nothing in the picture: in the depth-of-field depth it is the face's exact outline, so no rim of the face counts as what lies behind it
+  const outline = new THREE.Mesh(new THREE.ShapeGeometry(rrShape(c.W, c.H, c.W * c.rc), 14), CARD_DEPTH_MAT); outline.position.z = 0.0004; outline.renderOrder = -1; g.add(outline);
   const face = noDepth(new THREE.Mesh(new THREE.PlaneGeometry(c.W, c.H), mat)); face.name = 'CardFace'; face.position.z = 0.0004; face.material.userData.thin = true; g.add(face);
   const pool = decal(c.W * 2.3, c.W * 1.7, c.pos.x, c.pos.z, 0.0, true); pool.material.color.setRGB(1.0, 0.84, 0.74);
   const shade = decal(c.W * 1.45, c.W * 1.05, c.pos.x, c.pos.z, 0.0, false);
@@ -98,38 +111,57 @@ const CARDS = CARD_DEF.map((c, i) => {
   return { g, slab, face, mat, pool, shade };
 });
 SV_READY.then(() => CARDS.forEach((c, i) => { c.mat.uniforms.tA.value = SV_TEX['card' + (i + 1)]; }));
+// the frame's top at the moment a card starts for home: it comes down from just above it, straight over the phone, facing the same way as the phone
+function cardOff(i) {
+  const c = CARD_DEF[i], t = CARD_TIMES[i]; if (c.off) return c.off;
+  const o = { T: new THREE.Vector3(), D: 1, q: new THREE.Quaternion(), hfov: IN_HFOV }; FILM_CAM(16 + t.b0, o);
+  const up = V3(0, 1, 0).applyQuaternion(o.q), rt = V3(1, 0, 0).applyQuaternion(o.q), field = 2 * o.D * Math.tan(19 * deg);
+  c.off = o.T.clone().addScaledVector(rt, PHONE_C.clone().sub(o.T).dot(rt)).addScaledVector(up, field / 2 + 0.7 * c.H / 2 + 0.03);
+  return c.off;
+}
+const _qFloat = i => (i === 3 ? 2 : i);                         // card 3 and card 4 float together: the light between them stays on both
+const cardFloat = (a, i) => [0.0010 * Math.sin(a * 2 * Math.PI / 7.9 + _qFloat(i) * 2.9), 0.0016 * Math.sin(a * 2 * Math.PI / 6.1 + _qFloat(i) * 1.7)];
+const _ca = new THREE.Vector3();
 function cardState(i, a, out) {                                // a = time inside ACT2 (s). Writes out.pos, out.q, out.s (scale), out.o (opacity); false when not there
   const c = CARD_DEF[i], t = CARD_TIMES[i];
-  if (a <= t.r0 || a >= t.b1) return false;
-  const u = a < t.b0 ? smoother(range(a, t.r0, t.r1)) : smoother(1 - range(a, t.b0, t.b1));
-  const e = u * u * (3 - 2 * u) * 0.25 + u * 0.75;
-  // from flat on the screen, out along the screen's normal, up to its slot
-  const p0 = PHONE_C.clone().addScaledVector(PHONE_N, 0.0022), p1 = PHONE_C.clone().addScaledVector(PHONE_N, 0.20).addScaledVector(PHONE_U, 0.13).lerp(c.pos, 0.28), p2 = c.pos;
-  const w = 1 - e; out.pos.set(0, 0, 0).addScaledVector(p0, w * w).addScaledVector(p1, 2 * w * e).addScaledVector(p2, e * e);
-  out.q.copy(PHONE.quaternion).slerp(c.q, smoother(clamp01(e * 1.15)));
-  const s0 = SCR_W * 0.92 / c.W; out.s = s0 + (1 - s0) * e;
-  out.o = smoother(clamp01(u / 0.1));
-  const f = smoother(clamp01((u - 0.9) / 0.1));                 // slow float once it has arrived
-  out.pos.y += f * 0.0016 * Math.sin(a * 2 * Math.PI / 6.1 + i * 1.7);
-  out.pos.x += f * 0.0010 * Math.sin(a * 2 * Math.PI / 7.9 + i * 2.9);
+  if (a <= t.r0 || a >= t.b1 || (a >= t.x1 && a <= t.b0)) return false;
+  const back = a > t.b0, q = back ? 1 - range(a, t.b0, t.b1) : range(a, t.r0, t.r1);
+  const home = back && i !== 4;                                 // cards 1-4 start home from above the frame, card 5 from its own slot
+  const end = home ? cardOff(i) : c.pos, sEnd = home ? 0.7 : 1, qEnd = home ? PHONE.quaternion : c.q;
+  // it starts flat on the top of the screen at the screen's width; it clears the phone's top edge first and only then grows, its lower edge above the phone all the way.
+  // The flight takes as long as the camera's turn to the card, so the card stays in the frame all the way
+  const sp = (back ? t.sb : t.sr) || 0.4, k = smoother(range(q, 0, sp + 0.02)), wu = range(q, sp, 1), w = home ? wu * wu * (3 - 2 * wu) : smoother(wu), s0 = SCR_W * 0.92 / c.W, s = lerp(s0, sEnd, w);
+  const g = lerp(-s0 * c.H, 0.008, k) + 0.03 * w;
+  _ca.copy(PHONE_C).addScaledVector(PHONE_U, SCR_H / 2 + s * c.H / 2 + g).addScaledVector(PHONE_N, 0.003 + 0.016 * k);
+  out.pos.copy(_ca).lerp(end, w);
+  if (t.lead && !back) { const wl = smoother(range(q, sp - t.lead, 1 - t.lead)); out.pos.x = lerp(_ca.x, end.x, wl); out.pos.z = lerp(_ca.z, end.z, wl); }   // sideways ahead of upwards: it passes under its neighbour, not through it
+  out.q.copy(PHONE.quaternion).slerp(qEnd, w);
+  out.s = s; out.o = smoother(range(q, 0, 0.12));
+  const f = home ? 0 : smoother(range(w, 0.9, 1));              // slow float once it has arrived
+  const [fx, fy] = cardFloat(a, i); out.pos.x += f * fx; out.pos.y += f * fy;
+  const x = !back && a > t.x0 ? smoother(range(a, t.x0, t.x1)) : 0; if (x > 0) { out.pos.addScaledVector(c.right, t.dx * x); out.pos.y += t.dy * x; }
+  out.v = (1 - x) * (home ? 1 - w : 1);                         // how much of its light and shade on the table is there: nothing while it is out of the frame
   return true;
 }
-// the light that joins card 3 and card 4 (no lettering)
+// the light that joins the two cards' date lines: it underlines "접수기간" on card 3, crosses to card 4 and underlines the same line there (no lettering, the cards' pixels untouched)
 const LINK_U = { uProg: { value: 0 }, uT: { value: 0 }, uA: { value: 0 } };
 const LINK = (() => {
   const a = CARD_DEF[2], b = CARD_DEF[3];
-  const A = a.pos.clone().addScaledVector(a.right, a.W / 2 - 0.006), B = b.pos.clone().addScaledVector(b.right, -b.W / 2 + 0.006);
-  const M1 = A.clone().lerp(B, 0.33).add(V3(0, -0.03, 0.05)), M2 = A.clone().lerp(B, 0.68).add(V3(0, 0.022, 0.05));
-  const curve = new THREE.CatmullRomCurve3([A, M1, M2, B]);
-  const mk = (radius, core) => noDepth(new THREE.Mesh(new THREE.TubeGeometry(curve, 96, radius, 12), new THREE.ShaderMaterial({ uniforms: LINK_U, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  const on = (c, u, v, lift) => c.pos.clone().addScaledVector(c.right, (u - 0.5) * c.W).addScaledVector(c.upv, (0.5 - v) * c.H).addScaledVector(c.nrm, lift);
+  const V = 0.608, pts = [];                                    // v of the line just under the date line, in the PNG (y 193 of 318); the line runs x 55..860 on card 3, x 55..842 on card 4 (of 990)
+  for (let k = 0; k <= 8; k++) pts.push(on(a, lerp(0.056, 0.872, k / 8), V, 0.0016));
+  const A = pts[pts.length - 1], B = on(b, 0.056, V, 0.0016);
+  const gapA = on(a, 0.965, V + 0.02, 0.006), gapB = on(b, 0.012, V + 0.02, 0.006), mid = gapA.clone().lerp(gapB, 0.5); mid.y -= 0.006;
+  pts.push(gapA, mid, gapB);
+  for (let k = 0; k <= 8; k++) pts.push(on(b, lerp(0.056, 0.852, k / 8), V, 0.0016));
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+  const mk = (radius, core) => { const m = new THREE.Mesh(new THREE.TubeGeometry(curve, 320, radius, 10), new THREE.ShaderMaterial({ uniforms: LINK_U, transparent: true, depthWrite: false, blending: core ? THREE.CustomBlending : THREE.AdditiveBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
     vertexShader: `varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
     fragmentShader: `uniform float uProg, uT, uA; varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ float u = vUv.x;
-      float on = smoothstep(uProg, uProg - 0.04, u);
-      float pul = 0.72 + 0.28 * sin(u * 16.0 - uT * 3.2);
+      float on = smoothstep(uProg, uProg - 0.015, u) * uA;
       float ndv = abs(dot(normalize(vN), normalize(vV)));
-      float prof = ${core ? '1.0' : 'pow(ndv, 3.0) * 0.32'};
-      vec3 col = mix(vec3(1.0, 0.82, 0.62), vec3(0.72, 0.92, 1.0), u);
-      gl_FragColor = vec4(col * prof * pul * on * uA * ${core ? '3.2' : '1.1'}, 1.0); }` })));
-  const g = new THREE.Group(); g.name = 'CardLink'; const core = mk(0.00075, true), halo = mk(0.0065, false); core.renderOrder = 12; halo.renderOrder = 11; g.add(core, halo); core.material.userData.thin = halo.material.userData.thin = true; CAFE.add(g); g.visible = false;
+      ${core ? 'gl_FragColor = vec4(vec3(0.72, 0.24, 0.035) * on, on);' : 'gl_FragColor = vec4(vec3(1.0, 0.55, 0.22) * pow(ndv, 3.0) * 0.16 * on, 1.0);'} }` }));
+    return core ? m : noDepth(m); };      // the core stays in the depth-of-field depth, so it is as sharp as the cards it joins; the faint halo is not
+  const g = new THREE.Group(); g.name = 'CardLink'; const core = mk(0.00062, true), halo = mk(0.0048, false); core.renderOrder = 31; halo.renderOrder = 30; g.add(core, halo); core.material.userData.thin = halo.material.userData.thin = true; CAFE.add(g); g.visible = false;
   return g;
 })();

@@ -40,10 +40,8 @@ const EARTH_ROT = (() => {                                     // Earth-local (S
 const EARTH_U = { tDay: { value: null }, tNight: { value: null }, tPatch: { value: null }, uSun: { value: SUN_DIR.clone() }, uEye: { value: new THREE.Vector3() }, uExp: { value: 1 }, uNight: { value: 1.8 },
   uNS: { value: new THREE.Vector2(8192, 4096) }, uPS: { value: new THREE.Vector2(675, 600) },
   uP0: { value: new THREE.Vector2((118 + 180) / 360, (28 + 90) / 180) }, uP1: { value: new THREE.Vector2((136 + 180) / 360, (44 + 90) / 180) } };
-const EARTH_MAT = new THREE.ShaderMaterial({ uniforms: EARTH_U, depthTest: false, depthWrite: false,
-  vertexShader: `varying vec3 vN; varying vec3 vL; void main(){ vL = position; vN = normalize(mat3(modelMatrix) * position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `uniform sampler2D tDay, tNight, tPatch; uniform vec3 uSun, uEye; uniform vec2 uP0, uP1, uNS, uPS; uniform float uExp, uNight; varying vec3 vN; varying vec3 vL;
-    ${NOISE_GLSL}
+// the night lights of the map as the Earth shows them and as Seoul's field starts out: the same function in both, so the field takes over the Earth's picture with no change of look
+const NIGHT_GLSL = `
     // cubic B-spline from four bilinear taps: magnified map texels melt into smooth gradients, with no square texels and no bilinear diamonds
     vec3 cubicTex(sampler2D t, vec2 uv, vec2 sz){
       vec2 st = uv * sz - 0.5, i = floor(st), f = st - i, f2 = f * f, f3 = f2 * f;
@@ -53,14 +51,31 @@ const EARTH_MAT = new THREE.ShaderMaterial({ uniforms: EARTH_U, depthTest: false
                  mix(textureLod(t, vec2(h0.x, h1.y), 0.0).rgb, textureLod(t, vec2(h1.x, h1.y), 0.0).rgb, g1.x / (g0.x + g1.x)), g1.y / (g0.y + g1.y));
     }
     float eh(vec2 p){ vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
-    // one octave of point lights in map metres, mean 1 at every scale: it is flat 1 while a cell is smaller than a few pixels, so nothing pops
+    // one octave of point lights in map metres, mean 1 at every scale: it is flat 1 while a cell is smaller than a few pixels, so nothing pops. Heavy tailed: many dim lights, a few bright ones
     float speck(vec2 p, float cell, float fw, float seed){
       float k = smoothstep(2.2, 6.0, cell / fw); if (k <= 0.0) return 1.0;
       vec2 g = p / cell, id = floor(g), f = fract(g) - 0.5, o = (vec2(eh(id + seed), eh(id + seed + 7.7)) - 0.5) * 0.5;
-      float r = clamp(fw / cell * 0.8, 0.05, 0.16), d = dot(f - o, f - o);
-      float a = min(exp(-d / (r * r)) / (3.14159 * r * r), 9.0) * (0.35 + 1.3 * eh(id + seed + 5.5));
+      float b = eh(id + seed + 5.5), t = b * b * b, r = clamp(fw / cell * (0.62 + 0.5 * t), 0.05, 0.16), d = dot(f - o, f - o);
+      float a = min(exp(-d / (r * r)) / (3.14159 * r * r), 12.0) * (0.25 + 3.0 * t);
       return mix(1.0, a, k);
     }
+    // the 3 km map sharpened against a wider blur of itself: clusters of light tighten and the fog between them goes dark
+    vec3 nightSharp(vec3 nc, vec3 wide){ return max(nc + (nc - wide) * 0.6 - 0.008, vec3(0.0)); }
+    // the map's light resolved into point lights, warm and white, with no smooth core left
+    vec3 nightGrain(vec3 nc, vec2 mp, float mfw){
+      float lv = log2(mfw * 5.0), l0 = floor(lv), tl = lv - l0, c0 = pow(2.0, l0);
+      vec2 m1 = mp * mat2(0.94, -0.34, 0.34, 0.94), m2 = mp * mat2(0.82, 0.57, -0.57, 0.82);
+      float s2 = mix(speck(m1, c0 * 2.0, mfw, 13.0), speck(m1, c0 * 4.0, mfw, 19.0), tl), s3 = mix(speck(m2, c0, mfw, 29.0), speck(m2, c0 * 2.0, mfw, 37.0), tl);
+      float sp = 0.14 + 0.86 * (0.42 * s2 + 0.58 * s3);
+      float L = dot(nc, vec3(0.3, 0.55, 0.15)), hue = eh(floor(m2 / (c0 * 4.0)) + 3.3);
+      vec3 warm = mix(nc, L * mix(vec3(1.18, 0.88, 0.56), vec3(1.04, 0.98, 0.90), smoothstep(0.62, 0.95, hue)), 0.62);
+      return warm * sp * 0.9 / (1.0 + 0.8 * L);
+    }`;
+const EARTH_MAT = new THREE.ShaderMaterial({ uniforms: EARTH_U, depthTest: false, depthWrite: false,
+  vertexShader: `varying vec3 vN; varying vec3 vL; void main(){ vL = position; vN = normalize(mat3(modelMatrix) * position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform sampler2D tDay, tNight, tPatch; uniform vec3 uSun, uEye; uniform vec2 uP0, uP1, uNS, uPS; uniform float uExp, uNight; varying vec3 vN; varying vec3 vL;
+    ${NOISE_GLSL}
+    ${NIGHT_GLSL}
     void main(){
       vec3 N = normalize(vN), V = normalize(uEye - N), Ln = normalize(vL);
       float ndl = dot(N, uSun);
@@ -83,13 +98,11 @@ const EARTH_MAT = new THREE.ShaderMaterial({ uniforms: EARTH_U, depthTest: false
         // the 3 km map over East Asia: finer than the world map, feathered at its edges
         vec2 pu = (uv - uP0) / (uP1 - uP0), pe = min(pu, 1.0 - pu);
         float pm = smoothstep(0.0, 0.05, min(pe.x, pe.y));
-        if (pm > 0.0) nc = mix(nc, cubicTex(tPatch, pu, uPS), pm);
+        if (pm > 0.0) { vec2 lp = pu * uPS; float lodP = log2(max(length(dFdx(lp)), length(dFdy(lp))) + 1e-6); nc = mix(nc, nightSharp(cubicTex(tPatch, pu, uPS), textureLod(tPatch, pu, max(lodP + 2.0, 1.5)).rgb), pm); }
         // map metres of the same tangent frame as the Seoul field, so the lights seen here are in the same places there
         vec2 mp = vec2((uv.x * 360.0 - 180.0 - ${SV_LON.toFixed(3)}) * 88000.0, (${SV_LAT.toFixed(3)} - (uv.y * 180.0 - 90.0)) * 111000.0);
         float mfw = length(vec2(length(dFdx(mp)), length(dFdy(mp)))) * 0.75;
-        float s1 = speck(mp, 7000.0, mfw, 2.0), s2 = speck(mp * mat2(0.94, -0.34, 0.34, 0.94), 3100.0, mfw, 13.0), s3 = speck(mp * mat2(0.82, 0.57, -0.57, 0.82), 1300.0, mfw, 29.0);
-        float sp = 0.16 + 0.84 * (0.22 * s1 + 0.33 * s2 + 0.45 * s3);
-        vec3 grain = nc * sp + 0.55 * nc * nc * (sp - 1.0);
+        vec3 grain = nightGrain(nc, mp, mfw);
         nl = mix(nl, max(grain, vec3(0.0)), mag);
       }
       // the map has a hard-edged rectangle of fishing-fleet light in the East China Sea: that was the straight 'seam'. Open water here, feathered
