@@ -43,3 +43,13 @@ input card contains fictional Japanese text; the result and evidence use the
 built-in synthetic example, whose source values remain in English while the
 interface is Japanese. The input and result are separate demonstrations.
 The capture made **zero model calls** and did not submit the text for reading.
+
+## Additional display languages
+
+The `zh`, `es`, `fr`, `de`, `pt`, `ar`, and `ru` home/result JPEGs were
+captured from the public production app on **5 November 2026 (Asia/Seoul)**,
+which reported application SHA `3f8af2aba662f5529ea5bb0119587971fce4842a`.
+Each result is the app's labelled built-in synthetic example; source values
+remain in English while the interface uses the selected language. The captures
+use Chromium at 430 × 932 CSS pixels, not physical phones. No model calls,
+real-notice comparisons or user-uploaded images were used.
