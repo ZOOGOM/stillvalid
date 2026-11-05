@@ -91,7 +91,7 @@ Use the opt-in [live evaluation harness](evaluation.md) to record real public-no
 
 Inspect Production model variables first. Keep the selected privacy notice consistent with all effective steps, especially contributor data use. Set `META_MODEL` to an ID returned by the production key’s `GET https://api.meta.ai/v1/models`; leave per-step overrides unset unless intentionally mixing models. Never expose the key or an authenticated response body. SAM remains independently controlled by `SAM_MODEL`.
 
-Every Production hosting build runs a read-only model-catalog check before activation, using the Production key already in Vercel. It checks all three effective step IDs and prints only public model IDs and access flags, with no inference or model-call reservation. An inaccessible catalog or missing selected ID fails the build so the previous deployment keeps serving. Preview builds skip this Production-only check; the existing paid hosting probe remains opt-in via `STILLVALID_VERIFY_DEPLOYMENT`. `npm run verify:meta` uses the same resolution locally when a permitted key is available.
+Every Production hosting build runs a read-only model-catalog check before activation, using the Production key already in Vercel. It checks all three effective step IDs and prints only public model IDs and access flags, with no inference or model-call reservation. A readable catalog that lacks a selected ID fails the build so the previous deployment keeps serving. A catalog that cannot be read (HTTP error or network failure) logs a warning and skips the check, so a provider outage does not block a deployment. Preview builds skip this Production-only check; the existing paid hosting probe remains opt-in via `STILLVALID_VERIFY_DEPLOYMENT`. `npm run verify:meta` uses the same resolution locally when a permitted key is available.
 
 After deploying, verify both public aliases: `/api/status.deploymentSha` must match the released commit; `model` is the effective comparison model and `models` lists extraction/search/comparison. These fields show configuration, not completed inference. Confirm actual requests with a bounded production smoke run. Future model changes require a new deployment and a privacy-copy review; no inference fallback silently chooses another model.
 
@@ -118,3 +118,7 @@ Uncertain readings are not cached. Source fetching and final validity checks are
 never cached by this optimization. Model, daily budget and evidence rules are
 unchanged. Local regression checks use fixtures and make no model calls; production
 latency and provider cancellation billing still require separate measurement.
+
+## Deployment rate limit
+
+Vercel limits how many deployments a project can create in a period. When the limit is reached, the commit status shows `Vercel — failure: Deployment rate limited — retry in 24 hours` and production keeps serving the previous deployment. This is not a build or test failure: compare it with the GitHub Actions `Application checks` result for the same commit. Push again after the limit resets (or raise the plan limit); avoid pushing many small commits to `main` in a row. `[skip ci]` in a commit message does not stop Vercel from attempting a deployment.
