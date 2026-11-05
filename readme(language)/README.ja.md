@@ -22,7 +22,9 @@ Meta Global AI Developer Hackathon の **Indie developer 個人部門**、テー
 - **公式情報源だけを根拠にします。** ブログ・SNS・検索の要約は根拠になりません。お知らせに印刷された `go.kr`/`gov` のリンクは自動入力され、なければ Meta 内蔵のウェブ検索が実在のページを提案します。
 - **Meta のモデルで一貫して構築。** Muse Spark が読み取り・検索・比較を行い、SAM 3.1 が掲示板の中からお知らせを見つけ、結果は追加のモデル呼び出しなしで10言語で表示されます。
 
-**デモ動画:** 制作中です。完成後にここと提出フォームへリンクを追加します。
+**デモ動画:** [YouTube で見る](https://youtu.be/72v80uOubrU)
+
+<p align="center"><a href="https://youtu.be/72v80uOubrU"><img src="https://img.youtube.com/vi/72v80uOubrU/maxresdefault.jpg" width="560" alt="StillValid デモ動画"></a></p>
 
 ## 目次
 

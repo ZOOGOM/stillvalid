@@ -22,7 +22,9 @@
 - **只以官方来源为依据。** 博客、社交媒体和搜索摘要不算证据。公告上印的 `go.kr`/`gov` 链接会自动填入，否则由 Meta 内置网页搜索提出真实页面。
 - **全程使用 Meta 模型构建。** Muse Spark 负责读取、搜索和比对，SAM 3.1 在密集的公告板中定位公告，结果以十种语言显示且无需额外模型调用。
 
-**演示视频：** 制作中，完成后将在此处和提交表单中添加链接。
+**演示视频:** [在 YouTube 上观看](https://youtu.be/72v80uOubrU)
+
+<p align="center"><a href="https://youtu.be/72v80uOubrU"><img src="https://img.youtube.com/vi/72v80uOubrU/maxresdefault.jpg" width="560" alt="StillValid 演示视频"></a></p>
 
 ## 使用示例
 

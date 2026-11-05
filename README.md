@@ -8,7 +8,7 @@
 
 Compare a notice photo or pasted text with current official-source material. See **what changed, the supporting quotes, and what still needs confirmation** before you act.
 
-[**Open the app**](https://stillvalid-beta.vercel.app) · [Alternate site](https://stillvalid-zoogom.vercel.app) · [한국어 README](<readme(language)/README.ko.md>) · [日本語 README](<readme(language)/README.ja.md>) · [English README](<readme(language)/README.en.md>) · [Deployment guide](docs/deployment.md)
+[**Open the app**](https://stillvalid-beta.vercel.app) · [**Demo video**](https://youtu.be/72v80uOubrU) · [Alternate site](https://stillvalid-zoogom.vercel.app) · [한국어 README](<readme(language)/README.ko.md>) · [日本語 README](<readme(language)/README.ja.md>) · [English README](<readme(language)/README.en.md>) · [Deployment guide](docs/deployment.md)
 
 **Languages / 언어 / 言語 / اللغات:**
 
@@ -22,7 +22,9 @@ Built for the Meta Global AI Developer Hackathon — **Indie developer**, “Bui
 - **Official sources only.** Blogs, social posts and search snippets never count as evidence. A `go.kr`/`gov` link printed on the notice is filled in for you; otherwise Meta's built-in web search proposes real pages.
 - **Built with Meta models end to end.** Muse Spark reads the notice, searches and compares; SAM 3.1 finds the notice on a crowded board; results show in ten languages without extra model calls.
 
-**Demo video:** being produced; the link will be added here and in the submission form.
+**Demo video:** [Watch on YouTube](https://youtu.be/72v80uOubrU)
+
+<p align="center"><a href="https://youtu.be/72v80uOubrU"><img src="https://img.youtube.com/vi/72v80uOubrU/maxresdefault.jpg" width="560" alt="StillValid demo video"></a></p>
 
 ## Quick navigation
 

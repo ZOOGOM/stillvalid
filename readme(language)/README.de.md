@@ -22,7 +22,9 @@ Vergleiche ein Foto oder einen Text mit aktuellen offiziellen Quellen und sieh �
 - **Nur offizielle Quellen.** Blogs, soziale Netzwerke und Suchausschnitte z채hlen nie als Beleg. Ein im Hinweis gedruckter `go.kr`/`gov`-Link wird vorausgef체llt; sonst schl채gt Metas integrierte Websuche echte Seiten vor.
 - **Durchg채ngig mit Meta-Modellen gebaut.** Muse Spark liest, sucht und vergleicht; SAM 3.1 findet den Hinweis auf einer vollen Pinnwand; Ergebnisse erscheinen in zehn Sprachen ohne zus채tzliche Modellaufrufe.
 
-**Demo-Video:** in Produktion; der Link wird hier und im Einreichungsformular erg채nzt.
+**Demo-Video:** [Auf YouTube ansehen](https://youtu.be/72v80uOubrU)
+
+<p align="center"><a href="https://youtu.be/72v80uOubrU"><img src="https://img.youtube.com/vi/72v80uOubrU/maxresdefault.jpg" width="560" alt="StillValid-Demo-Video"></a></p>
 
 ## Anwendungsbeispiel
 

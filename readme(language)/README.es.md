@@ -22,7 +22,9 @@ Compara una foto o texto con información oficial actual y consulta cambios, cit
 - **Solo fuentes oficiales.** Blogs, redes sociales y resúmenes de búsqueda nunca cuentan como evidencia. Un enlace `go.kr`/`gov` impreso en el aviso se rellena automáticamente; si no, la búsqueda web integrada de Meta propone páginas reales.
 - **Construido de principio a fin con modelos de Meta.** Muse Spark lee, busca y compara; SAM 3.1 localiza el aviso en un tablón lleno; los resultados se muestran en diez idiomas sin llamadas adicionales al modelo.
 
-**Vídeo de demostración:** en producción; el enlace se añadirá aquí y en el formulario de entrega.
+**Vídeo de demostración:** [Ver en YouTube](https://youtu.be/72v80uOubrU)
+
+<p align="center"><a href="https://youtu.be/72v80uOubrU"><img src="https://img.youtube.com/vi/72v80uOubrU/maxresdefault.jpg" width="560" alt="Vídeo de demostración de StillValid"></a></p>
 
 ## Ejemplo de uso
 

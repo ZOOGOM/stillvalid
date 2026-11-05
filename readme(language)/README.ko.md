@@ -22,7 +22,9 @@ Meta Global AI Developer Hackathon **Indie developer 개인 부문**, “Build f
 - **공식 출처만 근거로 씁니다.** 블로그·SNS·검색 요약은 근거가 되지 않습니다. 공고에 적힌 `go.kr`/`gov` 링크는 자동으로 채워지고, 없으면 Meta 내장 웹 검색이 실제 페이지를 제안합니다.
 - **Meta 모델로 끝까지 만들었습니다.** Muse Spark가 읽고, 찾고, 비교하며, SAM 3.1이 복잡한 게시판에서 공고를 찾고, 결과는 추가 모델 호출 없이 10개 언어로 보입니다.
 
-**시연 영상:** 제작 중입니다. 완성되면 여기와 제출 양식에 링크를 추가합니다.
+**시연 영상:** [YouTube에서 보기](https://youtu.be/72v80uOubrU)
+
+<p align="center"><a href="https://youtu.be/72v80uOubrU"><img src="https://img.youtube.com/vi/72v80uOubrU/maxresdefault.jpg" width="560" alt="StillValid 시연 영상"></a></p>
 
 ## 빠른 목차
 

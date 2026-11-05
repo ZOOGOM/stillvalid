@@ -47,6 +47,6 @@ The [complete video plan](시연영상-전체본.md), [final scenario](시나리
 - App: https://stillvalid-beta.vercel.app
 - Repository: https://github.com/ZOOGOM/stillvalid
 - Submission portal: https://cerebralvalley.ai/e/meta-ai-developer-hackathon/hackathon/submit
-- Demo video: add the final uploaded video URL after reviewing the cut and the form's requirements.
+- Demo video: https://youtu.be/72v80uOubrU
 
 The public event page says submissions are due **4 November 2026 at 9:00 PM ET**, equivalent to **5 November at 02:00 UTC / 11:00 KST**. Aim to finish by 10:00 KST; do not rely on an unannounced grace period. Before submitting, confirm the registered individual Indie entry, final video access, repository access and deployed commit, then save the confirmation screen.
