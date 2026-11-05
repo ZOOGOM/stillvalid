@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "페이지를 찾을 수 없어요 · Page not found — StillValid",
+};
+
 export default function NotFound() {
   return (
     <main className="error-page">
