@@ -212,7 +212,7 @@ flowchart LR
 | 항목별 비교 | 동일 | Chat Completions, 엄격한 JSON | `META_COMPARISON_MODEL` |
 | 선택형 영역 찾기 | `sam-3.1` | Responses, 개념 프롬프트 | `SAM_MODEL` |
 
-세 Spark 단계는 `단계별 변수 → META_MODEL → 기본값` 순으로 선택하며 기본 추론 강도는 `minimal`입니다. 운영 빌드는 모델 목록을 읽기 전용으로 확인합니다. 모델 변경 시 재배포와 10개 언어 개인정보 안내 검토가 필요합니다. 기본 contributor 모델에 제출한 내용은 Meta 약관에 따라 모델 개선에 사용될 수 있습니다.
+세 Spark 단계는 `단계별 변수 → META_MODEL → 기본값` 순으로 선택하며 기본 추론 강도는 `minimal`입니다. 운영 빌드는 모델 목록을 읽기 전용으로 확인합니다. 모델 변경 시 재배포와 10개 언어 개인정보 안내 검토가 필요합니다. Meta 약관에 따라 기본 contributor 모델에 보낸 내용(사진·글과 모델 응답)은 향후 Meta 모델 학습에 사용됩니다.
 
 ### 결과가 만들어지는 기준
 
