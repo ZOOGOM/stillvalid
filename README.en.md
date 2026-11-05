@@ -6,6 +6,10 @@ Compare a notice photo or pasted text with current official-source material. See
 
 [**Open the app**](https://stillvalid-beta.vercel.app) · [Alternate site](https://stillvalid-zoogom.vercel.app) · [한국어 README](README.ko.md) · [日本語 README](README.ja.md) · [English README](README.en.md) · [Deployment guide](docs/deployment.md)
 
+**Languages / 언어 / 言語 / اللغات:**
+
+[English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [العربية](README.ar.md) · [Русский](README.ru.md)
+
 Built for the Meta Global AI Developer Hackathon — **Indie developer**, “Build for Your World.” No installation or account is required.
 
 ## Quick navigation

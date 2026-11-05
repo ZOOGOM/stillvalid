@@ -6,6 +6,10 @@
 
 [**アプリを開く**](https://stillvalid-beta.vercel.app) · [予備サイト](https://stillvalid-zoogom.vercel.app) · [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [デプロイガイド（英語）](docs/deployment.md)
 
+**Languages / 언어 / 言語 / اللغات:**
+
+[English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [العربية](README.ar.md) · [Русский](README.ru.md)
+
 Meta Global AI Developer Hackathon の **Indie developer 個人部門**、テーマ「Build for Your World」に向けて開発しました。インストールやアカウント登録は不要です。
 
 ## 目次

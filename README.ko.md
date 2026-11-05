@@ -6,6 +6,10 @@
 
 [**앱 열기**](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [日本語](README.ja.md) · [프로젝트 소개](README.md) · [배포 가이드](docs/deployment.md)
 
+**Languages / 언어 / 言語 / اللغات:**
+
+[English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [العربية](README.ar.md) · [Русский](README.ru.md)
+
 Meta Global AI Developer Hackathon **Indie developer 개인 부문**, “Build for Your World” 주제로 개발했습니다. 설치나 회원가입 없이 사용할 수 있습니다.
 
 ## 빠른 목차
