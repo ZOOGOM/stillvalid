@@ -1,0 +1,111 @@
+<!doctype html><html><head><meta charset="utf-8"><title>intro</title>
+<link rel="stylesheet" href="common.css">
+<style>
+html,body{background:#090707}
+canvas{position:absolute;left:0;top:0;width:1920px;height:1080px}
+#map{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,transparent 6%,#000 30%)}
+#mapIn{position:absolute;left:-480px;top:-270px;width:2880px;height:1620px;transform-origin:50% 55%}
+#title{position:absolute;left:0;width:1920px;top:0;height:880px;display:flex;align-items:center;justify-content:center;
+  font-size:100px;color:#faf9f5;letter-spacing:-.005em;text-shadow:0 4px 40px rgba(0,0,0,.55);white-space:nowrap}
+.card{position:absolute;left:0;top:0;transform-origin:0 0;overflow:hidden;background:#fff}
+.card img{display:block;width:100%;height:100%}
+.blk{position:absolute;background:#d9d7d1;filter:blur(7px);border-radius:12px}
+#phone{position:absolute;left:96px;top:0;width:500px;height:1080px;transform-origin:50% 50%;overflow:hidden;background:#0d0c0b}
+#bezel{position:absolute;left:84px;top:-12px;width:524px;height:1104px;transform-origin:50% 50%;border:12px solid #1d1c1a;
+  box-shadow:0 0 0 1px rgba(255,255,255,.14),0 30px 90px rgba(0,0,0,.6)}
+#home{position:absolute;left:0;top:0;width:500px;height:1080px;display:block}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="map"><div id="mapIn"></div></div>
+<div id="title" class="serif">Saved a notice. Still the same?</div>
+<div id="bezel"></div>
+<div id="phone"><img id="home" src="assets/s0_home_500.png"></div>
+<script src="common.js"></script><script src="bokeh.js"></script>
+<script>
+const LEN=12;
+const draw=makeBokeh(document.getElementById('c'));
+const AR=1080/1350,BASE=1000;
+
+/* Simplified Seoul: a grid and one curved river with a small island. No labels, pins or buildings. */
+const mapIn=document.getElementById('mapIn');
+const svg=S('svg',{width:2880,height:1620,viewBox:'0 0 2880 1620'},mapIn);
+const G=S('g',{},svg);
+for(let x=0;x<=2880;x+=90){const major=x%450===0;S('line',{x1:x,y1:0,x2:x,y2:1620,stroke:'#faf0dc','stroke-opacity':major?.20:.085,'stroke-width':major?2.4:1.2},G)}
+for(let y=0;y<=1620;y+=90){const major=y%450===0;S('line',{x1:0,y1:y,x2:2880,y2:y,stroke:'#faf0dc','stroke-opacity':major?.20:.085,'stroke-width':major?2.4:1.2},G)}
+const RIVER='M-60 1010 C 360 850, 640 1130, 1010 1040 S 1560 690, 1940 770 S 2520 720, 2960 470';
+const TRIB='M1270 -40 C 1240 240, 1420 430, 1400 640 S 1460 860, 1500 900';
+const rv=[
+  S('path',{d:TRIB,fill:'none',stroke:'#234c52','stroke-width':34,'stroke-linecap':'round','stroke-opacity':.5},svg),
+  S('path',{d:RIVER,fill:'none',stroke:'#27585f','stroke-width':130,'stroke-linecap':'round','stroke-opacity':.55},svg),
+  S('path',{d:RIVER,fill:'none',stroke:'#86c3c4','stroke-width':3,'stroke-linecap':'round','stroke-opacity':.34,transform:'translate(0 -66)'},svg),
+  S('path',{d:RIVER,fill:'none',stroke:'#86c3c4','stroke-width':3,'stroke-linecap':'round','stroke-opacity':.34,transform:'translate(0 66)'},svg),
+];
+const isl=S('ellipse',{cx:1230,cy:918,rx:92,ry:22,fill:'#201a15','fill-opacity':.55,stroke:'#86c3c4','stroke-opacity':.3,'stroke-width':2,transform:'rotate(-26 1230 918)'},svg);
+const lens=rv.map(p=>p.getTotalLength());
+rv.forEach((p,i)=>{p.setAttribute('stroke-dasharray',lens[i])});
+const shade=E('div','abs',{left:0,top:0,width:1920,height:1080,background:'radial-gradient(ellipse 72% 72% at 56% 46%,rgba(9,7,7,0) 40%,rgba(9,7,7,.92) 100%)'},document.getElementById('map'));
+
+/* Demo card with soft blocks over the date. Blocks are placed in source-image pixels. */
+const card=E('div','card',{width:BASE,height:BASE/AR});
+const im=document.createElement('img');im.src='../../demo-card.png';card.appendChild(im);
+const k0=BASE/1080;
+[[300,580,650,62],[80,646,132,62]].forEach(([x,y,w,h])=>E('div','blk',{left:x*k0,top:y*k0,width:w*k0,height:h*k0},card));
+
+const title=document.getElementById('title'),map=document.getElementById('map'),phone=document.getElementById('phone'),bezel=document.getElementById('bezel'),home=document.getElementById('home');
+const FLOAT={cx:1270,cy:440,w:448};
+part((t,f)=>{
+  /* Bokeh is phase-locked so the last frame lands on env/bokeh_loop.mp4 frame 0. */
+  return {f};
+},s=>draw((s.f-720)/60,s.f));
+part(t=>ap(t,.35,3.3,{dy:16,inD:.3,outD:.3}),s=>put(title,s));
+part(t=>{
+  const o=seg(t,3.0,3.5)*(1-seg(t,8.0,9.6));
+  if(o<=0)return {o:0};
+  return {o:r3(o),z:r3(1+.05*seg(t,3,10)),d:r3(eio(seg(t,3.05,4.3)))};
+},s=>{
+  if(!s.o){map.style.display='none';return}
+  map.style.display='';map.style.opacity=s.o;
+  mapIn.style.transform=`perspective(1700px) rotateX(36deg) scale(${s.z})`;
+  rv.forEach((p,i)=>p.setAttribute('stroke-dashoffset',lens[i]*(1-s.d)));
+  isl.style.opacity=clamp((s.d-.5)*2);
+});
+function phoneScale(t){return lerp(.8,1,eio(seg(t,7.0,10.4)))}
+part(t=>{
+  const a=eo(seg(t,6.95,7.25));
+  if(a<=0)return {o:0};
+  const s=phoneScale(t),rad=lerp(70,0,eio(seg(t,10.2,10.8)));
+  const bz=1-seg(t,11.0,11.5);
+  return {o:r3(a),s:r3(s),rad:r3(rad),bz:r3(bz),x:r3(-46*(1-a)),h:r3(eo(seg(t,10.65,11.0)))};
+},s=>{
+  if(!s.o){phone.style.display=bezel.style.display='none';return}
+  phone.style.display=bezel.style.display='';
+  phone.style.opacity=s.o;
+  phone.style.transform=`translateX(${s.x}px) scale(${s.s})`;
+  phone.style.borderRadius=s.rad+'px';
+  bezel.style.opacity=s.o*s.bz;bezel.style.display=s.bz<=0?'none':'';
+  bezel.style.transform=`translateX(${s.x}px) scale(${s.s})`;
+  bezel.style.borderRadius=(s.rad+12)+'px';
+  home.style.opacity=s.h;
+});
+part(t=>{
+  const inA=eo(seg(t,3.45,3.8));
+  if(inA<=0)return {o:0};
+  const u=eio(seg(t,7.3,9.5));
+  const s=phoneScale(t);
+  const fy=7*Math.sin(TAU*t/5.5),fx=3*Math.sin(TAU*t/7.5+1);
+  const w=lerp(FLOAT.w,500*s,u);
+  const cx=lerp(FLOAT.cx,346,u)+fx*(1-u);
+  const cy=lerp(FLOAT.cy+(1-inA)*36,540,u)+fy*(1-u);
+  const out=seg(t,10.65,11.0);
+  if(out>=1)return {o:0};
+  return {o:r3(inA*(1-out)),w:r3(w),cx:r3(cx),cy:r3(cy),rad:r3(lerp(26,10,u)),sh:r3(1-seg(t,9.2,9.7))};
+},s=>{
+  if(!s.o){card.style.display='none';return}
+  const k=s.w/BASE,h=s.w/AR;
+  card.style.display='';card.style.opacity=s.o;
+  card.style.borderRadius=(s.rad/k)+'px';
+  card.style.boxShadow=s.sh?`0 ${40/k}px ${90/k}px rgba(0,0,0,${.5*s.sh})`:'none';
+  card.style.transform=`translate(${s.cx-s.w/2}px,${s.cy-h/2}px) scale(${k})`;
+});
+window.__ready=waitImages();
+</script></body></html>
