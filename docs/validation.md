@@ -369,3 +369,17 @@ On unchanged application code, TypeScript, **179 behavioral/security tests**, **
 The refreshed three-minute silent cut uses production screen captures and explanatory captions, with waiting omitted. Its synthetic board, reconstructed notice, direct-API input and local map fixture are labelled separately. Prior Creative Commons public-photo and PDF observations remain attributed to the earlier dated records. Those photos were not reused in the refreshed cut. The final video link and authenticated submission-form limits remain for the entrant to verify; no upload or submission was performed.
 
 **Later configuration note:** the owner subsequently instructed that the then-current daily call limit of 300 remain unchanged; this historical pending decision is not the present configuration.
+
+## 2026-11-05 submission state
+
+The entrant reported submitting the entry on 5 November 2026 (KST), before the 11:00 KST deadline.
+
+| Item | State at submission |
+|---|---|
+| Production app | Both aliases served commit `1b43e7b` with HTTP 200; the 404 page had its own title. |
+| Demo video | https://youtu.be/72v80uOubrU, publicly reachable (YouTube oEmbed returned HTTP 200). Linked from all eleven READMEs and the submission copy. |
+| Automated checks | Type checking, 205 unit tests and the build passed; GitHub Actions `Application checks` passed on `main`. |
+| Vercel status on later commits | `Deployment rate limited — retry in 24 hours`: a hosting quota, not a test failure. Production kept serving `1b43e7b`. |
+| Model-catalog guard | A temporary relaxation (based on a mistaken diagnosis of the rate limit) was reverted after submission; an unreadable catalog fails the production build again. |
+| Still open | Ten human-reviewed real-notice cases (0 of 10), physical iPhone/Android checks, a live 24-hour expiry check and a latency study after the request-efficiency changes. |
+

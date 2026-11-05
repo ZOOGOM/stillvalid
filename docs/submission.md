@@ -1,6 +1,6 @@
 # StillValid submission copy
 
-Prepared for the **Indie developer track, individual entrant**, under **Build for Your World**. The entrant confirmed the track. Submission is to be completed later by the entrant; this file does not establish a submitted entry. The authenticated form's field names, character limits and video requirements still need checking.
+Prepared for the **Indie developer track, individual entrant**, under **Build for Your World**. The entrant confirmed the track and reported submitting the entry on **5 November 2026 (KST)**, before the deadline, with the app, repository and demo video links below. This file is the prepared copy; the confirmation screen held by the entrant is the record of submission.
 
 ## Project name and tagline
 
@@ -49,4 +49,4 @@ The [complete video plan](시연영상-전체본.md), [final scenario](시나리
 - Submission portal: https://cerebralvalley.ai/e/meta-ai-developer-hackathon/hackathon/submit
 - Demo video: https://youtu.be/72v80uOubrU
 
-The public event page says submissions are due **4 November 2026 at 9:00 PM ET**, equivalent to **5 November at 02:00 UTC / 11:00 KST**. Aim to finish by 10:00 KST; do not rely on an unannounced grace period. Before submitting, confirm the registered individual Indie entry, final video access, repository access and deployed commit, then save the confirmation screen.
+The public event page says submissions are due **4 November 2026 at 9:00 PM ET**, equivalent to **5 November at 02:00 UTC / 11:00 KST**. The entry was submitted on 5 November 2026 (KST). At that time the production app served commit `1b43e7b`, and the demo video was publicly reachable at the link above.

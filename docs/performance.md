@@ -4,9 +4,9 @@ The Spark model remains `muse-spark-1.3-contributor`. These changes do not alter
 the deterministic decision rules, daily request limit, evidence schemas or the
 contributor privacy notice in ten languages.
 
-- **Search reasoning:** all three steps default to minimal. Production explicitly
-  sets `META_REASONING_EFFORT_SEARCH=minimal`; the existing per-step overrides
-  still work. Search context stays low. Validate source discovery separately
+- **Search reasoning:** all three steps default to `minimal` in code
+  (`src/lib/meta.ts`), so no environment variable is needed; the per-step
+  `META_REASONING_EFFORT_*` overrides still work. Search context stays low. Validate source discovery separately
   from reading and direct-URL comparison: a faster direct check does not prove
   faster or equally complete automatic search.
 - **Prompt reuse:** extraction-image, extraction-text, comparison and search use
