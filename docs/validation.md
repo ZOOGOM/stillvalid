@@ -381,5 +381,6 @@ The entrant reported submitting the entry on 5 November 2026 (KST), before the 1
 | Automated checks | Type checking, 205 unit tests and the build passed; GitHub Actions `Application checks` passed on `main`. |
 | Vercel status on later commits | `Deployment rate limited — retry in 24 hours`: a hosting quota, not a test failure. Production kept serving `1b43e7b`. |
 | Model-catalog guard | A temporary relaxation (based on a mistaken diagnosis of the rate limit) was reverted after submission; an unreadable catalog fails the production build again. |
-| Still open | Ten human-reviewed real-notice cases (0 of 10), physical iPhone/Android checks, a live 24-hour expiry check and a latency study after the request-efficiency changes. |
+| 24-hour expiry (live) | A result created on production at 2026-11-04 09:48:52 UTC (zero model calls) was requested again at 2026-11-05 10:07 UTC, 24 h 18 min later. With the owner's session cookie sent explicitly the server returned **404**; without a cookie it returned 401 (the 24-hour session cookie had expired in the client). The server's response cannot tell a removed record from one past its expiry time; either way the owner can no longer read it. |
+| Still open | Ten human-reviewed real-notice cases (0 of 10), physical iPhone/Android checks and a latency study after the request-efficiency changes. |
 
