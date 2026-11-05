@@ -11,7 +11,7 @@ def add(*a):
     global n
     ins.extend(a); n+=1; return n-1
 env=add('-stream_loop','-1','-i',F+'/env/bokeh_loop.mp4')
-col=add('-i',F+'/segments/app_column.mp4')
+col=add('-i',F+('/segments_T2/app_column.mp4' if tier=='T2' else '/segments/app_column.mp4'))
 fg.append(f"[{env}:v]trim=duration={TOTAL},setpts=PTS-STARTPTS,fps=60,format=yuv444p[base]")
 fg.append(f"[{col}:v]tpad=stop_mode=clone:stop_duration=0.3,setpts=PTS-STARTPTS+12/TB[app]")
 fg.append("[base][app]overlay=96:0:eof_action=pass:format=yuv444[s]")
@@ -39,7 +39,9 @@ for s,v in edl['shots'].items():
 if tier=='T1': over(F+'/overlays/cards_2d.mov',84)
 over(F+'/overlays/M6.mov',edl['M6']['absStart'])
 over(F+'/overlays/M7.mov',edl['M7']['absStart'])
-if tier!='T1': over(F+'/outro/outro_card_alpha.mov',161)
+if tier!='T1':
+    over(F+'/outro/scrim.mov',161)
+    over(F+'/outro/outro_card_alpha.mov',161)
 sub=F+('/subs/subs_alpha_T2.mkv' if tier=='T2' else '/subs/subs_alpha.mkv')
 i=add('-i',sub)
 fg.append(f"[{i}:v]scale=in_range=full:out_range=tv:out_color_matrix=bt709,format=yuva444p[sb]")

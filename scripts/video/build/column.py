@@ -44,6 +44,10 @@ def build(name,ln,pieces,tail):
     cmd=['ffmpeg','-hide_banner','-loglevel','error','-y','-threads','3']+inputs+['-filter_complex',';'.join(fg),'-map','[o]','-an','-c:v','libx264','-preset','veryfast','-crf','12','-pix_fmt','yuv444p','-color_primaries','bt709','-color_trc','bt709','-colorspace','bt709','-color_range','tv','-g','30',out]
     subprocess.check_call(cmd)
     print(name,subprocess.check_output(['ffprobe','-v','error','-select_streams','v','-count_frames','-show_entries','stream=nb_read_frames,width,height','-of','csv=p=0',out]).decode().strip(),flush=True)
+T2COL=len(sys.argv)>1 and sys.argv[1]=='T2'
+if T2COL:
+    SH['07']=(44,[V(58.30,60.11),V(60.80,62.31),Hd(62.31,40.68)])
+    SEG=F+'/segments_T2'; os.makedirs(SEG,exist_ok=True)
 names=list(SH)
 for i,n in enumerate(names):
     build(n,SH[n][0],SH[n][1],i<len(names)-1)

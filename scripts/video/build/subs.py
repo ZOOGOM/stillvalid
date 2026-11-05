@@ -46,7 +46,7 @@ NOTE=[
  (154.4,160.8,'NoteFull','Illustrative animation · Narration and motion graphics generated with AI tools · App recorded on build fbbb841. The live app has since been updated.'),
 ]
 if os.environ.get('SUF')=='_T2':
-    NOTE=[(a,b,'NoteSide' if st=='NoteTop' else st,t) for a,b,st,t in NOTE]
+    NOTE=[(max(a,88.0),b,'NoteSide',t) if st=='NoteTop' else (a,b,st,t) for a,b,st,t in NOTE]
     NOTE=[((110.5,116.0,'NoteSide',t) if t.startswith('The same input') else (a,b,st,t)) for a,b,st,t in NOTE]
 ev+=NOTE
 hdr='''[Script Info]
