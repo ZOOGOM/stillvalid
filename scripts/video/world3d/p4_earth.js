@@ -4,6 +4,7 @@
    Drawn first, without depth; everything nearer draws over it.
    ===================================================================================== */
 const STAR_GROUP = new THREE.Group(); scene.add(STAR_GROUP);
+const STAR_MB_ZOOM = 0.009, STAR_MB_AMT = 0.55;
 {
   const rnd = mulberry32(7), N = 7000, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), sz = new Float32Array(N);
   for (let i = 0; i < N; i++) {
@@ -18,6 +19,8 @@ const STAR_GROUP = new THREE.Group(); scene.add(STAR_GROUP);
     vertexShader: `attribute float sz; attribute vec3 color; varying vec3 vC; uniform float uPx; void main(){ vC = color; gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0); gl_PointSize = sz * uPx; }`,
     fragmentShader: `varying vec3 vC; uniform float uA; void main(){ float r = length(gl_PointCoord - 0.5) * 2.0; float a = exp(-r * r * 3.2) * smoothstep(1.0, 0.7, r); gl_FragColor = vec4(vC * a * uA, 1.0); }` });
   const p = new THREE.Points(g, m); p.frustumCulled = false; p.renderOrder = -30; STAR_GROUP.add(p); STAR_GROUP.userData.mat = m;
+  // the post's zoom streak drew the stars out into radial lines (up to 2.2% of the frame, 42 px) and softened the globe's rim. While stars are in the frame it is held to STAR_MB_ZOOM (0.6% at the corners, about 12 px) at STAR_MB_AMT of the mix. Idempotent within a frame; the engine sets both afresh each frame
+  p.onBeforeRender = () => { const u = mblurPass.uniforms; u.uZoom.value = Math.max(-STAR_MB_ZOOM, Math.min(STAR_MB_ZOOM, u.uZoom.value)); u.uAmt.value = Math.min(u.uAmt.value, STAR_MB_AMT); };
   noDepth(STAR_GROUP);
 }
 // the low sky: city-lit haze seen when the camera is near the ground
@@ -37,7 +40,9 @@ const EARTH_ROT = (() => {                                     // Earth-local (S
   m.set(e.x, e.y, e.z, 0, n.x, n.y, n.z, 0, -nn.x, -nn.y, -nn.z, 0, 0, 0, 0, 1);
   return m;
 })();
-const EARTH_U = { tDay: { value: null }, tNight: { value: null }, tPatch: { value: null }, uSun: { value: SUN_DIR.clone() }, uEye: { value: new THREE.Vector3() }, uExp: { value: 1 }, uNight: { value: 1.8 },
+const CN_H = [90000, 14000, 3200], CN_GAIN = 2.3, CN_T = [{ value: null }, { value: null }, { value: null }];   // Seoul's night map, baked in p4b_city: three levels of one map
+const CN_TK = { value: null };
+const EARTH_U = { tCNK: CN_TK, tCN0: CN_T[0], tCN1: CN_T[1], tCN2: CN_T[2], tDay: { value: null }, tNight: { value: null }, tPatch: { value: null }, uSun: { value: V3(-0.74, -0.60, 0.16).normalize() }, uEye: { value: new THREE.Vector3() }, uExp: { value: 1 }, uNight: { value: 1.8 },
   uNS: { value: new THREE.Vector2(8192, 4096) }, uPS: { value: new THREE.Vector2(675, 600) },
   uP0: { value: new THREE.Vector2((118 + 180) / 360, (28 + 90) / 180) }, uP1: { value: new THREE.Vector2((136 + 180) / 360, (44 + 90) / 180) } };
 // the night lights of the map as the Earth shows them and as Seoul's field starts out: the same function in both, so the field takes over the Earth's picture with no change of look
@@ -51,29 +56,21 @@ const NIGHT_GLSL = `
                  mix(textureLod(t, vec2(h0.x, h1.y), 0.0).rgb, textureLod(t, vec2(h1.x, h1.y), 0.0).rgb, g1.x / (g0.x + g1.x)), g1.y / (g0.y + g1.y));
     }
     float eh(vec2 p){ vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
-    // one octave of point lights in map metres, mean 1 at every scale: it is flat 1 while a cell is smaller than a few pixels, so nothing pops. Heavy tailed: many dim lights, a few bright ones
-    float speck(vec2 p, float cell, float fw, float seed){
-      float k = smoothstep(2.2, 6.0, cell / fw); if (k <= 0.0) return 1.0;
-      vec2 g = p / cell, id = floor(g), f = fract(g) - 0.5, o = (vec2(eh(id + seed), eh(id + seed + 7.7)) - 0.5) * 0.5;
-      float b = eh(id + seed + 5.5), t = b * b * b, r = clamp(fw / cell * (0.62 + 0.5 * t), 0.05, 0.16), d = dot(f - o, f - o);
-      float a = min(exp(-d / (r * r)) / (3.14159 * r * r), 12.0) * (0.25 + 3.0 * t);
-      return mix(1.0, a, k);
-    }
+    float wbN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(eh(i), eh(i + vec2(1, 0)), f.x), mix(eh(i + vec2(0, 1)), eh(i + vec2(1, 1)), f.x), f.y); }
+    float wbR(vec2 p){ return 1.0 - abs(2.0 * wbN(p) - 1.0); }
     // the 3 km map sharpened against a wider blur of itself: clusters of light tighten and the fog between them goes dark
     vec3 nightSharp(vec3 nc, vec3 wide){ return max(nc + (nc - wide) * 0.6 - 0.008, vec3(0.0)); }
-    // the map's light resolved into point lights, warm and white, with no smooth core left
-    vec3 nightGrain(vec3 nc, vec2 mp, float mfw){
-      float lv = log2(mfw * 5.0), l0 = floor(lv), tl = lv - l0, c0 = pow(2.0, l0);
-      vec2 m1 = mp * mat2(0.94, -0.34, 0.34, 0.94), m2 = mp * mat2(0.82, 0.57, -0.57, 0.82);
-      float s2 = mix(speck(m1, c0 * 2.0, mfw, 13.0), speck(m1, c0 * 4.0, mfw, 19.0), tl), s3 = mix(speck(m2, c0, mfw, 29.0), speck(m2, c0 * 2.0, mfw, 37.0), tl);
-      float sp = 0.14 + 0.86 * (0.42 * s2 + 0.58 * s3);
-      float L = dot(nc, vec3(0.3, 0.55, 0.15)), hue = eh(floor(m2 / (c0 * 4.0)) + 3.3);
-      vec3 warm = mix(nc, L * mix(vec3(1.18, 0.88, 0.56), vec3(1.04, 0.98, 0.90), smoothstep(0.62, 0.95, hue)), 0.62);
-      return warm * sp * 0.9 / (1.0 + 0.8 * L);
+    // Seoul's night map at this place: the level that suits the pixel, and the air's glow over its bright districts
+    vec3 cityNight(vec2 p, float fw, sampler2D t0, sampler2D t1, sampler2D t2){
+      vec2 u0 = p / ${(2 * CN_H[0]).toFixed(1)} + 0.5; float m = max(abs(p.x), abs(p.y));
+      vec3 c = texture(t0, u0).rgb, c1 = texture(t1, p / ${(2 * CN_H[1]).toFixed(1)} + 0.5).rgb, c2 = texture(t2, p / ${(2 * CN_H[2]).toFixed(1)} + 0.5).rgb;
+      c = mix(c, c1, smoothstep(${CN_H[1].toFixed(1)}, ${(0.86 * CN_H[1]).toFixed(1)}, m) * smoothstep(80.0, 34.0, fw));
+      c = mix(c, c2, smoothstep(${CN_H[2].toFixed(1)}, ${(0.86 * CN_H[2]).toFixed(1)}, m) * smoothstep(13.0, 6.0, fw));
+      return c + textureLod(t0, u0, 4.0).rgb * 0.10;
     }`;
 const EARTH_MAT = new THREE.ShaderMaterial({ uniforms: EARTH_U, depthTest: false, depthWrite: false,
   vertexShader: `varying vec3 vN; varying vec3 vL; void main(){ vL = position; vN = normalize(mat3(modelMatrix) * position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `uniform sampler2D tDay, tNight, tPatch; uniform vec3 uSun, uEye; uniform vec2 uP0, uP1, uNS, uPS; uniform float uExp, uNight; varying vec3 vN; varying vec3 vL;
+  fragmentShader: `uniform sampler2D tDay, tNight, tPatch, tCN0, tCN1, tCN2, tCNK; uniform vec3 uSun, uEye; uniform vec2 uP0, uP1, uNS, uPS; uniform float uExp, uNight; varying vec3 vN; varying vec3 vL;
     ${NOISE_GLSL}
     ${NIGHT_GLSL}
     void main(){
@@ -102,17 +99,22 @@ const EARTH_MAT = new THREE.ShaderMaterial({ uniforms: EARTH_U, depthTest: false
         // map metres of the same tangent frame as the Seoul field, so the lights seen here are in the same places there
         vec2 mp = vec2((uv.x * 360.0 - 180.0 - ${SV_LON.toFixed(3)}) * 88000.0, (${SV_LAT.toFixed(3)} - (uv.y * 180.0 - 90.0)) * 111000.0);
         float mfw = length(vec2(length(dFdx(mp)), length(dFdy(mp)))) * 0.75;
-        vec3 grain = nightGrain(nc, mp, mfw);
-        nl = mix(nl, max(grain, vec3(0.0)), mag);
-      }
+        // past the map's resolution: the map's texels resolved into their own lights (baked in p4b_city). The lit fence along the demilitarised zone and the string of towns on the east coast are held far back there: as thin dotted lines at this size they read as the edge of a clipped shape
+        vec3 web = texture(tCNK, pu).rgb * 4.0 * smoothstep(0.0, 0.02, min(pe.x, pe.y));
+        nl = mix(max(nl - vec3(0.004, 0.006, 0.012), 0.0), mix(max(nc - vec3(0.004, 0.006, 0.012), 0.0), web, pm * smoothstep(-0.9, -2.0, lod)), mag);
+        float kb = smoothstep(86000.0, 58000.0, length(mp)) * smoothstep(1500.0, 520.0, mfw);
+        if (kb > 0.0) nl = mix(nl, cityNight(mp, mfw, tCN0, tCN1, tCN2) * ${CN_GAIN.toFixed(3)}, kb);
+      } else nl = max(nl - vec3(0.004, 0.006, 0.012), 0.0);
       // the map has a hard-edged rectangle of fishing-fleet light in the East China Sea: that was the straight 'seam'. Open water here, feathered
       vec2 ll = vec2(uv.x * 360.0 - 180.0, uv.y * 180.0 - 90.0), sb = smoothstep(vec2(125.6, 29.8), vec2(125.95, 30.15), ll) * smoothstep(vec2(128.9, 33.05), vec2(128.55, 32.8), ll);
       nl *= 1.0 - sb.x * sb.y;
-      nl = max(nl - vec3(0.004, 0.006, 0.012), 0.0);
       float night = 1.0 - smoothstep(-0.10, 0.10, ndl);
-      vec3 col = lit + nl * uNight * night + surf * 0.0075;
+      // the night side is never a black disc: a thin moon from above-left lights its clouds and seas, with a broad sheen, so the globe keeps its form
+      float mn = max(dot(N, normalize(vec3(-0.25, 0.62, 0.74))), 0.0);
+      vec3 moon = ((surf * vec3(0.62, 0.74, 1.0) * 0.058 + vec3(0.0035, 0.0065, 0.014)) * (0.25 + 0.75 * mn) + vec3(0.30, 0.42, 0.68) * pow(max(dot(N, normalize(V + vec3(-0.25, 0.62, 0.74))), 0.0), 26.0) * 0.012 * (1.0 - cl)) * smoothstep(-3.0, -0.6, lod);
+      vec3 col = lit + nl * uNight * night + mix(surf * 0.0075, moon, night);
       float f = pow(1.0 - max(dot(N, V), 0.0), 4.0);
-      col += mix(vec3(0.010, 0.022, 0.05), vec3(0.22, 0.45, 0.95), smoothstep(-0.25, 0.3, ndl)) * f * 0.9;
+      col += mix(vec3(0.030, 0.062, 0.135), vec3(0.22, 0.45, 0.95), smoothstep(-0.25, 0.3, ndl)) * f * 0.9;
       gl_FragColor = vec4(col * uExp, 1.0);
     }` });
 const EARTH_MESH = new THREE.Mesh(new THREE.SphereGeometry(SV_R, 256, 160), EARTH_MAT);

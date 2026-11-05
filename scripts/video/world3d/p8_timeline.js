@@ -25,16 +25,24 @@ const DOF_NEAR_PASS = new ShaderPass({
       gl_FragColor = d >= 0.99999 ? vec4(1.0) : packDepthToRGBA(d); }` }, 'tNotUsed');
 DOF_NEAR_PASS.material.blending = THREE.NoBlending;
 const DOF = {
-  uniforms: { tDiffuse: { value: null }, tDepth: { value: null }, uA: { value: 0 }, uF: { value: 1 }, uPx: { value: new THREE.Vector2(1 / 1920, 1 / 1080) }, uNear: { value: 1e-3 }, uFar: { value: 1e4 } },
+  defines: { SV_RIM: 1 },   // the frames the MP4 is made of; real-time playback leaves the ring out (below)
+  uniforms: { tDiffuse: { value: null }, tDepth: { value: null }, tRaw: { value: null }, uA: { value: 0 }, uF: { value: 1 }, uPx: { value: new THREE.Vector2(1 / 1920, 1 / 1080) }, uNear: { value: 1e-3 }, uFar: { value: 1e4 } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
   fragmentShader: `#include <packing>
-    uniform sampler2D tDiffuse, tDepth; uniform float uA, uF, uNear, uFar; uniform vec2 uPx; varying vec2 vUv;
+    uniform sampler2D tDiffuse, tDepth, tRaw; uniform float uA, uF, uNear, uFar; uniform vec2 uPx; varying vec2 vUv;
     float zAt(vec2 uv){ float d = unpackRGBAToDepth(texture2D(tDepth, uv)); if (d >= 0.99999) return -1.0; return -perspectiveDepthToViewZ(d, uNear, uFar); }
     float cocOf(float z){ return z < 0.0 ? 0.0 : uA * abs(1.0 - uF / max(z, 1e-3)); }
     vec3 tame(vec3 c){ float l = max(c.r, max(c.g, c.b)); return l > 1.6 ? c * (1.6 / l) : c; }   // a thin hot edge would otherwise print as single bright samples
     void main(){
       float zc = zAt(vUv), cc = cocOf(zc);
-      vec3 col = texture2D(tDiffuse, vUv).rgb; if (cc > 0.9) col = tame(col); float tot = 1.0, rad = 1.6;
+      vec3 raw = texture2D(tDiffuse, vUv).rgb;
+      // the 3 x 3 above gives the one-pixel ring just outside anything in focus that thing's depth, so the ring stayed unblurred: where a dark bar lay behind, that printed as a short black nick on the edge.
+      // The ring is gathered as the far pixel it is; max keeps the bright anti-aliased rim of the thing in focus
+      #ifdef SV_RIM
+      float dr = unpackRGBAToDepth(texture2D(tRaw, vUv)), zr = dr >= 0.99999 ? -1.0 : -perspectiveDepthToViewZ(dr, uNear, uFar), cr = cocOf(zr);
+      bool rim = zc > 0.0 && zr > 0.0 && cr > 1.5 && cc < 0.6 * cr; if (rim) { zc = zr; cc = cr; }
+      #endif
+      vec3 col = mix(raw, tame(raw), smoothstep(0.6, 1.4, cc)); float tot = 1.0, rad = 1.6;   // eased in with the blur: a hard threshold here took a hot strip's bloom away in one frame
       float maxR = uA * 1.15; float rot = 6.2832 * fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
       for (int i = 0; i < 72; i++) {
         if (rad >= maxR) break;
@@ -47,7 +55,11 @@ const DOF = {
         col += mix(col / tot, tame(texture2D(tDiffuse, tc).rgb), m); tot += 1.0;
         rad += 2.2 / rad + 0.016 * uA;
       }
-      gl_FragColor = vec4(col / tot, 1.0);
+      vec3 res = col / tot;
+      #ifdef SV_RIM
+      if (rim) res = max(res, raw);
+      #endif
+      gl_FragColor = vec4(res, 1.0);
     }` };
 const dofPass = new ShaderPass(DOF);
 // a small tent over what the gather blurred, which takes its noise pattern away. Nothing in focus goes in or comes out.
@@ -57,11 +69,11 @@ const DOF_TENT = new ShaderPass({
   fragmentShader: `#include <packing>
     uniform sampler2D tDiffuse, tDepth; uniform float uA, uF, uNear, uFar; uniform vec2 uPx; varying vec2 vUv;
     float cocAt(vec2 uv){ float d = unpackRGBAToDepth(texture2D(tDepth, uv)); if (d >= 0.99999) return 0.0; return uA * abs(1.0 - uF / max(-perspectiveDepthToViewZ(d, uNear, uFar), 1e-3)); }
-    void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb; float cc = cocAt(vUv); if (cc < 1.2) { gl_FragColor = vec4(c, 1.0); return; }
+    void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb; float cc = cocAt(vUv); if (cc < 0.8) { gl_FragColor = vec4(c, 1.0); return; }
       float r = clamp(cc * 0.2, 1.0, 3.2); vec3 sum = c * 2.0; float w = 2.0;
       for (int i = 0; i < 8; i++) { float a = float(i) * 0.7854 + 0.3927; vec2 tc = vUv + vec2(cos(a), sin(a)) * r * uPx * (i % 2 == 0 ? 1.0 : 1.5);
         float k = smoothstep(0.6, 1.4, cocAt(tc)); sum += texture2D(tDiffuse, tc).rgb * k; w += k; }
-      gl_FragColor = vec4(sum / w, 1.0); }` });
+      gl_FragColor = vec4(mix(c, sum / w, smoothstep(0.8, 1.6, cc)), 1.0); }` });   // eased in: a whole facade crossing a hard threshold went soft in one frame
 const OUT_TONE = {
   uniforms: { tDiffuse: { value: null } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
@@ -99,7 +111,7 @@ grainPass.material.fragmentShader = grainPass.material.fragmentShader.replace('g
 RESIZE_HOOKS.push((W, H, pr) => {
   DOF_DEPTH.setSize(Math.round(W * pr), Math.round(H * pr)); DOF_NEAR.setSize(Math.round(W * pr), Math.round(H * pr));
   dofPass.uniforms.uPx.value.set(1 / (W * pr), 1 / (H * pr)); DOF_TENT.uniforms.uPx.value.copy(dofPass.uniforms.uPx.value); DOF_NEAR_PASS.uniforms.uPx.value.copy(dofPass.uniforms.uPx.value);
-  dofPass.uniforms.tDepth.value = DOF_NEAR.texture; DOF_TENT.uniforms.tDepth.value = DOF_NEAR.texture; DOF_NEAR_PASS.uniforms.tDepth.value = DOF_DEPTH.texture;
+  dofPass.uniforms.tDepth.value = DOF_NEAR.texture; dofPass.uniforms.tRaw.value = DOF_DEPTH.texture; DOF_TENT.uniforms.tDepth.value = DOF_NEAR.texture; DOF_NEAR_PASS.uniforms.tDepth.value = DOF_DEPTH.texture;
   if (LIVE.rt) { const w = Math.round(W * pr), h = Math.round(H * pr); LIVE.rt.scene.setSize(w, h); LIVE.rt.a.setSize(w, h); LIVE.rt.b.setSize(w, h); }
 });
 /* ---------- REAL-TIME PLAYBACK ONLY. A frame drawn on request (seek, ?freeze, a render, a pause) takes none of this and stays the frame the MP4 is made of.
@@ -142,12 +154,12 @@ const FILM_SPEED = { hook: 1, key: 1, normal: 1, transit: 1, return: 1 };
 const LOOP_T = 74.0;
 const IN_HOLD = 0.15;                       // seconds the camera rests exactly at the IN pose on each side of a join
 const D_E0 = (SV_R * 1080 / 300) / (2 * Math.tan(IN_HFOV * deg / 2));   // Earth radius ≈ 300 px at the wide end
-const EARTH_AT = [1650, 920];               // where Earth's centre sits at the wide end (film's first and last frame), clear of the ending card's lettering
+const EARTH_AT = [1568, 725];               // where Earth's centre sits at the wide end (film's first and last frame): the whole disc to the right of the ending card's lettering (x < 1240)
 
 // ---- ACT 1 ----
 const A1_END = 16 - IN_HOLD;
 const A1_LND = monoTrack([[0, D_E0], [1.2, 2.9e7], [2.4, 1.1e7], [3.4, 2.4e6], [4.4, 3.6e5], [5.6, 6.0e4], [6.8, 1.4e4], [8.0, 3.0e3], [9.2, 500], [10.2, 90], [11.2, 14], [12.0, 2.5], [13.0, 1.1], [14.0, 0.55], [15.0, 0.29], [A1_END, IN_D]].map(([t, d]) => [t, Math.log(d)]));
-const A1_H = monoTrack([[0, -60], [2.4, -52], [4.4, -38], [6.0, -28], [8.0, -18], [10.2, -8], [12.0, 0], [A1_END, IN_H]]);
+const A1_H = monoTrack([[0, 0], [1.4, 0], [2.6, -3], [3.6, -10], [4.6, -20], [6.0, -28], [8.0, -18], [10.2, -8], [12.0, 0], [A1_END, IN_H]]);   // north is up on the globe (heading 0) until the map is close enough for north not to matter
 const A1_P = monoTrack([[0, 65], [2.4, 62], [4.4, 58], [6.0, 52], [7.5, 46], [9.0, 38], [10.2, 26], [11.2, 14], [12.0, 9], [A1_END, IN_P]]);
 const A1_ROLL = monoTrack([[0, 0], [3, 0], [6, 5], [9, 3], [12, 0], [A1_END, 0]]);
 const _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion(), _qc = new THREE.Quaternion();
@@ -208,16 +220,30 @@ function frameCards(ids, H, P, x0, x1, yc) {
 }
 const A2_PAIR = frameCards([2, 3], -12, 7, 70, 1850, 525);                  // card 3 and card 4 both whole, the light between them, the phone and the glass wholly below the frame
 // card 5, nearer than its slot's default so its body lettering is at least 26 px; its lettering stays above y 880
-const A2_C5 = (() => { const c = CARD_DEF[4], pxW = 860, at = [960, 480], d = c.W * 1080 / (2 * Math.tan(19 * deg) * pxW), field = 2 * Math.tan(19 * deg) * d;
+const A2_C5 = (() => { const c = CARD_DEF[4], pxW = 800, at = [960, 514], d = c.W * 1080 / (2 * Math.tan(19 * deg) * pxW), field = 2 * Math.tan(19 * deg) * d;
   return { stopT: c.pos.clone().addScaledVector(c.right, -(at[0] - 960) / 1080 * field).addScaledVector(c.upv, -(540 - at[1]) / 1080 * field), d, stopH: c.stopH, stopP: c.stopP }; })();
 const A2_E = 40 - IN_HOLD;
+// the target that puts the phone at (px, py) for this turn, pitch and distance
+function A2_AIM(H, P, D, px, py) { const f = 540 / Math.tan(19 * deg), q = new THREE.Quaternion().setFromAxisAngle(AX_Y, -H * deg).multiply(new THREE.Quaternion().setFromAxisAngle(AX_X, -P * deg));
+  return PHONE_C.clone().addScaledVector(V3(1, 0, 0).applyQuaternion(q), -(px - 960) / f * D).addScaledVector(V3(0, 1, 0).applyQuaternion(q), (py - 540) / f * D); }
+// no stop stands completely still: a slow push and a slow slide, so the cards keep a little parallax against the room (none at a stop's ends, where the moves take over)
+const A2_STOPS = [[4.2, 6.9, 1], [8.5, 14.0, 0.35], [15.6, 18.7, 1], [20.2, 24.7, 1], [26.2, 31.4, 0.6]];
+function a2Drift(a, out) {
+  for (const [s, e, g] of A2_STOPS) { if (a <= s - 0.4 || a >= e + 0.4) continue;
+    const w = pulse(a, s - 0.4, s + 0.4, e - 0.4, e + 0.4), u = (a - (s + e) / 2) * w * g, field = 2 * out.D * Math.tan(19 * deg);
+    _vr.set(1, 0, 0).applyQuaternion(out.q); _vu.set(0, 1, 0).applyQuaternion(out.q);
+    out.T.addScaledVector(_vr, 0.0052 * field * u).addScaledVector(_vu, 0.0024 * field * u); out.D *= 1 - 0.0048 * u; }
+}
 const A2_KEYS = [
   [IN_HOLD, IN_T, IN_D, IN_H, IN_P],
   [1.1, V3(0.055, 0.845, 0.0), 0.33, 2, 13],
   [2.15, V3(0.085, 0.90, -0.02), 0.57, 14, 14],
   ...STOP(0, 4.2, 6.9), ...STOP(1, 8.5, 14.0), ...HOLD(15.6, 18.7, A2_PAIR), ...STOP(3, 20.2, 24.7), ...HOLD(26.2, 31.4, A2_C5),
-  [33.3, V3(0.27, 1.0, -0.05), 1.28, -10, 12],
-  [36.0, V3(0.05, 0.86, 0.0), 0.52, -4, 13],
+  // the way home: a wide slow turn that keeps the phone near the middle of the frame and close enough for the cards coming down to it to be read as cards, the phone in focus (it lies in the focal plane)
+  [32.3, A2_C5.stopT.clone().lerp(A2_AIM(-20, 11, 0.8, 640, 690), 0.52), 0.82, -36, 9],
+  [33.3, A2_AIM(-20, 11, 0.8, 640, 690), 0.8, -20, 11],
+  [34.7, A2_AIM(-8, 12.5, 0.56, 880, 660), 0.56, -8, 12.5],
+  [36.0, V3(0.05, 0.86, 0.0), 0.45, -4, 13],
   [38.6, V3(0.07, 0.835, 0.0), 0.262, -0.8, 12.2],
   [A2_E, IN_T, IN_D, IN_H, IN_P],
 ];
@@ -231,7 +257,7 @@ function FILM_CAM(tau, out) {
   else if (t < 56) {
     const a = t - 16; out.hfov = IN_HFOV;
     if (a <= IN_HOLD || a >= A2_E) { out.T.copy(IN_T); out.D = IN_D; setOri(out, IN_H, IN_P, 0); }
-    else { out.T.set(A2_TX(a), A2_TY(a), A2_TZ(a)); out.D = Math.exp(A2_LD(a)); setOri(out, A2_H(a), A2_P(a), 0); }
+    else { out.T.set(A2_TX(a), A2_TY(a), A2_TZ(a)); out.D = Math.exp(A2_LD(a)); setOri(out, A2_H(a), A2_P(a), 0); a2Drift(a, out); }
   } else {
     const u = t - 56;
     if (u <= IN_HOLD) poseA1(A1_END, out); else poseA1(A3.t1(u), out, smoother(range(u, 10.8, 15)));   // the glide to the lower right has its own pace on the way out
@@ -263,22 +289,27 @@ beat(48, 56, 'normal', 'Cards go home', 1);
 beat(56, 68.5, 'normal', 'Back out to Earth', 1);
 beat(68.5, 74, 'key', 'Earth rests', 1);
 
-// Captions: QA 'read' and the visual review measure and see them; their words are fragments of the film's real subtitles (final/subs/captions_T2.ass). The final
-// picture leaves them out with ?text=0 (render.mjs --text0), since the subtitles are burned in at compositing.
+// Captions: labels for QA 'read', the visual review and the HTML playback only: each names what the frame really shows. The final picture leaves them out with ?text=0 (render.mjs --text0); the film's subtitles are burned in at compositing.
 EARTH_MESH.name = 'Earth'; ATM_MESH.name = 'Atmosphere'; CITY_MESH.name = 'Seoul'; const SV_EARTH_BODY = [EARTH_MESH, ATM_MESH];   // the planet's shell of air is drawn over its surface CARDS.forEach((c, i) => { c.g.name = 'Card ' + (i + 1); });
-caption(0.0, 2.4, "Alex is staying in Seoul.", '', '', SV_EARTH_BODY);
-caption(5.0, 6.95, "Details change.", '', '', CITY_MESH);
-caption(10.25, 12.6, "Is that photo still right?", '', '', CAFE);
-caption(14.0, 17.3, "Alex sets English as the display language.", '', '', PHONE);
-caption(20.2, 22.9, "The deadline moved,", '', '', CARDS[0].g);
-caption(24.5, 30.0, "We altered the card's date for this demo, and StillValid caught it.", '', '', CARDS[1].g);
-caption(31.6, 34.7, "Both exact lines appear side by side,", '', '', [CARDS[2].g, CARDS[3].g]);
-caption(36.2, 40.7, "Our own code re-checks that each quote really appears there,", '', '', CARDS[3].g);
-caption(42.2, 47.4, "And it only vouches for what it checked, right now.", '', '', CARDS[4].g);
-caption(52.2, 55.9, "Cards lifted from the live result screen", '', '', PHONE);
-caption(56.1, 59.0, "Built on Meta's Muse Spark,", '', '', PHONE);
-caption(63.9, 65.75, "StillValid:", '', '', CITY_MESH);
-caption(68.6, 73.0, "before you act on a saved notice, check that it's still valid.", '', '', SV_EARTH_BODY);
+caption(0.0, 2.4, "Earth at night", '', '', SV_EARTH_BODY);
+caption(5.0, 6.95, "Seoul from above", '', '', CITY_MESH);
+caption(10.25, 12.6, "A cafe in Seoul", '', '', CAFE);
+caption(14.0, 16.05, "The phone on the table", '', '', PHONE);
+caption(16.05, 17.95, "Result on the phone", '', '', PHONE);
+caption(20.2, 22.9, "Verdict card", '', '', CARDS[0].g);
+caption(24.5, 30.0, "Application deadline card", '', '', CARDS[1].g);
+caption(31.35, 34.8, "Quotes: your notice and the retrieved source", '', '', [CARDS[2].g, CARDS[3].g]);
+caption(36.2, 40.7, "Retrieved source", '', '', CARDS[3].g);
+caption(42.2, 47.4, "Sources checked", '', '', CARDS[4].g);
+caption(52.2, 55.9, "Back on the phone", '', '', PHONE);
+caption(56.1, 59.0, "Delete dialog on the phone", '', '', PHONE);
+caption(63.9, 65.75, "Seoul from above", '', '', CITY_MESH);
+caption(68.6, 73.0, "Back to Earth", '', '', SV_EARTH_BODY);
+// the label's box hugs its words and the dark behind it fades out inside its own box, so it never ends in a line. Over the phone the label goes to the right of the frame, off the phone's lettering
+{ const st = document.createElement('style'); st.textContent = `#frame[data-aspect="16x9"] #caption { right: auto; max-width: 50%; }
+  #frame[data-aspect="16x9"] #caption.sv-right { left: auto; right: 5%; }
+  #caption::before { left: -18%; right: -18%; top: -130%; bottom: -130%; background: radial-gradient(ellipse closest-side at 50% 50%, rgba(3,5,8,.56), rgba(3,5,8,.3) 52%, rgba(3,5,8,0) 100%); }`; document.head.appendChild(st); }
+const SV_CAP_EL = document.getElementById('caption');
 
 const RULER = null;
 const WARMUP_TAUS = [0, 5, 9.5, 12.5, 15.9, 30, 42, 56.05, 60];
@@ -355,6 +386,7 @@ function applyScene(tau, tp, field) {
     KEY_LIGHT.shadow.bias = -0.0006; KEY_LIGHT.shadow.normalBias = 0.0015 / D;
   }
   // which recorded still the phone shows
+  SV_CAP_EL.classList.toggle('sv-right', (t > 13.5 && t < 18.5) || (t > 51.7 && t < 59.5));
   const key = t < 15.999 ? 'S0' : t < 55.999 ? 'S6' : 'S10';
   SCREEN_U.tA.value = SV_TEX[key];
   exactPass.uniforms.tExact.value = SV_TEX[key + 'X'];
@@ -365,7 +397,8 @@ function applyScene(tau, tp, field) {
   if (ex > 0.0005) setExactHomography(hold);
   // reflections on the screen die away before the IN pose
   SCREEN_U.uReflect.value = (1 - pulse(t, 14.6, 15.5, 16.5, 17.4)) * (1 - pulse(t, 54.6, 55.5, 56.5, 57.4));
-  SCREEN_U.uGain.value = 0.94 + 0.06 * Math.max(pulse(t, 14.6, 15.5, 16.5, 17.4), pulse(t, 54.6, 55.5, 56.5, 57.4));
+  // the screen dims while its cards are out, and lights up again as the last one lands on its own place: the dimmed phone and the bright card never read as two phones
+  SCREEN_U.uGain.value = (0.94 + 0.06 * Math.max(pulse(t, 14.6, 15.5, 16.5, 17.4), pulse(t, 54.6, 55.5, 56.5, 57.4))) * (1 - 0.8 * pulse(t - 16, 1.05, 1.7, 35.35, 35.95));
   { const m = new THREE.Matrix4().copy(PHONE.matrixWorld).invert(); SCREEN_U.uEyeL.value.copy(camera.position).applyMatrix4(m); }
   SCREEN_POOL.material.opacity = 0.11;
   // steam
@@ -375,16 +408,14 @@ function applyScene(tau, tp, field) {
   CARDS.forEach((c, i) => {
     const on = a > 0 && a < 40 && cardState(i, a, _cs);
     c.g.visible = !!on;
-    if (!on) { c.pool.visible = c.shade.visible = false; return; }
-    c.pool.visible = c.shade.visible = true;
+    if (!on) { c.shade.visible = false; return; }
+    c.shade.visible = true;
     c.g.position.copy(_cs.pos); c.g.quaternion.copy(_cs.q); c.g.scale.setScalar(_cs.s);
     c.mat.uniforms.uO.value = _cs.o;
     c.slab.material.opacity = _cs.o; c.slab.material.depthWrite = _cs.o > 0.98; c.slab.visible = _cs.o > 0.01;
     const lift = clamp01((_cs.pos.y - TABLE_Y - 0.06) / 0.4);
-    c.pool.material.opacity = 0.16 * _cs.o * _cs.s * _cs.v * (1 - 0.55 * lift);
-    c.shade.material.opacity = 0.42 * _cs.o * _cs.s * _cs.v * (1 - 0.6 * lift);
+    c.shade.material.opacity = 0.16 * _cs.o * _cs.s * _cs.v * (1 - 0.6 * lift);   // the only trace of a card on the table: a very faint soft shadow
     const clx = (v, w) => clamp(v, -0.53 + w / 2, 0.97 - w / 2), clz = (v, d) => clamp(v, -0.39 + d / 2, 0.43 - d / 2), cw = CARD_DEF[i].W;
-    c.pool.position.x = clx(_cs.pos.x, cw * 2.3); c.pool.position.z = clz(_cs.pos.z + 0.02, cw * 1.7);
     c.shade.position.x = clx(_cs.pos.x + 0.05 + 0.2 * lift, cw * 1.45); c.shade.position.z = clz(_cs.pos.z - 0.06 - 0.22 * lift, cw * 1.05);
     drawn.push(c);
   });
@@ -399,16 +430,16 @@ function applyScene(tau, tp, field) {
   { const vd = _vt.set(0, 0, -1).applyQuaternion(CAM.q), zOf = P => Math.max(P.clone().sub(CAM_POS).dot(vd) / D, 0.05);
     let ln = 0;
     if (a > 0 && a < 40) {
-      for (let i = 0; i < 5; i++) { const T = CARD_TIMES[i], w = pulse(a, T.r0 + 0.35 * (T.r1 - T.r0), T.r0 + 0.6 * (T.r1 - T.r0), T.r1 - 0.2, T.r1 + 0.1);
+      for (let i = 0; i < 5; i++) { const T = CARD_TIMES[i], w = i === 0 ? pulse(a, 1.3, 2.1, T.r1 - 0.2, T.r1 + 0.1) : Math.max(pulse(a, T.r0 + 0.3 * (T.r1 - T.r0), T.r0 + 0.5 * (T.r1 - T.r0), T.r1 - 0.2, T.r1 + 0.1), i === 4 ? pulse(a, 31.25, 31.45, 32.2, 32.9) : 0);
         if (w > 0.001 && CARDS[i].g.visible) { _cv.copy(CARDS[i].g.position).applyMatrix4(universe.matrixWorld).project(camera); ln = lerp(ln, Math.log(zOf(CARDS[i].g.position)), w * (1 - smoother(range(Math.max(Math.abs(_cv.x), Math.abs(_cv.y)), 0.7, 1.1)))); } }
-      const wp = Math.max(1 - smoother(range(a, 1.0, 2.8)), smoother(range(a, 32.4, 33.8)));
+      const wp = Math.max(1 - smoother(range(a, 1.0, 2.1)), smoother(range(a, 32.2, 32.9)));
       if (wp > 0) ln = lerp(ln, Math.log(zOf(PHONE_C)), wp);
     }
-    dofPass.uniforms.uF.value = DOF_TENT.uniforms.uF.value = Math.exp(clamp(ln, -0.2, 0.2)); }   // a limited pull: the whole picture's blur follows it
+    dofPass.uniforms.uF.value = DOF_TENT.uniforms.uF.value = Math.exp(clamp(ln, -0.42, 0.42)); }   // a limited pull: the whole picture's blur follows it
   // less bloom over the light field (thousands of small lights would otherwise fog the frame)
   bloom.strength = lerp(0.42, 0.13, smoother(range(Math.log(field), Math.log(9e5), Math.log(2e5))) * (1 - smoother(range(Math.log(field), Math.log(30), Math.log(8)))));
   // the planned dark zones
-  const dark = a > 0 ? pulse(a, 7.3, 8.5, 14.0, 15.2) : 0;           // the frame's dark stretch for the callouts over x 660-1860: 1.2 s in and out
+  const dark = a > 0 ? pulse(a, 7.3, 8.5, 14.0, 14.85) : 0;          // the frame's dark stretch for the callouts over x 660-1860; gone before the next card has come in, so that card is never greyed
   exactPass.uniforms.uDarkR.value = dark;
   if (dark > 0.0005 && CARDS[1].g.visible) {
     const c2 = CARD_DEF[1]; CARDS[1].g.updateMatrixWorld(true);
@@ -421,7 +452,7 @@ const EXPOSURE = () => 1;
 // less motion blur over the city, whose fine detail smears under it: half at 5–8.5 s and 57.5–61.5 s, and wherever else the city fills the frame (ACT1 and ACT3 hold stops there)
 // and almost none while the phone's or a card's lettering is what the frame is about
 function filmMbAmt(t, D) { const city = 1 - Math.max(0.5 * pulse(t, 57.2, 57.5, 61.5, 61.8), 0.8 * pulse(t, 3.0, 3.4, 9.7, 10.1), 0.8 * pulse(t, 60.7, 61.1, 67.4, 67.8));
-  const phone = Math.max(pulse(t, 13.6, 14.0, 18.6, 19.0), pulse(t, 51.6, 52.0, 59.0, 59.4)), act2 = pulse(t, 16.3, 16.8, 51.6, 52.0); return city * (1 - 0.85 * phone) * (1 - 0.45 * act2); }
+  const phone = Math.max(pulse(t, 13.6, 14.0, 18.6, 19.0), pulse(t, 51.6, 52.0, 59.0, 59.4)), act2 = pulse(t, 16.3, 16.8, 55.4, 55.8); return city * (1 - 0.85 * phone) * (1 - 0.7 * act2); }
 // drawn right before the composer: the depth the depth-of-field pass reads, without the see-through things
 function FILM_PREPASS() {
   const A = SV_STATE.dof;

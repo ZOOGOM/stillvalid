@@ -66,7 +66,7 @@ const FLOOR_MAT = new THREE.MeshStandardMaterial({ map: FLOOR_TEX, roughness: 0.
 const CERAMIC_MAT = new THREE.MeshPhysicalMaterial({ color: 0xf2eee6, roughness: 0.34, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 0.9 });
 const CUP_GLAZE = CERAMIC_MAT.clone(); CUP_GLAZE.vertexColors = true;
 const SPOON_MAT = new THREE.MeshStandardMaterial({ color: 0xcfd0ce, metalness: 1, roughness: 0.17, envMapIntensity: 0.85 });
-SPOON_MAT.onBeforeCompile = s => { s.fragmentShader = s.fragmentShader.replace('#include <lights_fragment_maps>', '#include <lights_fragment_maps>\n radiance = min(radiance, vec3(1.5));').replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n reflectedLight.directSpecular *= 0.12;'); }; SPOON_MAT.customProgramCacheKey = () => 'spoon-soft';
+SPOON_MAT.onBeforeCompile = s => { s.fragmentShader = s.fragmentShader.replace('#include <lights_fragment_maps>', '#include <lights_fragment_maps>\n radiance = min(radiance, vec3(0.85));').replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n reflectedLight.directSpecular *= 0.12;'); }; SPOON_MAT.customProgramCacheKey = () => 'spoon-soft';
 const FRAME_MAT = new THREE.MeshStandardMaterial({ color: 0x2b2926, metalness: 1, roughness: 0.38, envMapIntensity: 0.62 }); FRAME_MAT.userData.thin = true;
 const COFFEE_MAT = new THREE.MeshPhysicalMaterial({ roughness: 0.16, specularIntensity: 0.9, specularColor: new THREE.Color(0.95, 0.8, 0.65), envMapIntensity: 0.14 });
 // the gloss map's panes are far brighter than any wall: glazes take its reflections and almost none of its light; and the coat mirrors the map alone, since a direct light's tiny hot spot reads as a stain once out of focus
@@ -80,6 +80,8 @@ function mergeGeo(list) { const parts = list.map(g => g.index ? g.toNonIndexed()
 function plate(w, d, r, h, bev) { const s = new THREE.Shape(), x = -w / 2, y = -d / 2; s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.absarc(x + w - r, y + r, r, -Math.PI / 2, 0); s.lineTo(x + w, y + d - r); s.absarc(x + w - r, y + d - r, r, 0, Math.PI / 2); s.lineTo(x + r, y + d); s.absarc(x + r, y + d - r, r, Math.PI / 2, Math.PI); s.lineTo(x, y + r); s.absarc(x + r, y + r, r, Math.PI, Math.PI * 1.5);
   const g = new THREE.ExtrudeGeometry(s, { depth: h - 2 * bev, bevelEnabled: true, bevelSize: bev, bevelThickness: bev, bevelOffset: -bev, bevelSegments: 3, curveSegments: 10 }); g.rotateX(-Math.PI / 2); g.translate(0, bev, 0); return g; }
 const box = (w, h, d, mat, x, y, z, parent = CAFE, cast = false) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = cast; m.receiveShadow = true; parent.add(m); return m; };
+// the window frames: dark satin. Polished, they mirrored the sky as a bright strip thinner than the lens's blur, and a strip that thin prints the gather's noise as a woven pattern
+const WIN_STEEL = new THREE.MeshStandardMaterial({ color: 0x141517, metalness: 0.55, roughness: 0.62, envMapIntensity: 0.28 });
 // a room of closed slabs: floor, ceiling, side walls, and two window walls built around their openings
 const ROOM = { x: 3.6, zb: -3.6, zf: 2.4, h: 3.0, t: 0.25 };
 {
@@ -92,12 +94,12 @@ const ROOM = { x: 3.6, zb: -3.6, zf: 2.4, h: 3.0, t: 0.25 };
   const winWall = (z, x0, x1, y0, y1, mullions, mat) => {
     box(x0 + X, Y, T, mat, (-X + x0) / 2, Y / 2, z); box(X - x1, Y, T, mat, (x1 + X) / 2, Y / 2, z);
     box(x1 - x0, y0, T, mat, (x0 + x1) / 2, y0 / 2, z); box(x1 - x0, Y - y1, T, mat, (x0 + x1) / 2, (y1 + Y) / 2, z);
-    for (const mx of mullions) box(0.05, y1 - y0, 0.09, STEEL_MAT, mx, (y0 + y1) / 2, z);
-    box(x1 - x0, 0.05, 0.09, STEEL_MAT, (x0 + x1) / 2, y0 + 0.025, z); box(x1 - x0, 0.05, 0.09, STEEL_MAT, (x0 + x1) / 2, y1 - 0.025, z);
-    box(0.05, y1 - y0, 0.09, STEEL_MAT, x0 + 0.025, (y0 + y1) / 2, z); box(0.05, y1 - y0, 0.09, STEEL_MAT, x1 - 0.025, (y0 + y1) / 2, z);
+    for (const mx of mullions) box(0.05, y1 - y0, 0.09, WIN_STEEL, mx, (y0 + y1) / 2, z);
+    box(x1 - x0, 0.05, 0.09, WIN_STEEL, (x0 + x1) / 2, y0 + 0.025, z); box(x1 - x0, 0.05, 0.09, WIN_STEEL, (x0 + x1) / 2, y1 - 0.025, z);
+    box(0.05, y1 - y0, 0.09, WIN_STEEL, x0 + 0.025, (y0 + y1) / 2, z); box(0.05, y1 - y0, 0.09, WIN_STEEL, x1 - 0.025, (y0 + y1) / 2, z);
   };
-  winWall(ZF + T / 2, -3.0, 3.0, 0.45, 2.7, [-1.1, 1.1], CONCRETE_MAT);
-  box(6, 0.05, 0.09, STEEL_MAT, 0, 2.25, ZF + T / 2);
+  winWall(ZF + T / 2, -3.0, 3.0, 0.45, 2.7, [], CONCRETE_MAT);
+  box(6, 0.05, 0.09, WIN_STEEL, 0, 2.25, ZF + T / 2);
   winWall(ZB - T / 2, -3.2, 3.2, 0.78, 2.62, [-1.6, 0, 1.6], PLASTER_MAT);
   // painted dado, skirting, rail, window sill and curtains: the room reads at its real size
   const dado = (w, d, x, z) => { box(w, 0.86, d, DADO_MAT, x, 0.43, z); box(w + 0.012, 0.022, d + 0.012, SHELF_MAT, x, 0.87, z); box(w + 0.006, 0.11, d + 0.006, STEEL_MAT, x, 0.055, z); };
@@ -118,7 +120,8 @@ for (const [w, h, x, y, z] of [[6, 2.25, 0, 1.575, ROOM.zf + ROOM.t / 2], [6.4, 
   gr.addColorStop(0, '#0d1420'); gr.addColorStop(0.62, '#141a26'); gr.addColorStop(1, '#2c2522'); g.fillStyle = gr; g.fillRect(0, 0, 1024, 320);
   g.filter = 'blur(9px)'; const r = mulberry32(17); for (let i = 0; i < 26; i++) { const w = 50 + r() * 90, h = 70 + r() * 190; g.fillStyle = `rgba(${6 + r() * 6},${8 + r() * 6},${12 + r() * 8},0.85)`; g.fillRect(r() * 1024 - w / 2, 320 - h, w, h + 20); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  const b = noDepth(new THREE.Mesh(new THREE.PlaneGeometry(6.6, 2.0), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false }))); b.position.set(0, 1.7, ROOM.zb - ROOM.t - 0.01); b.renderOrder = 1.5; b.name = 'FarNight'; b.userData.passable = true; b.material.userData.thin = true; CAFE.add(b);
+  // it stays in the depth-of-field depth: a window pixel with no depth at all was left out of the tent that takes the gather's noise away, and printed a stipple beside every bar and sill. With a depth, bars, sill and lights all blur through the same lens
+  const b = new THREE.Mesh(new THREE.PlaneGeometry(6.6, 2.0), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false })); b.position.set(0, 1.7, ROOM.zb - ROOM.t - 0.01); b.renderOrder = 1.5; b.name = 'FarNight'; b.userData.passable = true; b.material.userData.thin = true; CAFE.add(b);
 }
 // the table
 const TABLE = new THREE.Group(); TABLE.position.set(0.22, 0, 0.02); CAFE.add(TABLE);
@@ -142,58 +145,117 @@ const CUP = new THREE.Group(); CUP.position.copy(CUP_POS); CAFE.add(CUP);
   const bp = [[0, 0.0085], [0.022, 0.0085], [0.024, 0.0095], [0.0242, 0.012], [0.028, 0.016], [0.036, 0.028], [0.0415, 0.044], [0.0442, 0.06], [0.0452, 0.070], [0.0455, 0.0725], [0.0445, 0.0735], [0.0428, 0.0725], [0.0425, 0.070], [0.041, 0.058], [0.038, 0.044], [0.033, 0.030], [0.024, 0.018], [0, 0.015]];
   const body = new THREE.Mesh(shaded(lathe(bp, 128), bp.length, [0.3, 0.32, 0.36, 0.42, 0.56, 0.82, 1, 1, 1, 1, 1, 0.96, 0.8, 0.46, 0.4, 0.4, 0.4, 0.4]), CUP_GLAZE);
   body.castShadow = body.receiveShadow = true; body.name = 'Cup'; CUP.add(body);
-  // the handle: an ear that is flat in section, thick where it grows out of the wall and slimmer around the bend
-  const handle = (() => { const hc = new THREE.CatmullRomCurve3([V3(0.0425, 0.0625, 0), V3(0.0505, 0.0665, 0), V3(0.0625, 0.0655, 0), V3(0.0702, 0.0555, 0), V3(0.0668, 0.042, 0), V3(0.0545, 0.0325, 0), V3(0.0355, 0.0265, 0)]);
-    const n = 64, m = 16, pos = [], idx = []; for (let i = 0; i <= n; i++) { const u = i / n, c = hc.getPoint(u), t = hc.getTangent(u), nx = -t.y, ny = t.x, e = Math.abs(u - 0.5) * 2, thick = 0.0031 + 0.0034 * e * e * e, wide = 0.0052 + 0.0028 * e * e * e;
-      for (let k = 0; k < m; k++) { const a = k / m * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a); pos.push(c.x + nx * thick * ca, c.y + ny * thick * ca, wide * sa); } }
+  // the handle: a closed ear. Both ends run into the wall and stop inside it, the lower one rising into the bowl where the wall is still steep; flat in section, swelling only at the roots. It carries the body's own shading, so the join has no seam
+  const handle = (() => { const hc = new THREE.CatmullRomCurve3([V3(0.0425, 0.0632, 0), V3(0.0505, 0.0676, 0), V3(0.0612, 0.0672, 0), V3(0.0695, 0.0600, 0), V3(0.0712, 0.0500, 0), V3(0.0650, 0.0412, 0), V3(0.0540, 0.0362, 0), V3(0.0440, 0.0350, 0), V3(0.0372, 0.0368, 0)]);
+    const n = 96, m = 20, pos = [], col = [], idx = [], ao = y => { const k = [[0.016, 0.56], [0.028, 0.82], [0.044, 1]]; if (y <= k[0][0]) return k[0][1]; for (let i = 0; i < 2; i++) if (y <= k[i + 1][0]) return k[i][1] + (k[i + 1][1] - k[i][1]) * (y - k[i][0]) / (k[i + 1][0] - k[i][0]); return 1; };
+    for (let i = 0; i <= n; i++) { const u = i / n, c = hc.getPoint(u), t = hc.getTangent(u), nx = -t.y, ny = t.x, e = Math.pow(Math.abs(u - 0.5) * 2, 5), thick = 0.00285 + 0.0022 * e, wide = 0.0049 + 0.0021 * e;
+      for (let k = 0; k < m; k++) { const a = k / m * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a); pos.push(c.x + nx * thick * ca, c.y + ny * thick * ca, wide * sa); const s = ao(c.y) * (0.78 + 0.22 * (ny * ca * 0.5 + 0.5)); col.push(s, s, s); } }
     for (let i = 0; i < n; i++) for (let k = 0; k < m; k++) { const a = i * m + k, b = i * m + (k + 1) % m, d = (i + 1) * m + k, e = (i + 1) * m + (k + 1) % m; idx.push(a, b, d, b, e, d); }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g; })();
-  { const h = new THREE.Mesh(handle, CERAMIC_MAT); h.castShadow = true; h.rotation.y = -0.65; h.name = 'CupHandle'; CUP.add(h); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals(); return g; })();
+  { const h = new THREE.Mesh(handle, CUP_GLAZE); h.castShadow = true; h.receiveShadow = true; h.rotation.y = -0.65; h.name = 'CupHandle'; CUP.add(h); }
   const coffeeTex = canvasTex(512, 512, true, null, (d, w, h) => { const n = vnoise2(3); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const dx = x / w - 0.5, dy = y / h - 0.5, r = Math.hypot(dx, dy) * 2, ang = Math.atan2(dy, dx), m = n(x * 0.03 + 5 * Math.cos(ang) * r, y * 0.03 + 5 * Math.sin(ang) * r), crema = Math.min(1, Math.max(0, (r - 0.72 + 0.14 * (m - 0.5)) * 6)) * 0.85 + 0.24 * Math.pow(m, 3), i = (y * w + x) * 4;
       d[i] = 34 + crema * 112; d[i + 1] = 19 + crema * 60; d[i + 2] = 10 + crema * 24; d[i + 3] = 255; } });
   COFFEE_MAT.map = coffeeTex;
   const coffee = new THREE.Mesh(new THREE.CircleGeometry(0.0422, 64).rotateX(-Math.PI / 2), COFFEE_MAT); coffee.position.y = 0.0635; coffee.name = 'Coffee'; coffee.receiveShadow = true; CUP.add(coffee);
-  // a teaspoon of polished steel lying in the saucer: a shallow egg-shaped bowl, a narrow neck, a handle that widens to a rounded end and rests on the saucer's rim
-  const spoonG = (() => { const LN = 0.122, NS = 84, NR = 18, pos = [], idx = [], ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-    for (let i = 0; i <= NS; i++) { const s = i / NS, e = s < 0.36 ? Math.sqrt(Math.max(0, 1 - Math.pow((s - 0.18) / 0.18, 2))) : 0, bowlW = 0.0135 * e * (s < 0.18 ? 0.86 + 0.14 * s / 0.18 : 1), neck = s < 0.3 ? 0 : (0.0016 + 0.0034 * ss(0.5, 0.97, s)) * (s > 0.965 ? Math.sqrt(Math.max(0, 1 - Math.pow((s - 0.965) / 0.035, 2))) : 1);
-      const w = Math.max(bowlW, neck, 1e-4), y0 = 0.0074 * ss(0.3, 0.52, s) - 0.0016 * ss(0.62, 1, s), dp = 0.0052 * e, th = s < 0.33 ? 0.0009 : 0.0015;
-      for (let k = 0; k < NR; k++) { const a = k / NR * Math.PI * 2, t = Math.cos(a); pos.push(w * t, y0 - dp * (1 - t * t) + Math.sin(a) * th / 2, (s - 0.18) * LN); } }
-    for (let i = 0; i < NS; i++) for (let k = 0; k < NR; k++) { const a = i * NR + k, b = i * NR + (k + 1) % NR, c = (i + 1) * NR + (k + 1) % NR, d = (i + 1) * NR + k; idx.push(a, b, c, a, c, d); }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g; })();
+  // a teaspoon of polished steel lying in the saucer: a shallow egg-shaped bowl, a narrow neck, a handle that widens to a rounded end and rests on the saucer's rim. Rings crowd where the outline turns, the edge has a real thickness and the normals come from the surface itself: the outline stays one clean curve
+  const spoonG = (() => { const LN = 0.122, NR = 28, pos = [], nor = [], idx = [], ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const at = (s, a) => { const e = s < 0.36 ? Math.sqrt(Math.max(0, 1 - Math.pow((s - 0.18) / 0.18, 2))) : 0, bowlW = 0.0135 * e * (s < 0.18 ? 0.86 + 0.14 * s / 0.18 : 1), neck = s < 0.3 ? 0 : (0.0016 + 0.0034 * ss(0.5, 0.97, s)) * (s > 0.965 ? Math.sqrt(Math.max(0, 1 - Math.pow((s - 0.965) / 0.035, 2))) : 1);
+      const w = Math.max(Math.pow(Math.pow(bowlW, 4) + Math.pow(neck, 4), 0.25), 5e-5), y0 = 0.0074 * ss(0.3, 0.52, s) - 0.0016 * ss(0.62, 1, s), dp = 0.0052 * e, th = 0.0012 + 0.0006 * ss(0.3, 0.42, s), t = Math.cos(a), r = Math.sin(a);
+      return [w * Math.sign(t) * Math.pow(Math.abs(t), 0.7), y0 - dp * (1 - t * t) + r * th / 2, (s - 0.18) * LN]; };
+    const rings = []; for (let i = 0; i <= 96; i++) rings.push(0.36 * (1 - Math.cos(Math.PI * i / 96)) / 2); for (let i = 1; i <= 56; i++) rings.push(0.36 + (0.965 - 0.36) * i / 56); for (let i = 1; i <= 14; i++) rings.push(0.965 + 0.035 * Math.sin(Math.PI / 2 * i / 14));
+    rings.forEach(s => { for (let k = 0; k < NR; k++) { const a = k / NR * Math.PI * 2, p = at(s, a), da = 0.02, ds = 0.0008, p0 = at(s, a - da), p1 = at(s, a + da), q0 = at(Math.max(0, s - ds), a), q1 = at(Math.min(1, s + ds), a);
+      const ux = p1[0] - p0[0], uy = p1[1] - p0[1], uz = p1[2] - p0[2], vx = q1[0] - q0[0], vy = q1[1] - q0[1], vz = q1[2] - q0[2]; let nx = vy * uz - vz * uy, ny = vz * ux - vx * uz, nz = vx * uy - vy * ux; const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
+      pos.push(p[0], p[1], p[2]); nor.push(nx, ny, nz); } });
+    for (let i = 0; i + 1 < rings.length; i++) for (let k = 0; k < NR; k++) { const a = i * NR + k, b = i * NR + (k + 1) % NR, c = (i + 1) * NR + (k + 1) % NR, d = (i + 1) * NR + k; idx.push(a, b, c, a, c, d); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setIndex(idx); return g; })();
   const spoon = new THREE.Mesh(spoonG, SPOON_MAT); spoon.rotation.order = 'YXZ'; spoon.rotation.set(0, 1.02, 0.1); spoon.position.set(-0.02, 0.0172, 0.049); spoon.castShadow = spoon.receiveShadow = true; spoon.name = 'Spoon'; CUP.add(spoon);
 }
-// a closed notebook and a glass of water (no lettering)
+// a closed notebook (no lettering): two grained boards a little larger than the block of pages, a rounded spine, an elastic and a ribbon. The pages show on the two sides that face the room
 {
-  const nb = new THREE.Mesh(new RoundedBoxGeometry(0.15, 0.016, 0.21, 3, 0.003), new THREE.MeshStandardMaterial({ color: 0x20302a, roughness: 0.68, normalMap: PLASTER_N, normalScale: new THREE.Vector2(0.5, 0.5) })); nb.position.set(0.53, TABLE_Y + 0.008, -0.1); nb.rotation.y = 0.28; nb.castShadow = nb.receiveShadow = true; nb.name = 'Notebook'; CAFE.add(nb);
-  const pages = new THREE.Mesh(new THREE.BoxGeometry(0.143, 0.011, 0.204), new THREE.MeshStandardMaterial({ color: 0xcfc6b2, roughness: 0.9 })); pages.position.copy(nb.position); pages.rotation.copy(nb.rotation); pages.position.x += 0.0015; pages.scale.y = 1.15; CAFE.add(pages);
-  // a glass tumbler: what makes glass read on a dark room is its edges. Bright thin rim, Fresnel edge, two long window highlights, and the light it gathers on the table
-  const glassMat = (rim) => { const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,
-    vertexShader: `varying vec3 vN; varying vec3 vV; varying vec3 vL; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalMatrix * normal; vV = -mv.xyz; vL = position; gl_Position = projectionMatrix * mv; }`,
-    fragmentShader: `varying vec3 vN; varying vec3 vV; varying vec3 vL; void main(){ vec3 N = normalize(vN), V = normalize(vV); if (dot(N, V) < 0.0) N = -N; float ndv = max(dot(N, V), 0.0);
-      float F = 0.03 + 0.97 * pow(clamp(1.0 - ndv, 0.0, 1.0), 4.0);
-      float win = smoothstep(0.86, 0.985, dot(N, normalize(vec3(0.60, 0.10, 0.79)))) * smoothstep(0.012, 0.03, vL.y) * smoothstep(0.108, 0.09, vL.y);
-      float lamp = smoothstep(0.93, 0.995, dot(N, normalize(vec3(-0.66, 0.16, 0.73)))) * smoothstep(0.012, 0.03, vL.y) * smoothstep(0.108, 0.09, vL.y);
-      float lip = smoothstep(0.1085, 0.1105, vL.y), foot = smoothstep(0.014, 0.004, vL.y);
-      vec3 c = vec3(0.62, 0.72, 0.88) * (F * 0.8 + win * 0.2) + vec3(1.0, 0.8, 0.58) * (lamp * 0.26 + lip * 0.75 + foot * 0.26);
-      gl_FragColor = vec4(c * ${rim.toFixed(2)}, F * 0.32 + 0.012); }` }); m.userData.thin = true; return m; };
-  const gl = new THREE.Mesh(lathe([[0, 0.0], [0.028, 0.0], [0.0315, 0.0025], [0.036, 0.1095], [0.0356, 0.111], [0.0348, 0.111], [0.0342, 0.1095], [0.0300, 0.012], [0.024, 0.0085], [0, 0.0075]], 96), glassMat(1)); gl.position.set(-0.27, TABLE_Y + 0.0004, -0.13); gl.renderOrder = 8; gl.name = 'WaterGlass'; CAFE.add(gl);   // stays in the depth-of-field depth, so its edges keep their true focus
-  const water = noDepth(new THREE.Mesh(lathe([[0, 0.0085], [0.0298, 0.0125], [0.0327, 0.078], [0.0333, 0.0795], [0.03, 0.0782], [0, 0.0782]], 64), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,
-    vertexShader: `varying vec3 vN; varying vec3 vV; varying float vY; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalMatrix * normal; vV = -mv.xyz; vY = position.y; gl_Position = projectionMatrix * mv; }`,
-    fragmentShader: `varying vec3 vN; varying vec3 vV; varying float vY; void main(){ vec3 N = normalize(vN), V = normalize(vV); if (dot(N, V) < 0.0) N = -N; float e = pow(clamp(1.0 - dot(N, V), 0.0, 1.0), 2.5), men = smoothstep(0.0765, 0.0785, vY);
-      gl_FragColor = vec4(vec3(0.52, 0.60, 0.68) * (e * 0.16 + men * 0.34), 0.05 + e * 0.32); }` }))); water.position.copy(gl.position); water.renderOrder = 7; CAFE.add(water);
+  const NB = new THREE.Group(); NB.position.set(0.53, TABLE_Y + 0.0002, -0.1); NB.rotation.y = 0.28; NB.name = 'Notebook'; CAFE.add(NB);
+  const W = 0.15, DP = 0.21, H = 0.0185, CT = 0.0017;
+  const grain = canvasTex(512, 512, false, [26, 26], (d, w, h) => { const n = vnoise2(31), H2 = new Float32Array(w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const c = n(x * 0.16, y * 0.16), f = n(x * 0.42 + 9, y * 0.42 + 3); H2[y * w + x] = Math.pow(Math.abs(c * 2 - 1), 0.6) * 0.7 + f * 0.3; }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const dx = (H2[y * w + (x + 1) % w] - H2[y * w + (x + w - 1) % w]) * 1.6, dy = (H2[((y + 1) % h) * w + x] - H2[((y + h - 1) % h) * w + x]) * 1.6, l = Math.hypot(dx, dy, 1), i = (y * w + x) * 4; d[i] = (-dx / l * 0.5 + 0.5) * 255; d[i + 1] = (dy / l * 0.5 + 0.5) * 255; d[i + 2] = (1 / l * 0.5 + 0.5) * 255; d[i + 3] = 255; } });
+  const coverM = new THREE.MeshPhysicalMaterial({ color: 0x2b3a33, roughness: 0.52, normalMap: grain, normalScale: new THREE.Vector2(0.8, 0.8), sheen: 0.4, sheenRoughness: 0.6, sheenColor: new THREE.Color(0.32, 0.36, 0.33), envMapIntensity: 0.55 });
+  const part = (g, m, x, y, z, shadow = true) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); o.castShadow = shadow; o.receiveShadow = true; NB.add(o); return o; };
+  part(plate(W, DP, 0.007, CT, 0.0006), coverM, 0, 0, 0); part(plate(W, DP, 0.007, CT, 0.0006), coverM, 0, H - CT, 0);
+  part(new RoundedBoxGeometry(0.0062, H, DP - 0.009, 4, 0.0030), coverM, W / 2 - 0.0031, H / 2, 0);   // the spine, on the far side
+  // the block: page edges in fine uneven lines, stacked up the block's height
+  const stack = canvasTex(8, 256, true, null, (d, w, h) => { const r = mulberry32(61); let v = 0; for (let y = 0; y < h; y++) { if (y % 3 === 0) v = 0.8 + r() * 0.2 - (r() < 0.14 ? 0.24 : 0); const g = 255 * Math.min(1, v) * (y % 3 === 2 ? 0.86 : 1); for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; d[i] = g; d[i + 1] = g * 0.97; d[i + 2] = g * 0.91; d[i + 3] = 255; } } });
+  const pagesM = new THREE.MeshStandardMaterial({ map: stack, color: 0xc4c6c6, roughness: 0.92, envMapIntensity: 0.25 });
+  pagesM.onBeforeCompile = s => { s.vertexShader = s.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>\n vMapUv = vec2(0.5, position.y / ${(H - 2 * CT).toFixed(5)});`); }; pagesM.customProgramCacheKey = () => 'page-stack';
+  part(plate(W - 0.0052, DP - 0.0048, 0.0052, H - 2 * CT, 0.0001), pagesM, -0.0002, CT, 0);
+  renderer.initTexture(grain); renderer.initTexture(stack);   // uploaded now, not on the first frame the book comes into view
+  // the elastic, near the fore-edge: over the top board, down the head and the tail, under the bottom board
+  const band = new THREE.MeshStandardMaterial({ color: 0x14181a, roughness: 0.78, envMapIntensity: 0.25 }), bx = -W / 2 + 0.019;
+  part(new THREE.BoxGeometry(0.0052, 0.0005, DP + 0.0008), band, bx, H + 0.0002, 0, false);
+  for (const sz of [-1, 1]) part(new THREE.BoxGeometry(0.0052, H + 0.0006, 0.0005), band, bx, H / 2 + 0.0001, sz * (DP / 2 + 0.0002), false);
+  // a ribbon marker from the tail, lying on the table
+  { const g = new THREE.PlaneGeometry(0.0052, 0.05, 1, 16).rotateX(-Math.PI / 2), p = g.attributes.position; for (let i = 0; i < p.count; i++) { const k = (p.getZ(i) + 0.025) / 0.05; p.setY(i, 0.0014 + 0.0058 * Math.pow(1 - k, 3)); p.setX(i, p.getX(i) + 0.006 * k * k); } g.computeVertexNormals(); const m = new THREE.MeshStandardMaterial({ color: 0x5c2a24, roughness: 0.7, side: THREE.DoubleSide, envMapIntensity: 0.3 }); m.userData.thin = true; const o = part(g, m, W / 2 - 0.046, 0, DP / 2 + 0.024, false); o.name = 'NotebookRibbon'; }
+}
+// a plain tumbler of water. Straight walls, a thick clear base, a faint lip. Glass shows what is around it, so it reads a small painted copy of the room (one cube, drawn once): the water bends that view as a solid lens would, the wall above it mirrors a little of it, and the table simply shows through the base
+const GLASS_ROOM = (() => {
+  const s = new THREE.Scene(); s.background = new THREE.Color(0.016, 0.013, 0.011);
+  const panel = (w, h, c, x, y, z, ry = 0, rx = 0) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(...c), side: THREE.DoubleSide })); m.position.set(x, y, z); m.rotation.set(rx, ry, 0); s.add(m); };
+  panel(12, 12, [0.098, 0.052, 0.031], 0, -0.02, 0, 0, Math.PI / 2);                     // the table and floor
+  panel(7, 1.9, [0.026, 0.019, 0.014], 0, 1.0, 3.2); panel(7, 3, [0.03, 0.021, 0.015], -3.3, 0.6, 0, Math.PI / 2); panel(7, 3, [0.03, 0.021, 0.015], 3.3, 0.6, 0, Math.PI / 2);
+  panel(6.4, 1.84, [0.007, 0.009, 0.014], 0, 0.95, -3.5);                                // the far windows
+  panel(5.6, 0.5, [0.03, 0.046, 0.024], 0, 0.0, -3.2);                                   // the bench
+  panel(0.42, 0.24, [0.17, 0.075, 0.028], -0.26, 0.04, -0.62, 0.05); panel(0.42, 0.24, [0.17, 0.075, 0.028], 0.62, 0.04, -0.62, -0.1);   // the two chairs behind the table
+  const r = mulberry32(19); for (let i = 0; i < 22; i++) { const b = 0.2 + r() * 0.7; panel(0.06, 0.06, [b, b * 0.68, b * 0.42], (r() - 0.5) * 6, 0.35 + r() * 1.2, -3.45); }
+  panel(0.34, 0.34, [7, 4.4, 2.1], 0.55, 1.24, 0.15, 0, Math.PI / 2);                    // the pendant over the table
+  panel(0.16, 1.5, [3.2, 2.7, 2.2], -2.2, 0.9, 2.2, 0.8); panel(0.08, 1.5, [3.2, 2.7, 2.2], -1.3, 0.9, 2.6, 0.45);   // a tall window pane by the viewer: the long soft highlight
+  const rt = new THREE.WebGLCubeRenderTarget(128, { type: THREE.HalfFloatType, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter });
+  new THREE.CubeCamera(0.02, 40, rt).update(renderer, s); return rt.texture;
+})();
+{
+  const GX = -0.245, GZ = -0.13, BY = 0.0135, WY = 0.0775, HT = 0.1105;
+  const GLASS_V = `varying vec3 vN; varying vec3 vV; varying vec3 vL; void main(){ vec3 e = (inverse(modelMatrix) * vec4(cameraPosition, 1.0)).xyz; vN = normal; vV = e - position; vL = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+  const GLASS_COMMON = `uniform samplerCube tRoom; varying vec3 vN; varying vec3 vV; varying vec3 vL; vec3 room(vec3 d, float lod){ return textureLod(tRoom, d, lod).rgb; }
+    float fres(float c){ return 0.04 + 0.96 * pow(clamp(1.0 - c, 0.0, 1.0), 5.0); }
+    vec3 lens(vec3 V, vec3 N, float ior){ vec3 a = refract(-V, N, 1.0 / ior); vec2 d = a.xz, p = vL.xz; float k = dot(d, d), t = k > 1e-5 ? -2.0 * dot(p, d) / k : 0.0; vec2 q = p + d * t; vec3 N2 = normalize(vec3(q.x, 0.0, q.y)); vec3 b = refract(a, -N2, ior); return dot(b, b) < 0.01 ? reflect(a, -N2) : b; }`;
+  const glassMat = (side, frag) => { const m = new THREE.ShaderMaterial({ uniforms: { tRoom: { value: GLASS_ROOM } }, transparent: true, depthWrite: false, side, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor, vertexShader: GLASS_V, fragmentShader: GLASS_COMMON + frag }); m.userData.thin = true; return m; };
+  const shell = lathe([[0, 0], [0.0296, 0], [0.0320, 0.0011], [0.0334, 0.0040], [0.0346, HT - 0.001], [0.0340, HT]], 96);
+  // the far wall, seen through the near one
+  const back = noDepth(new THREE.Mesh(shell, glassMat(THREE.BackSide, `void main(){ vec3 N = -normalize(vN), V = normalize(vV); float c = max(dot(N, V), 0.0), F = fres(c); gl_FragColor = vec4(min(room(reflect(-V, N), 1.5), vec3(0.4)) * F * 0.8, F * 0.2 + 0.006); }`)));
+  back.position.set(GX, TABLE_Y + 0.0004, GZ); back.renderOrder = 7; back.name = 'GlassBack'; CAFE.add(back);
+  // the water's top, seen from above: mostly the far room mirrored at a low angle, a bright meniscus at its edge
+  const top = new THREE.Mesh(new THREE.CircleGeometry(0.0334, 64).rotateX(-Math.PI / 2), glassMat(THREE.DoubleSide, `void main(){ vec3 N = vec3(0.0, 1.0, 0.0), V = normalize(vV); float c = max(dot(N, V), 0.0), F = fres(c), r = length(vL.xz);
+    vec3 under = room(refract(-V, N, 0.75), 2.0) * 0.8; vec3 col = min(room(reflect(-V, N), 1.0), vec3(0.5)) * F + under * (1.0 - F) * 0.22 + vec3(0.06, 0.06, 0.056) * smoothstep(0.0310, 0.0334, r); gl_FragColor = vec4(col, 0.72); }`));
+  top.position.set(GX, TABLE_Y + 0.0004 + WY, GZ); top.renderOrder = 7.5; top.name = 'GlassWater'; CAFE.add(top);
+  // the near wall. Water and base stay in the depth-of-field depth, so they keep their true focus. The empty wall above does not: its pixels take the depth of what lies far behind them, or the floor and chair legs seen through it would stay razor sharp inside a blurred room
+  const wallM = glassMat(THREE.FrontSide, `void main(){ vec3 N = normalize(vN), V = normalize(vV); float c = max(dot(N, V), 0.0), F = fres(c), y = vL.y;
+    float water = smoothstep(${(WY + 0.0005).toFixed(4)}, ${(WY - 0.0005).toFixed(4)}, y), base = smoothstep(${(BY + 0.0008).toFixed(4)}, ${(BY - 0.0008).toFixed(4)}, y);
+    vec3 refl = min(room(reflect(-V, N), 0.8), vec3(1.0)) * F;
+    vec3 thru = min(room(lens(V, N, 1.33), 1.4), vec3(0.3)) * vec3(0.93, 0.97, 0.98);
+    float edge = smoothstep(0.46, 0.06, c);
+    float win = smoothstep(0.955, 0.995, dot(N, normalize(vec3(0.62, 0.10, 0.78)))), bend = smoothstep(0.985, 0.999, dot(N, normalize(vec3(-0.46, 0.0, 0.89))));
+    // above the water: a thin wall, nearly nothing but its edge. In the water: the room and the table come through, bent and darkened, dark toward the walls. In the base: the table comes through, with a soft edge of light where base and water meet
+    vec3 col = refl; float a = 0.016 + F * 0.3 + edge * 0.3; col += (room(refract(-V, N, 0.94), 2.0) * 0.3 + vec3(0.035, 0.036, 0.036)) * edge;
+    vec3 wc = thru * (0.56 - 0.42 * edge) + refl + vec3(0.11, 0.125, 0.14) * win * 0.5 + vec3(0.11, 0.085, 0.06) * bend * 0.6;
+    col = mix(col, wc, water); a = mix(a, 0.60 + edge * 0.34, water);
+    vec3 bc = min(room(lens(V, N, 1.5), 1.4), vec3(0.3)) * 0.32 + refl + vec3(0.10, 0.09, 0.07) * smoothstep(0.0016, 0.0, abs(y - ${BY.toFixed(4)})) * (0.3 + 0.7 * smoothstep(0.9, 0.3, c)) + vec3(0.05, 0.044, 0.035) * smoothstep(0.75, 0.35, c);
+    col = mix(col, bc, base); a = mix(a, 0.26 + edge * 0.3, base);
+    col += vec3(0.085, 0.095, 0.10) * smoothstep(0.0006, 0.0, abs(y - ${WY.toFixed(4)}));   // the water line
+    col *= mix(0.72, 1.0, smoothstep(0.0, 0.003, y));
+    gl_FragColor = vec4(col, a); }`);
+  const gl = new THREE.Mesh(lathe([[0, 0], [0.0296, 0], [0.0320, 0.0011], [0.0334, 0.0040], [0.03434, WY]], 96), wallM);
+  gl.position.set(GX, TABLE_Y + 0.0004, GZ); gl.renderOrder = 8; gl.name = 'WaterGlass'; CAFE.add(gl);
+  const up = noDepth(new THREE.Mesh(lathe([[0.03434, WY], [0.0346, HT - 0.001], [0.0340, HT]], 96), wallM)); up.position.copy(gl.position); up.renderOrder = 8; up.name = 'GlassWall'; CAFE.add(up);
+  // the lip: a faint line of light around the rim, not an outline
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(0.0340, 0.00085, 10, 96).rotateX(Math.PI / 2), glassMat(THREE.FrontSide, `void main(){ vec3 N = normalize(vN), V = normalize(vV); float c = max(dot(N, V), 0.0), F = fres(c); gl_FragColor = vec4(min(room(reflect(-V, N), 0.8), vec3(0.45)) * (F + 0.1) + vec3(0.045, 0.045, 0.043), 0.2 + F * 0.35); }`));
+  lip.position.set(GX, TABLE_Y + 0.0004 + HT, GZ); lip.renderOrder = 8.5; lip.name = 'GlassLip'; CAFE.add(lip);
 }
 // contact shadows, tight under each thing that touches the table (the wide soft ones are in the phone part), the glass's gathered light, and the floor's occlusion
 {
   const blobTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 24, 64, 64, 63); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.72)'); gr.addColorStop(0.78, 'rgba(255,255,255,0.2)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
   const rectTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.filter = 'blur(9px)'; g.fillStyle = '#fff'; g.fillRect(24, 24, 80, 80); return new THREE.CanvasTexture(c); })();
-  const causticTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.filter = 'blur(2.2px)'; g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath(); g.arc(64, 64, 38, 0.35, 2.8); g.stroke(); g.lineWidth = 2.5; g.globalAlpha = 0.6; g.beginPath(); g.arc(64, 74, 24, 0.6, 2.5); g.stroke(); return new THREE.CanvasTexture(c); })();
   const lay = (tex, w, d, x, y, z, o, ry = 0, add = false, col = 0x000000) => { const m = noDepth(new THREE.Mesh(new THREE.PlaneGeometry(w, d).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex, color: col, transparent: true, opacity: o, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending }))); m.material.userData.thin = true; m.userData.passable = true; m.position.set(x, y, z); m.rotation.y = ry; m.renderOrder = 4; CAFE.add(m); return m; };
   const TY = TABLE_Y + 0.0009;
   lay(rectTex, 0.158, 0.116, 0, TY, -0.012, 0.92);                       // the stand's base
   lay(blobTex, 0.135, 0.135, CUP_POS.x, TY, CUP_POS.z, 0.86);            // the saucer
   lay(rectTex, 0.25, 0.345, 0.53, TY, -0.1, 0.85, 0.28);                 // the notebook
-  lay(blobTex, 0.112, 0.112, -0.27, TY, -0.13, 0.62);                    // the glass
-  lay(causticTex, 0.13, 0.13, -0.277, TY + 0.0002, -0.118, 0.15, 0.4, true, 0xffe2bd);   // the light the glass gathers, on the side away from the lamp
+  lay(blobTex, 0.092, 0.092, -0.244, TY, -0.128, 0.40);                  // the glass: thin and clear, so a light shadow, tightest at its foot
   for (const [x, z] of [[-1.9, -1.9], [2.0, -1.8], [2.4, 1.05], [-2.3, 0.95]]) { lay(blobTex, 0.62, 0.62, x + 0.05, TABLE_Y + 0.0012, z - 0.04, 0.2, 0, true, 0xffb56e); lay(blobTex, 0.09, 0.09, x + 0.07, TABLE_Y + 0.0009, z - 0.06, 0.6); }
 }
 // the rest of the room: lamps, tables, chairs, shelf (seen out of focus, still real shapes)
@@ -267,12 +329,12 @@ const LAMP_LIGHTS = [];
   // wall light: a warm scallop above and below each sconce, a strip under each shelf and the glow it throws down the wall
   const glowTex = (w, h, paint) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.globalCompositeOperation = 'lighter'; paint(g, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
   const scallopT = glowTex(128, 256, (g, w, h) => { for (const [cy, ry, a] of [[0.5, 0.5, 0.95], [0.5, 0.26, 0.75]]) { g.save(); g.translate(w / 2, cy * h); g.scale(0.46 * w, ry * h); const r = g.createRadialGradient(0, 0, 0.02, 0, 0, 1); r.addColorStop(0, `rgba(255,200,140,${a})`); r.addColorStop(0.3, `rgba(190,130,80,${a * 0.55})`); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.beginPath(); g.arc(0, 0, 1, 0, 7); g.fill(); g.restore(); } });
-  const stripT = glowTex(64, 64, (g, w, h) => { const r = g.createLinearGradient(0, 0, 0, h); r.addColorStop(0, 'rgba(255,190,125,0.95)'); r.addColorStop(0.3, 'rgba(180,120,75,0.42)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, w, h); });
+  const stripT = glowTex(64, 64, (g, w, h) => { const r = g.createLinearGradient(0, 0, 0, h); r.addColorStop(0, 'rgba(120,84,52,0.30)'); r.addColorStop(0.1, 'rgba(235,172,112,0.62)'); r.addColorStop(0.34, 'rgba(180,120,75,0.36)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, w, h); });
   const glowMat = t => { const m = new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }); m.userData.thin = m.userData.passable = true; return m; };
   const onWall = (sx, w, h, y, z, off = 0.024) => placed(new THREE.PlaneGeometry(w, h), sx * (ROOM.x - off), y, z, 0, -sx * Math.PI / 2);
   const washes = noDepth(new THREE.Mesh(mergeGeo([-1, 1].flatMap(sx => [onWall(sx, 1.0, 2.0, 1.92, -2.92), onWall(sx, 1.0, 2.0, 1.92, 1.98)])), glowMat(scallopT))); washes.renderOrder = 1.6; washes.userData.passable = true; washes.name = 'WallWash'; CAFE.add(washes);
   const glows = noDepth(new THREE.Mesh(mergeGeo([-1, 1].flatMap(sx => [1.25, 1.75].map(y => onWall(sx, 3.86, 0.36, y - 0.195, -0.4)))), glowMat(stripT))); glows.renderOrder = 1.6; glows.userData.passable = true; glows.name = 'ShelfGlow'; CAFE.add(glows);
-  inst(placed(new THREE.BoxGeometry(0.012, 0.006, 3.82), 0, 0, 0), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.3, 1.55, 0.85) }), [-1, 1].flatMap(sx => [1.25, 1.75].map(y => [sx * (ROOM.x - 0.21), y - 0.019, -0.4])), 'ShelfStrip');
+  inst(placed(new THREE.BoxGeometry(0.012, 0.006, 3.82), 0, 0, 0), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.15, 0.78, 0.43) }), [-1, 1].flatMap(sx => [1.25, 1.75].map(y => [sx * (ROOM.x - 0.21), y - 0.019, -0.4])), 'ShelfStrip');
   inst(placed(new THREE.CylinderGeometry(0.038, 0.038, 0.17, 16), 0, 0, 0), BRASS_MAT, [-1, 1].flatMap(sx => [-2.92, 1.98].map(z => [sx * (ROOM.x - 0.034), 1.92, z])), 'Sconce');
   // the floor's own shadow, painted once: walls, bench, tables and chairs on the boards. Costs one texture read on the floor
   const fw = 2 * ROOM.x + 2 * ROOM.t, fd = ROOM.zf - ROOM.zb + 2 * ROOM.t, S = 150, c = document.createElement('canvas'); c.width = Math.round(fw * S); c.height = Math.round(fd * S);
@@ -328,15 +390,16 @@ const CAFE_STEAM_U = { uT: { value: 0 }, uA: { value: 0 } };
 const CAFE_STEAM = noDepth(new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.14), new THREE.ShaderMaterial({ uniforms: CAFE_STEAM_U, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,
   vertexShader: `varying vec2 vP; void main(){ vP = vec2(position.x, position.y + 0.07); float s = length(modelViewMatrix[0].xyz); vec4 mv = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0); mv.xy += position.xy * s; gl_Position = projectionMatrix * mv; }`,
   fragmentShader: `uniform float uT, uA; varying vec2 vP; ${NOISE_GLSL}
-    float thread(vec2 p, float y, float k, float x0){
+    float thread(vec2 p, float y, float k, float x0, float w){
       float sy = sqrt(y), bend = (fbm(vec3(y * 3.4 - uT * 0.26, uT * 0.05, k), 2) - 0.375) * 0.105 * sy + (fbm(vec3(y * 9.0 - uT * 0.5, uT * 0.08, k + 6.0), 2) - 0.375) * 0.036 * sy;
-      float x = (p.x - x0 - bend) / (0.0015 + 0.0065 * y);
+      float x = (p.x - x0 - bend) / (w * (0.0007 + 0.0030 * y));
       return exp(-x * x); }
     void main(){ float y = clamp(vP.y / 0.14, 0.0, 1.0);
-      float d = thread(vP, y, 3.0, -0.004) + 0.6 * thread(vP, y, 11.0, 0.006);
-      d *= smoothstep(0.14 + 0.46 * y, 0.40 + 0.34 * y, fbm(vec3(vP.x * 46.0, y * 7.5 - uT * 0.7, uT * 0.15), 3));   // the thread frays as it rises
-      d *= smoothstep(0.0, 0.05, y) * pow(1.0 - y, 2.8);
-      vec3 c = vec3(0.74, 0.68, 0.62) * d * 0.44 + vec3(0.52, 0.66, 0.92) * d * 0.14;
+      vec2 q = vec2(vP.x + (fbm(vec3(vP.x * 70.0, y * 8.0 - uT * 0.5, uT * 0.1 + 20.0), 2) - 0.375) * 0.016 * y, vP.y);   // the strands curl and part as they rise
+      float d = thread(q, y, 3.0, -0.004, 1.0) + 0.55 * thread(q, y, 11.0, 0.006, 0.8) + 0.4 * thread(q, y, 23.0, 0.001, 0.65);
+      d *= smoothstep(0.20 + 0.42 * y, 0.44 + 0.34 * y, fbm(vec3(q.x * 210.0, y * 5.5 - uT * 0.7, uT * 0.15), 3));   // fine streaks along the rise: the thread frays and comes apart
+      d *= smoothstep(0.0, 0.05, y) * pow(1.0 - y, 2.6);
+      vec3 c = vec3(0.74, 0.68, 0.62) * d * 0.46 + vec3(0.52, 0.66, 0.92) * d * 0.14;
       gl_FragColor = vec4(c * uA, 0.0); }` })));
 CAFE_STEAM.position.copy(CUP_POS).add(V3(0, 0.064 + 0.07, 0)); CAFE_STEAM.frustumCulled = false; CAFE_STEAM.renderOrder = 9; CAFE_STEAM.name = 'CoffeeSteam'; CAFE_STEAM.userData.passable = true; CAFE_STEAM.material.userData.thin = true; CAFE_STEAM.material.userData.passable = true;
 CAFE_STEAM.onBeforeRender = () => { CAFE_STEAM_U.uT.value = STEAM_U.uT.value; CAFE_STEAM_U.uA.value = smoother(range(-Math.log(CAM.D), -Math.log(3.5), -Math.log(1.5))); CAFE_STEAM.material.uniformsNeedUpdate = true; };
@@ -347,17 +410,27 @@ CAFE.add(CAFE_STEAM);
 const FAR_LIGHTS = (() => {
   const a = CITY_POINTS.geometry.attributes, N = 300, ZG = ROOM.zb - ROOM.t / 2, refl = LAMP_POS.map(([x, y, z]) => [x, y - 0.02, 2 * ZG - z]), M = N + refl.length;
   const P = new Float32Array(M * 3), C = new Float32Array(M * 3), S = new Float32Array(M), Q = new Float32Array(M), K = new Float32Array(M);
+  // a real window's lights differ: most are dim and far, a few nearer and stronger, and none is the same size. Soft-edged: the lens's gather rounds them, and each is dim enough to stay behind what the frame is about
+  const VAR = new Float32Array(M * 2), vr = mulberry32(77); for (let i = 0; i < M; i++) { const a = vr(), b = vr(); VAR[i * 2] = 0.72 + 0.95 * a * a; VAR[i * 2 + 1] = 0.07 + 1.25 * Math.pow(b, 3); }
   P.set(a.position.array.subarray(0, N * 3)); C.set(a.color.array.subarray(0, N * 3)); S.set(a.sz.array.subarray(0, N)); Q.set(a.aer.array.subarray(0, N));
   refl.forEach(([x, y, z], i) => { const j = N + i; P.set([x, y, z], j * 3); C.set([0.95, 0.66, 0.38], j * 3); S[j] = 0.05; K[j] = 1; });
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('color', new THREE.BufferAttribute(C, 3)); g.setAttribute('sz', new THREE.BufferAttribute(S, 1)); g.setAttribute('aer', new THREE.BufferAttribute(Q, 1)); g.setAttribute('keep', new THREE.BufferAttribute(K, 1));
-  const u = { uPx: CITY_LIGHTS_U.uPx, uD: CITY_LIGHTS_U.uD, uCoc: CITY_LIGHTS_U.uCoc, uFar: { value: 0 }, uEye: CITY_U.uEyeW };
-  const m = new THREE.ShaderMaterial({ uniforms: u, transparent: true, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending, fragmentShader: CITY_POINTS.material.fragmentShader,
-    vertexShader: CITY_POINTS.material.vertexShader.replace('attribute float sz, aer;', 'uniform vec3 uEye; attribute float keep; attribute float sz, aer;')
-      .replace('gl_Position = projectionMatrix * mv;', `vec3 ray = position - uEye; vec3 q = uEye + ray * ((${(ROOM.zb - ROOM.t - 0.02).toFixed(3)} - uEye.z) / ray.z); gl_Position = projectionMatrix * modelViewMatrix * vec4(q, 1.0);
-        if (ray.z >= 0.0 || abs(q.x) > 3.6 || q.y < 0.4 || q.y > 3.0) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);`)
-      .replace('* uFar;', '* (keep > 0.5 ? keep * 0.5 : uFar);') });
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('color', new THREE.BufferAttribute(C, 3)); g.setAttribute('sz', new THREE.BufferAttribute(S, 1)); g.setAttribute('aer', new THREE.BufferAttribute(Q, 1)); g.setAttribute('keep', new THREE.BufferAttribute(K, 1)); g.setAttribute('look', new THREE.BufferAttribute(VAR, 2));
+  const u = { uPx: CITY_LIGHTS_U.uPx, uD: CITY_LIGHTS_U.uD, uCoc: CITY_LIGHTS_U.uCoc, uFar: { value: 0 }, uEye: CITY_U.uEyeW, uLive: { value: 0 } };
+  const m = new THREE.ShaderMaterial({ uniforms: u, transparent: true, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending,
+    fragmentShader: `varying vec3 vC; varying float vDisc; void main(){ float r = length(gl_PointCoord - 0.5) * 2.0; if (r > 1.0) discard; float spot = exp(-r * r * 4.2), disc = smoothstep(1.0, 0.25, r); gl_FragColor = vec4(vC * mix(spot, disc, vDisc), 1.0); }`,
+    vertexShader: `attribute float sz, aer, keep; attribute vec3 color; attribute vec2 look; uniform float uPx, uD, uCoc, uFar, uLive; uniform vec3 uEye; varying vec3 vC; varying float vDisc;
+      void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); float z = -mv.z;
+        vec3 ray = position - uEye; vec3 q = uEye + ray * ((${(ROOM.zb - ROOM.t - 0.02).toFixed(3)} - uEye.z) / ray.z); gl_Position = projectionMatrix * modelViewMatrix * vec4(q, 1.0);
+        if (ray.z >= 0.0 || abs(q.x) > 3.6 || q.y < 0.4 || q.y > 3.0 || (uLive > 0.5 && keep < 0.5 && look.y < 0.16)) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);   // playback only: the faintest four in ten are not drawn
+        float base = clamp(sz / uD / max(z, 1e-4) * uPx, 1.35, 13.0), coc = uCoc * abs(1.0 - 1.0 / max(z, 1e-3));
+        vDisc = smoothstep(2.0, 8.0, coc);
+        float cl = coc * mix(1.0, look.x, vDisc), size = sqrt(base * base + 4.0 * cl * cl);
+        float glim = 1.0 / (1.0 + z * uD / 2500.0), tr = sz / uD / max(z, 1e-4) * uPx, sub = clamp(tr * tr / (1.35 * 1.35), 0.015, 1.0), e = (base * base) / (size * size);
+        vC = color * mix(sub, 1.0, vDisc) * (0.28 + 0.72 * glim) * mix(0.72, clamp(12.0 * e, 0.13, 0.5) * look.y, vDisc) * (keep > 0.5 ? keep * 0.5 : uFar);
+        if (aer >= 0.0 && aer < 0.001) vC *= 1.0 - smoothstep(8.5, 12.0, uD); float air = smoothstep(90.0, 420.0, uD); vC *= aer < -1.5 ? 1.0 - smoothstep(110.0, 300.0, uD) : aer < 0.0 ? 1.0 - smoothstep(240.0, 620.0, uD) : mix(1.0, aer, air); if (air > 0.0) { float gy = dot(vC, vec3(0.3, 0.55, 0.15)); vC = mix(vC, gy * vec3(1.25, 0.92, 0.6), air * 0.35) * (1.0 - 0.3 * air); }
+        gl_PointSize = min(size, 240.0); }` });
   const pts = noDepth(new THREE.Points(g, m)); pts.frustumCulled = false; pts.renderOrder = 2; pts.name = 'FarLights'; pts.userData.passable = true; m.userData.thin = true; CAFE.add(pts);
-  pts.onBeforeRender = () => { const ln = Math.log(CAM.D); u.uFar.value = Math.max(0, 1 - CITY_LIGHTS_U.uFar.value, smoother(range(ln, Math.log(45), Math.log(22)))); m.uniformsNeedUpdate = true; const all = u.uFar.value > 0.002; g.setDrawRange(all ? 0 : N, all ? M : M - N); };   // once the city's layer has taken over only the reflections stay: 300 discs drawn black would cost as much as the bokeh itself
+  pts.onBeforeRender = () => { const ln = Math.log(CAM.D); u.uLive.value = LIVE_ON() ? 1 : 0; u.uFar.value = Math.max(0, 1 - CITY_LIGHTS_U.uFar.value, smoother(range(ln, Math.log(45), Math.log(22)))); m.uniformsNeedUpdate = true; const all = u.uFar.value > 0.002; g.setDrawRange(all ? 0 : N, all ? M : M - N); };   // once the city's layer has taken over only the reflections stay: 300 discs drawn black would cost as much as the bokeh itself
   return pts;
 })();
 // the city's ground stops at the cafe's walls: inside the footprint the room's own floor is what the eye sees, from outside the window as well
