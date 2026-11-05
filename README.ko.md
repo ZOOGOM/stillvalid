@@ -4,7 +4,7 @@
 
 공고 사진이나 붙여 넣은 글을 현재 공식 자료와 비교합니다. 행동하기 전에 **바뀐 내용, 원문 근거, 아직 확인해야 할 점**을 함께 살펴보세요.
 
-[**앱 열기**](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [프로젝트 소개](README.md) · [배포 가이드](docs/deployment.md)
+[**앱 열기**](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [日本語](README.ja.md) · [프로젝트 소개](README.md) · [배포 가이드](docs/deployment.md)
 
 Meta Global AI Developer Hackathon **Indie developer 개인 부문**, “Build for Your World” 주제로 개발했습니다. 설치나 회원가입 없이 사용할 수 있습니다.
 

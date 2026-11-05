@@ -32,3 +32,14 @@ earlier production run using reconstructed public Seoul notice text and an
 official source. The input's earlier deadline was deliberately altered for
 comparison. They are historical observations, not a current result, an actual
 historical deadline change, or a physical camera test.
+
+## Japanese production captures
+
+The `ja-*.jpg` images were captured directly from the same public production
+site on **5 November 2026 (Asia/Seoul)** with display language Japanese. The
+site reported application SHA `3f8af2aba662f5529ea5bb0119587971fce4842a`.
+They use the same viewport and capture conventions described above. The
+input card contains fictional Japanese text; the result and evidence use the
+built-in synthetic example, whose source values remain in English while the
+interface is Japanese. The input and result are separate demonstrations.
+The capture made **zero model calls** and did not submit the text for reading.
