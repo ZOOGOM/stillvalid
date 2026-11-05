@@ -1,0 +1,90 @@
+<!doctype html><html><head><meta charset="utf-8"><title>outro</title>
+<link rel="stylesheet" href="common.css">
+<style>
+canvas{position:absolute;left:0;top:0;width:1920px;height:1080px}
+/* Soft dark band behind the text column (x 120~1240); the Earth stays clear on the right and at the bottom. */
+#scrim{position:absolute;left:0;top:0;width:1920px;height:1080px;background:
+  linear-gradient(90deg,rgba(8,7,7,.74) 0,rgba(8,7,7,.70) 1000px,rgba(8,7,7,0) 1200px);
+  -webkit-mask-image:linear-gradient(180deg,#000 0,#000 850px,transparent 990px)}
+.row{position:absolute;left:164px;width:1076px;font-size:35px;line-height:43px;color:#faf9f5;text-shadow:0 2px 10px rgba(0,0,0,.7)}
+.row b{font-family:Georgia,serif;font-weight:700;font-size:38px;color:#ffe2bc}
+.dot{position:absolute;left:120px;width:22px;height:22px;border-radius:50%;background:#faf9f5;box-shadow:0 0 18px rgba(255,214,160,.8)}
+#card{position:absolute;left:0;top:0;width:1920px;height:1080px;color:#faf9f5}
+#rail{position:absolute;left:129px;width:4px;background:rgba(250,249,245,.32);border-radius:2px;transform-origin:50% 0}
+</style></head><body>
+<canvas id="c" style="display:none"></canvas>
+<div id="card"><div id="scrim"></div></div>
+<script src="common.js"></script><script src="bokeh.js"></script>
+<script>
+const MODE=new URLSearchParams(location.search).get('mode');           // alpha | opaque
+const OFFSET=MODE==='opaque'?7:0;
+const cardRoot=document.getElementById('card');
+const scrim=document.getElementById('scrim');
+const LINES=[
+  ['Read','Muse Spark turns the photo into structured fields (optional: SAM 3.1 finds the notice in the photo)'],
+  ['Find the page','official link given: fetch it · no link: Muse Spark + built-in web search returns candidates'],
+  ['Compare','Muse Spark compares field by field with exact quotes'],
+  ['Verify','deterministic checks: quotes, registered domain, title, institution, edition, section'],
+  ['Result','matched / changed / needs another look'],
+];
+const SMALL='Narration and motion graphics generated with AI tools · App recorded on build fbbb841. The live app has since been updated.';
+const CREDIT=(window.CREDIT||'').trim();
+
+if(MODE==='opaque'){
+  const cv=document.getElementById('c');cv.style.display='';
+  // No Earth behind the opaque version, and the bokeh is brighter than space: carry the band past the text.
+  scrim.style.background='linear-gradient(90deg,rgba(8,7,7,.74) 0,rgba(8,7,7,.72) 1260px,rgba(8,7,7,0) 1620px)';
+  document.documentElement.style.background=document.body.style.background='#090707';
+  const draw=makeBokeh(cv);
+  // Motion eases to a stop so the last 3 s hold completely still.
+  const warp=t=>{if(t<=13)return t;const u=seg(t,13,15);return 13+2*(u-u*u*u/3)};
+  part((t,f)=>({w:r3(warp(t)),g:Math.min(f,900)}),s=>draw(s.w,s.g));
+}
+
+/* Build the card: left-aligned in x 120~1240, everything above y 860. Rows wrap, so tops follow measured heights. */
+const X0=120,COL_W=1120;
+const iconWrap=E('div','abs',{left:0,top:0,width:1920,height:0},cardRoot);
+const icon=E('img','abs',{left:X0,top:26,width:84,height:84,borderRadius:19,boxShadow:'0 8px 30px rgba(0,0,0,.5)'},iconWrap);icon.src='assets/icon.png';
+const name=E('div','serif nowrap',{position:'absolute',left:X0+104,top:32,fontSize:62,lineHeight:'72px',color:'#faf9f5',textShadow:'0 2px 16px rgba(0,0,0,.6)'},iconWrap,'StillValid');
+const Y0=134,ROW_GAP=18;
+// Line breaks only: the text itself is untouched.
+const BREAK_BEFORE=['(optional:','no link:','','institution,',''];
+function textWithBreak(el,text,before){
+  const k=before?text.indexOf(before):-1;
+  if(k<=0){el.appendChild(document.createTextNode(text));return}
+  el.appendChild(document.createTextNode(text.slice(0,k)));
+  el.appendChild(document.createElement('br'));
+  el.appendChild(document.createTextNode(text.slice(k)));
+}
+const rail=E('div','',{},cardRoot);rail.id='rail';
+const rowEls=LINES.map(([h,rest],i)=>{
+  const d=E('div','dot',{},cardRoot);
+  const r=E('div','row',{},cardRoot);
+  const b=document.createElement('b');b.textContent=h;r.appendChild(b);
+  textWithBreak(r,' — '+rest,BREAK_BEFORE[i]);
+  return {d,r};
+});
+let yNext=Y0,dotFirst=0,dotLast=0;
+rowEls.forEach(({d,r},i)=>{
+  r.style.top=yNext+'px';
+  const dy=yNext+11;d.style.top=dy+'px';
+  if(i===0)dotFirst=dy+11;
+  dotLast=dy+11;
+  yNext+=r.offsetHeight+ROW_GAP;
+});
+rail.style.top=dotFirst+'px';rail.style.height=(dotLast-dotFirst)+'px';
+const url=E('div','serif nowrap',{position:'absolute',left:X0,top:yNext+4,fontSize:60,lineHeight:'70px',color:'#faf9f5',textShadow:'0 2px 20px rgba(0,0,0,.6)'},cardRoot,'stillvalid-beta.vercel.app');
+const smallCss=top=>({position:'absolute',left:X0,width:COL_W,top,fontSize:28,lineHeight:'34px',color:'#faf9f5',textShadow:'0 1px 8px rgba(0,0,0,.7)'});
+const small=E('div','',smallCss(yNext+84),cardRoot);textWithBreak(small,SMALL,'App recorded');
+const credit=E('div','',smallCss(yNext+84+small.offsetHeight+8),cardRoot);textWithBreak(credit,CREDIT,'and NASA');
+
+const T_ICON=.15,T_ROW=1.0,D_ROW=.8,T_URL=T_ROW+5*D_ROW+.1,T_SMALL=T_URL+.7;
+const c=t=>t-OFFSET;
+part(t=>{const o=seg(c(t),0,.5);return {o:r3(o)}},s=>{cardRoot.style.display=s.o?'':'none';scrim.style.opacity=s.o});
+part(t=>{const s=ap(c(t),T_ICON,99,{dy:18});s.s=r3(lerp(.92,1,eo(seg(c(t),T_ICON,T_ICON+.3))));return s},s=>{put(iconWrap,{...s,s:1});});
+part(t=>({v:r3(eo(seg(c(t),T_ROW,T_ROW+D_ROW*4+.3)))}),s=>{rail.style.transform=`scaleY(${s.v})`;rail.style.display=s.v>0?'':'none'});
+rowEls.forEach((e,i)=>part(t=>ap(c(t),T_ROW+i*D_ROW,99,{dx:-24,dy:0}),s=>{put(e.r,s);put(e.d,{o:s.o})}));
+part(t=>ap(c(t),T_URL,99,{dy:18}),s=>put(url,s));
+part(t=>ap(c(t),T_SMALL,99,{dy:10}),s=>{put(small,s);put(credit,{...s,o:CREDIT?s.o:0})});
+window.__ready=waitImages();
+</script></body></html>

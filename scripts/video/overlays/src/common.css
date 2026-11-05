@@ -1,0 +1,13 @@
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;
+  font-family:"Helvetica Neue","Apple SD Gothic Neo",Helvetica,Arial,sans-serif;color:#273e33;
+  -webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+.serif{font-family:Georgia,"Apple SD Gothic Neo",serif}
+.ko{font-family:"Apple SD Gothic Neo",sans-serif}
+.abs{position:absolute}
+.glass{position:absolute;border-radius:30px;
+  background:linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,0) 42%),rgba(250,249,245,.93);
+  box-shadow:0 22px 60px rgba(0,0,0,.34),0 4px 14px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 1px rgba(255,255,255,.32)}
+.nowrap{white-space:nowrap}
+.pt{color:#285c48}
+.sub{color:#a7683f}

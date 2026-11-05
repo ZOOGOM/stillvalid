@@ -1,0 +1,120 @@
+<!doctype html><html><head><meta charset="utf-8"><title>cards</title>
+<link rel="stylesheet" href="common.css">
+<style>
+#scene{position:absolute;left:0;top:0;width:1920px;height:1080px;clip-path:inset(0 0 0 602px);
+  -webkit-mask-image:linear-gradient(180deg,#000 0,#000 770px,transparent 790px)} /* card shadows end above the note zone */
+.card{position:absolute;left:0;top:0;transform-origin:0 0;overflow:hidden;box-shadow:0 34px 90px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.28)}
+.card img{display:block;width:100%;height:100%}
+</style></head><body><div id="scene"></div>
+<script src="common.js"></script>
+<script>
+const scene=document.getElementById('scene');
+// Source pixel sizes come straight from the PNGs; only radius and shadow are added.
+const DEF=[
+  {src:'../../cards/card1.png',w:2100,h:1762,rad:.074},
+  {src:'../../cards/card2.png',w:2100,h:1446,rad:.074},
+  {src:'../../cards/card3.png',w:1980,h:635,rad:.052},
+  {src:'../../cards/card4.png',w:1980,h:635,rad:.052},
+  {src:'../../cards/card5.png',w:2100,h:2031,rad:.074},
+];
+const BASE=1200;
+const cards=DEF.map(d=>{
+  const ar=d.w/d.h;
+  const el=E('div','card',{width:BASE,height:BASE/ar,borderRadius:BASE*d.rad},scene);
+  const im=document.createElement('img');im.src=d.src;el.appendChild(im);
+  return {el,ar,d};
+});
+const float=(t,i)=>({dx:3.5*Math.sin(TAU*t/9.0+i*1.7),dy:6.5*Math.sin(TAU*t/6.5+i*2.3)});
+
+// Layout targets inside x 660~1860, y 130~760.
+const C1={cx:1260,cy:445,w:736};
+const C2={cx:1260,cy:445,w:840};
+const C3a={cx:1260,cy:372,w:1120};   // card 3 in focus (under the M7 label)
+const C4a={cx:1260,cy:668,w:540};    // card 4 waiting
+const C3b={cx:1048,cy:250,w:736};    // card 3 beside the big card 4
+const C4b={cx:1260,cy:577,w:1150};   // card 4 in focus
+const C5={cx:1260,cy:445,w:648};
+// Exit: one card at a time, each clear of the next. Card 5 is already on screen, so it leaves first.
+const EXIT_FROM=[{cx:1400,cy:445,w:540},{cx:1400,cy:445,w:600},{cx:1440,cy:445,w:800},{cx:1440,cy:445,w:800},C5];
+const SINK={cx:630,cy:540};
+const SINK_T=[35.04,34.28,33.52,32.76,32.0],SINK_D=.92; // order: card 5 first, card 1 last
+
+function mix(a,b,u){return {cx:lerp(a.cx,b.cx,u),cy:lerp(a.cy,b.cy,u),w:lerp(a.w,b.w,u)}}
+function cardState(i,t){
+  let r=null,o=0,dx=0,dy=0;
+  const inOut=(a,b,tgt,opt={})=>{const s=ap(t,a,b,opt);r=tgt;o=s.o;dx=s.x;dy=s.y};
+  // From 32 s each card shrinks toward the app in turn and is gone before the next one has room to touch it.
+  if(t>=32){
+    const T=SINK_T[i];
+    if(t<T||t>=T+SINK_D)return {o:0};
+    const from=EXIT_FROM[i];
+    const u=eio(seg(t,T,T+SINK_D));
+    const inU=i===4?1:eo(seg(t,T,T+.16));
+    r={cx:lerp(from.cx,SINK.cx,u),cy:lerp(from.cy,SINK.cy,u),w:lerp(from.w,from.w*.05,u)};
+    o=inU*(1-seg(u,.75,1));
+    if(o<=0)return {o:0};
+    const f=float(t,i);
+    return {o:r3(o),cx:r3(r.cx+f.dx*(1-u)+(i===4?0:20*(1-inU))),cy:r3(r.cy+f.dy*(1-u)),w:r3(r.w)};
+  }
+  if(i===0){inOut(4,8.5,C1,{dy:30,dx:0})}
+  if(i===1){const s=ap(t,8.3,8.95,{outD:.22,dy:24});r=C2;o=s.o;dy=s.y}
+  if(i===2){
+    const s=ap(t,14.5,26.3,{dy:26,outD:.3});o=s.o;dy=s.y;
+    r=mix(C3a,C3b,eio(seg(t,19.75,20.25)));
+  }
+  if(i===3){
+    const s=ap(t,14.68,26.3,{dy:26,outD:.3});
+    const u=eio(seg(t,19.75,20.25));
+    o=r3(s.o*lerp(.72,1,u));dy=s.y;
+    r=mix(C4a,C4b,u);
+  }
+  if(i===4){inOut(26.1,40,C5,{dy:30})}
+  if(!r||o<=0)return {o:0};
+  const f=float(t,i);
+  return {o:r3(o),cx:r3(r.cx+f.dx+dx),cy:r3(r.cy+f.dy+dy),w:r3(r.w)};
+}
+cards.forEach((c,i)=>part(t=>cardState(i,t),s=>{
+  if(!s.o){c.el.style.display='none';return}
+  const k=s.w/BASE,h=s.w/c.ar;
+  c.el.style.display='';c.el.style.opacity=s.o;
+  c.el.style.transform=`translate(${s.cx-s.w/2}px,${s.cy-h/2}px) scale(${k})`;
+}));
+
+/* Light link between card 3 and card 4 while card 4 is in focus. */
+const svg=S('svg',{width:1920,height:1080,viewBox:'0 0 1920 1080'});svg.style.cssText='position:absolute;left:0;top:0';scene.appendChild(svg);
+const defs=S('defs',{},svg);
+const grad=S('linearGradient',{id:'lk',gradientUnits:'userSpaceOnUse',x1:1416,y1:250,x2:1690,y2:392},defs);
+S('stop',{offset:0,'stop-color':'#ffe2b8'},grad);S('stop',{offset:1,'stop-color':'#ffb36a'},grad);
+const blur=S('filter',{id:'gl',x:'-40%',y:'-40%',width:'180%',height:'180%'},defs);S('feGaussianBlur',{stdDeviation:9},blur);
+const PATH='M1416 250 C 1560 250, 1690 280, 1690 392';
+const glowP=S('path',{d:PATH,fill:'none',stroke:'#ffb36a','stroke-width':16,'stroke-linecap':'round',filter:'url(#gl)',opacity:.7},svg);
+const coreP=S('path',{d:PATH,fill:'none',stroke:'url(#lk)','stroke-width':5,'stroke-linecap':'round'},svg);
+const L=coreP.getTotalLength();
+[glowP,coreP].forEach(p=>{p.setAttribute('stroke-dasharray',L);p.setAttribute('stroke-dashoffset',L)});
+const capA=E('div','circle',{position:'absolute',left:-42,top:-42,width:84,height:84,borderRadius:'50%',background:LIGHT},scene);
+const capB=E('div','circle',{position:'absolute',left:-42,top:-42,width:84,height:84,borderRadius:'50%',background:LIGHT},scene);
+const runner=E('div','circle',{position:'absolute',left:-30,top:-30,width:60,height:60,borderRadius:'50%',background:LIGHT},scene);
+part((t,f)=>{
+  const a=eio(seg(t,20.2,20.75));
+  const o=seg(t,20.2,20.4)*(1-seg(t,25.9,26.2));
+  if(o<=0)return {o:0};
+  return {o:r3(o),a:r3(a),run:r3(((f-1212)%120+120)%120/120),breathe:r3(.5-.5*Math.cos(TAU*(f%150)/150))};
+},s=>{
+  if(!s.o){svg.style.display=capA.style.display=capB.style.display=runner.style.display='none';return}
+  svg.style.display=capA.style.display=capB.style.display=runner.style.display='';
+  svg.style.opacity=s.o;
+  glowP.setAttribute('stroke-dashoffset',L*(1-s.a));coreP.setAttribute('stroke-dashoffset',L*(1-s.a));
+  const p0=coreP.getPointAtLength(0),p1=coreP.getPointAtLength(L*s.a),pr=coreP.getPointAtLength(L*eio(s.run));
+  capA.style.opacity=s.o*(.75+.25*s.breathe);capA.style.transform=`translate(${p0.x}px,${p0.y}px)`;
+  capB.style.opacity=s.o*(.75+.25*s.breathe);capB.style.transform=`translate(${p1.x}px,${p1.y}px)`;
+  runner.style.opacity=s.a>=1?s.o*Math.sin(Math.PI*s.run):0;runner.style.transform=`translate(${pr.x}px,${pr.y}px)`;
+});
+
+/* Warm glow where cards vanish at the edge of the app. */
+const sink=E('div','abs',{left:602,top:300,width:260,height:480,background:'radial-gradient(ellipse 100% 50% at 0% 50%,rgba(255,190,120,.55),rgba(255,170,100,0) 70%)'},scene);
+part(t=>{
+  let v=0;for(const T of SINK_T){const u=seg(t,T+SINK_D*.55,T+SINK_D+.25);if(u>0&&u<1)v=Math.max(v,Math.sin(Math.PI*u))}
+  return {o:r3(v)};
+},s=>put(sink,s));
+window.__ready=waitImages();
+</script></body></html>
