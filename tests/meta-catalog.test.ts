@@ -58,7 +58,7 @@ test("catalog verification checks effective step models without inference", () =
   assert.equal(result.stdout.includes("mock-catalog-credential"), false);
 });
 
-test("production catalog guard runs before the optional inference probe and fails only for a missing selected model", () => {
+test("production catalog guard runs before the optional inference probe and fails closed", () => {
   const ok = runCatalog("scripts/check-hosted.mjs", {
     VERCEL_ENV: "production",
   });
@@ -76,11 +76,7 @@ test("production catalog guard runs before the optional inference probe and fail
     { VERCEL_ENV: "production" },
     true,
   );
-  // An unreadable catalog (HTTP error or network failure) is a warning, not a
-  // failed build: only a catalog that lacks a selected model fails closed.
-  assert.equal(blocked.status, 0, blocked.stderr);
-  assert.match(blocked.stderr, /model check was skipped/);
-  assert.match(blocked.stdout, /"catalogChecked":false/);
+  assert.equal(blocked.status, 1);
   assert.equal(
     (blocked.stdout + blocked.stderr).includes("must-not-print-provider-body"),
     false,

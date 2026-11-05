@@ -29,18 +29,10 @@ try {
     ...(proxy ? { dispatcher: proxy } : {}),
   });
   if (!response.ok) {
-    // A catalog that cannot be read is a warning, not a build failure: the
-    // selected IDs are only known to be wrong when the catalog says so.
-    console.warn(
-      `Meta catalog returned HTTP ${response.status}; the model check was skipped. Check account access and the approved outbound policy for api.meta.ai. Credentials and response bodies are not printed.`,
+    console.error(
+      `Meta catalog returned HTTP ${response.status}. Check account access and the approved outbound policy for api.meta.ai. Credentials and response bodies are not printed.`,
     );
-    console.log(
-      JSON.stringify({
-        apiReachable: false,
-        catalogChecked: false,
-        selectedModels: models,
-      }),
-    );
+    process.exitCode = 1;
   } else {
     const data = await response.json();
     const availableModelIds = Array.isArray(data.data)
@@ -67,16 +59,10 @@ try {
     if (!enabled) process.exitCode = 1;
   }
 } catch {
-  console.warn(
-    "Meta API could not be reached; the model check was skipped. Check approved access for api.meta.ai. No credentials are printed.",
+  console.error(
+    "Meta API could not be reached. Check approved access for api.meta.ai. No credentials are printed.",
   );
-  console.log(
-    JSON.stringify({
-      apiReachable: false,
-      catalogChecked: false,
-      selectedModels: models,
-    }),
-  );
+  process.exitCode = 1;
 } finally {
   if (proxy) await proxy.close();
 }
