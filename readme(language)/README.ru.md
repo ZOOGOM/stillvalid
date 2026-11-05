@@ -1,6 +1,6 @@
 <div>
 
-![StillValid — сравнение сохранённых объявлений с актуальными источниками](docs/images/stillvalid-banner.webp)
+![StillValid — сравнение сохранённых объявлений с актуальными источниками](../docs/images/stillvalid-banner.webp)
 
 # StillValid
 
@@ -10,7 +10,7 @@
 
 Сравните фотографию или текст объявления с текущими официальными источниками и посмотрите изменения, цитаты и то, что ещё нужно проверить. Установка и регистрация не требуются.
 
-[Открыть приложение](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [README](README.md)
+[Открыть приложение](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [README](../README.md)
 
 **Languages / 言語 / 언어 / اللغات:**
 
@@ -18,7 +18,7 @@
 
 ## Почему StillValid
 
-- **Модель предлагает, код решает.** Каждое изменение должно подтверждаться точными цитатами, которые есть и в объявлении, и на официальной странице; детерминированный проверяющий в [`compare.ts`](src/lib/compare.ts) всё остальное помечает как «требует проверки».
+- **Модель предлагает, код решает.** Каждое изменение должно подтверждаться точными цитатами, которые есть и в объявлении, и на официальной странице; детерминированный проверяющий в [`compare.ts`](../src/lib/compare.ts) всё остальное помечает как «требует проверки».
 - **Только официальные источники.** Блоги, соцсети и поисковые сниппеты никогда не считаются доказательством. Напечатанная в объявлении ссылка `go.kr`/`gov` подставляется автоматически; иначе встроенный веб-поиск Meta предлагает реальные страницы.
 - **Построено целиком на моделях Meta.** Muse Spark читает, ищет и сравнивает; SAM 3.1 находит объявление на заполненной доске; результаты показываются на десяти языках без дополнительных вызовов модели.
 
@@ -32,7 +32,7 @@
 
 Снимки реального рабочего интерфейса от 5 ноября 2026 года (KST), Chromium в мобильной ширине. Результат — обозначенный синтетический пример, а не реальная проверка и не фотография iPhone. Интерфейс на русском; исходные значения примера остаются на английском.
 
-<p align="center"><img src="docs/screenshots/readme/ru-home.jpg" width="310" alt="Экраны приложения: StillValid"><img src="docs/screenshots/readme/ru-result.jpg" width="310" alt="Пример использования: StillValid"></p>
+<p align="center"><img src="../docs/screenshots/readme/ru-home.jpg" width="310" alt="Экраны приложения: StillValid"><img src="../docs/screenshots/readme/ru-result.jpg" width="310" alt="Пример использования: StillValid"></p>
 
 ## Как пользоваться
 
@@ -85,7 +85,7 @@
 | `muse-spark-1.3-contributor` · Seoul + Smithsonian · 4 runs | median 24.3 s; Seoul `changed` 2/2, Smithsonian `review` 2/2 |
 | `muse-spark-1.3` · minimal · 4 runs | median 26.8 s |
 
-[Validation record](docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b)
+[Validation record](../docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b)
 
 ## API и настройки
 
@@ -132,7 +132,7 @@ npm run test:browser-early
 npm run test:browser-image
 ```
 
-[Validation / 검증 기록](docs/validation.md) · [Evaluation / 평가](docs/evaluation.md) · [Deployment / 배포](docs/deployment.md) · [Acceptance / 확인표](docs/acceptance.md) · [Performance / 성능](docs/performance.md) · [README screenshot provenance](docs/screenshots/readme/README.md) · [.env.example](.env.example) · [MIT](LICENSE)
+[Validation / 검증 기록](../docs/validation.md) · [Evaluation / 평가](../docs/evaluation.md) · [Deployment / 배포](../docs/deployment.md) · [Acceptance / 확인표](../docs/acceptance.md) · [Performance / 성능](../docs/performance.md) · [README screenshot provenance](../docs/screenshots/readme/README.md) · [.env.example](../.env.example) · [MIT](../LICENSE)
 
 ## Лицензия
 

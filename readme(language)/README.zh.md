@@ -1,6 +1,6 @@
 <div>
 
-![StillValid — 比较保存的通知与当前依据](docs/images/stillvalid-banner.webp)
+![StillValid — 比较保存的通知与当前依据](../docs/images/stillvalid-banner.webp)
 
 # StillValid
 
@@ -10,7 +10,7 @@
 
 将通知照片或文字与当前官方资料比较，查看变化、原文依据和仍需确认的事项。无需安装或注册。
 
-[打开应用](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [README](README.md)
+[打开应用](https://stillvalid-beta.vercel.app) · [English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [README](../README.md)
 
 **Languages / 言語 / 언어 / اللغات:**
 
@@ -18,7 +18,7 @@
 
 ## 为什么选择 StillValid
 
-- **模型提出，代码裁定。** 每一处变更都必须有同时存在于公告和官方页面中的原文引用支持；[`compare.ts`](src/lib/compare.ts) 中的确定性校验器会把其余情况一律标为“需要复核”。
+- **模型提出，代码裁定。** 每一处变更都必须有同时存在于公告和官方页面中的原文引用支持；[`compare.ts`](../src/lib/compare.ts) 中的确定性校验器会把其余情况一律标为“需要复核”。
 - **只以官方来源为依据。** 博客、社交媒体和搜索摘要不算证据。公告上印的 `go.kr`/`gov` 链接会自动填入，否则由 Meta 内置网页搜索提出真实页面。
 - **全程使用 Meta 模型构建。** Muse Spark 负责读取、搜索和比对，SAM 3.1 在密集的公告板中定位公告，结果以十种语言显示且无需额外模型调用。
 
@@ -32,7 +32,7 @@
 
 以下为2026年11月5日（KST）实际线上界面的移动宽度截图。结果是明确标记的合成示例，不是真实通知的实时验证，也不是 iPhone 实机照片。界面为中文，示例原文保持英文。
 
-<p align="center"><img src="docs/screenshots/readme/zh-home.jpg" width="310" alt="应用画面: StillValid"><img src="docs/screenshots/readme/zh-result.jpg" width="310" alt="使用示例: StillValid"></p>
+<p align="center"><img src="../docs/screenshots/readme/zh-home.jpg" width="310" alt="应用画面: StillValid"><img src="../docs/screenshots/readme/zh-result.jpg" width="310" alt="使用示例: StillValid"></p>
 
 ## 使用步骤
 
@@ -85,7 +85,7 @@
 | `muse-spark-1.3-contributor` · Seoul + Smithsonian · 4 runs | median 24.3 s; Seoul `changed` 2/2, Smithsonian `review` 2/2 |
 | `muse-spark-1.3` · minimal · 4 runs | median 26.8 s |
 
-[Validation record](docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b)
+[Validation record](../docs/validation.md#2026-11-04-production-with-muse-spark-13-contributor-f671f3b)
 
 ## API 与配置
 
@@ -132,7 +132,7 @@ npm run test:browser-early
 npm run test:browser-image
 ```
 
-[Validation / 검증 기록](docs/validation.md) · [Evaluation / 평가](docs/evaluation.md) · [Deployment / 배포](docs/deployment.md) · [Acceptance / 확인표](docs/acceptance.md) · [Performance / 성능](docs/performance.md) · [README screenshot provenance](docs/screenshots/readme/README.md) · [.env.example](.env.example) · [MIT](LICENSE)
+[Validation / 검증 기록](../docs/validation.md) · [Evaluation / 평가](../docs/evaluation.md) · [Deployment / 배포](../docs/deployment.md) · [Acceptance / 확인표](../docs/acceptance.md) · [Performance / 성능](../docs/performance.md) · [README screenshot provenance](../docs/screenshots/readme/README.md) · [.env.example](../.env.example) · [MIT](../LICENSE)
 
 ## 许可证
 

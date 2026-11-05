@@ -8,11 +8,11 @@
 
 Compare a notice photo or pasted text with current official-source material. See **what changed, the supporting quotes, and what still needs confirmation** before you act.
 
-[**Open the app**](https://stillvalid-beta.vercel.app) · [Alternate site](https://stillvalid-zoogom.vercel.app) · [한국어 README](README.ko.md) · [日本語 README](README.ja.md) · [English README](README.en.md) · [Deployment guide](docs/deployment.md)
+[**Open the app**](https://stillvalid-beta.vercel.app) · [Alternate site](https://stillvalid-zoogom.vercel.app) · [한국어 README](<readme(language)/README.ko.md>) · [日本語 README](<readme(language)/README.ja.md>) · [English README](<readme(language)/README.en.md>) · [Deployment guide](docs/deployment.md)
 
 **Languages / 언어 / 言語 / اللغات:**
 
-[English](README.en.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [العربية](README.ar.md) · [Русский](README.ru.md)
+[English](<readme(language)/README.en.md>) · [한국어](<readme(language)/README.ko.md>) · [日本語](<readme(language)/README.ja.md>) · [简体中文](<readme(language)/README.zh.md>) · [Español](<readme(language)/README.es.md>) · [Français](<readme(language)/README.fr.md>) · [Deutsch](<readme(language)/README.de.md>) · [Português](<readme(language)/README.pt.md>) · [العربية](<readme(language)/README.ar.md>) · [Русский](<readme(language)/README.ru.md>)
 
 Built for the Meta Global AI Developer Hackathon — **Indie developer**, “Build for Your World.” No installation or account is required.
 
@@ -302,13 +302,13 @@ npm run test:browser-early
 npm run test:browser-image
 ```
 
-The default README and the English guide contain the same content. After editing either file, compare them before committing:
+The default README and the English guide contain the same content with links adjusted for their locations. After editing either file, compare them before committing:
 
 ```bash
-git diff --no-index -- README.md README.en.md
+node scripts/check-readme-sync.mjs
 ```
 
-No output means the files match; a difference makes the command exit with a non-zero status. This is a manual check, not an automated CI gate.
+The command reports whether their content matches after resolving relative links; a mismatch exits with a non-zero status. This is a manual check, not an automated CI gate.
 
 Set `CHROMIUM_PATH` if Chromium is not at `/usr/bin/chromium`. These browser suites use fixtures and make no model calls. They do not replace physical-device testing or establish full accessibility conformance. `npm run verify:meta` is a read-only model-catalog check requiring a key; live evaluation and the opt-in hosting probe can incur model costs.
 
