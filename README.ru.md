@@ -2,6 +2,8 @@
 
 # StillValid
 
+[![Built with Meta Muse Spark 1.3](https://img.shields.io/badge/Built%20with-Meta%20Muse%20Spark%201.3-0866FF?logo=meta&logoColor=white)](https://dev.meta.ai/docs/models) [![SAM 3.1](https://img.shields.io/badge/Meta-SAM%203.1-0866FF?logo=meta&logoColor=white)](https://dev.meta.ai/docs/models) [![Meta Model API](https://img.shields.io/badge/Meta-Model%20API-1C2B33?logo=meta&logoColor=white)](https://dev.meta.ai/docs) [![Meta AI Developer Hackathon · Indie](https://img.shields.io/badge/Meta%20AI%20Developer%20Hackathon-Indie-6E3FF3)](https://cerebralvalley.ai/e/meta-ai-developer-hackathon)
+
 ### Сохранённое объявление всё ещё актуально?
 
 Сравните фотографию или текст объявления с текущими официальными источниками и посмотрите изменения, цитаты и то, что ещё нужно проверить. Установка и регистрация не требуются.

@@ -1,5 +1,7 @@
 # StillValid · 지금도 맞나요
 
+[![Built with Meta Muse Spark 1.3](https://img.shields.io/badge/Built%20with-Meta%20Muse%20Spark%201.3-0866FF?logo=meta&logoColor=white)](https://dev.meta.ai/docs/models) [![SAM 3.1](https://img.shields.io/badge/Meta-SAM%203.1-0866FF?logo=meta&logoColor=white)](https://dev.meta.ai/docs/models) [![Meta Model API](https://img.shields.io/badge/Meta-Model%20API-1C2B33?logo=meta&logoColor=white)](https://dev.meta.ai/docs) [![Meta AI Developer Hackathon · Indie](https://img.shields.io/badge/Meta%20AI%20Developer%20Hackathon-Indie-6E3FF3)](https://cerebralvalley.ai/e/meta-ai-developer-hackathon)
+
 ### 저장해 둔 공고, 지금도 그대로일까요?
 
 공고 사진이나 붙여 넣은 글을 현재 공식 자료와 비교합니다. 행동하기 전에 **바뀐 내용, 원문 근거, 아직 확인해야 할 점**을 함께 살펴보세요.
